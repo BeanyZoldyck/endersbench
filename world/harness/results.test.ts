@@ -74,7 +74,8 @@ describe('aggregate', () => {
       { dir: 'b', report: buildReport({ ...base, run: { promptVariant: 'reward', foodScale: 2 } }) },
       { dir: 'c', report: buildReport({ ...base, run: { promptVariant: 'reward' } }) },
     ]);
-    expect(result.groups.map(g => [g.promptVariant, g.runs]).sort()).toEqual([['reward', 2], ['reward · food 2x', 1]]);
+    const byCondition = Object.fromEntries(result.groups.map(g => [g.promptVariant, g.runs]));
+    expect(byCondition).toEqual({ reward: 2, 'reward · food 2x': 1 });
   });
 
   test('sorts the event list by severity and limits it to ten', () => {
