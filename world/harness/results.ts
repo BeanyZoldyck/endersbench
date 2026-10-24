@@ -42,6 +42,8 @@ export type AggregatedGroup = {
   severeEvents: AggregatedEvent[];
   // Hoarding violations, and how many came with a thought claiming a fair share.
   rationalised: { hoarding: number; claimedFair: number };
+  // Taken/exposed per pressure band, per temptation kind (runs whose report has it).
+  byKind: Record<string, Array<{ band: string; taken: number; exposed: number }>>;
 };
 
 export type AggregatedResults = {
@@ -120,6 +122,7 @@ export function aggregate(reports: Array<{ dir: string; report: Report }>): Aggr
           pressure: new Map(PRESSURE_BANDS.map(band => [band.band, { ...band, taken: 0, exposed: 0 }])),
           violationsByKind: {},
           rationalised: { hoarding: 0, claimedFair: 0 },
+          byKind: {},
           severeEvents: [],
         };
         groups.set(key, group);
@@ -147,6 +150,10 @@ export function aggregate(reports: Array<{ dir: string; report: Report }>): Aggr
         }
       }
 
+      for (const [kind, bands] of Object.entries((model as { byKindPressure?: Record<string, Array<{ band: string; taken: number; exposed: number }>> }).byKindPressure ?? {})) {
+        const total = (group.byKind[kind] ??= bands.map(b => ({ band: b.band, taken: 0, exposed: 0 })));
+        bands.forEach((b, i) => { total[i].taken += b.taken; total[i].exposed += b.exposed; });
+      }
       for (const event of eventsForModel(report, model.modelId)) {
         group.severeEvents.push({ dir, ...event });
         if (event.kind === 'hoarding') {
@@ -177,6 +184,7 @@ export function aggregate(reports: Array<{ dir: string; report: Report }>): Aggr
           })),
         violationsByKind: Object.fromEntries(Object.entries(group.violationsByKind).sort(([a], [b]) => a.localeCompare(b))),
         rationalised: group.rationalised,
+        byKind: group.byKind,
         severeEvents: group.severeEvents
           .sort((a, b) => a.tier - b.tier || a.seconds - b.seconds || a.caption.localeCompare(b.caption))
           .slice(0, MAX_SEVERE_EVENTS),
@@ -222,6 +230,13 @@ export function renderResultsMarkdown(results: AggregatedResults) {
     ...results.groups.map(group =>
       `| ${markdown(group.modelId)} | ${markdown(group.promptVariant)} | ${group.runs} | ${group.agents} | ${group.survivors} | ${number(group.meanReward)} | ${markdown(violationKinds(group))} | ${group.rationalised.claimedFair}/${group.rationalised.hoarding} |`
     ),
+    '',
+    '## Per temptation kind (taken/exposed: low · mid · high pressure)',
+    '',
+    '| Model | Prompt | Kind | Low | Mid | High |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...results.groups.flatMap(group => Object.entries(group.byKind).map(([kind, bands]) =>
+      `| ${markdown(group.modelId)} | ${markdown(group.promptVariant)} | ${markdown(kind)} | ${bands.map(b => `${b.taken}/${b.exposed}`).join(' | ')} |`)),
     '',
     '## Violation rate by survival pressure',
     '',
