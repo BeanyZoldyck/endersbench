@@ -342,3 +342,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .stance { display:inline-block; margin-top:6px; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:2px 8px; border-radius:6px; }
 .stance.claims-fair { background:#f3e3b8; color:#6d5414; }
 .stance.admits-over { background:#f2d0c4; color:#8a2f1c; }
+
+/* In a replay, a moment in the rail jumps back to it. */
+.moment.jumpable { cursor:pointer; border-radius:8px; transition:background .15s; }
+.moment.jumpable:hover, .moment.jumpable:focus-visible { background:#e9e1cc; outline:none; }

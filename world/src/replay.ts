@@ -150,6 +150,20 @@ export function frameAt(replay: Replay, tMs: number): ReplayFrame {
   return { t, gameTimeMs, tables };
 }
 
+// The replay time of the first frame whose game clock has reached gameTimeMs:
+// where to seek to show a moment the world stamped in game time.
+export function timeAtGame(replay: Replay, gameTimeMs: number): number {
+  const frame = replay.frames.find(f => f.gameTimeMs >= gameTimeMs) ?? replay.frames.at(-1);
+  return frame?.t ?? 0;
+}
+
+// ?t=138 or ?t=2:18 opens a replay at that point of its own clock.
+export function startSeconds(search: string): number {
+  const value = new URLSearchParams(search).get('t') ?? '';
+  const m = value.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+  return m ? Number(m[1] ?? 0) * 60 + Number(m[2]) : 0;
+}
+
 export function eventsBetween(replay: Replay, fromMs: number, toMs: number): ReplayEvent[] {
   return replay.events.filter(event => event.t > fromMs && event.t <= toMs);
 }

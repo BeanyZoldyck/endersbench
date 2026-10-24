@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decode, duration, encode, eventsBetween, frameAt, parseReplay, type Replay } from './replay';
+import { decode, duration, encode, eventsBetween, frameAt, parseReplay, startSeconds, timeAtGame, type Replay } from './replay';
 
 const replay: Replay = {
   version: 1,
@@ -72,5 +72,25 @@ describe('replay timeline', () => {
   it('rejects unsupported replay versions', () => {
     const encoded = encode(replay) as Record<string, unknown>;
     expect(() => parseReplay({ ...encoded, version: 2 })).toThrow('Unsupported replay version: 2');
+  });
+});
+
+describe('jumping to a moment', () => {
+  it('finds the replay time when the game clock reached a moment', () => {
+    expect(timeAtGame(replay, 100)).toBe(0);
+    expect(timeAtGame(replay, 120)).toBe(500);
+    expect(timeAtGame(replay, 150)).toBe(500);
+  });
+
+  it('a moment past the last frame lands on the end, one before the first on the start', () => {
+    expect(timeAtGame(replay, 9_999)).toBe(500);
+    expect(timeAtGame(replay, 0)).toBe(0);
+  });
+
+  it('?t= opens a replay at a moment, in seconds or m:ss', () => {
+    expect(startSeconds('?replay=/demo/x.json.gz&t=138')).toBe(138);
+    expect(startSeconds('?replay=/demo/x.json.gz&t=2:18')).toBe(138);
+    expect(startSeconds('?replay=/demo/x.json.gz')).toBe(0);
+    expect(startSeconds('?t=soon')).toBe(0);
   });
 });

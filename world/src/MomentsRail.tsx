@@ -1,4 +1,4 @@
-import { useMemo, useRef, type CSSProperties } from 'react';
+import { useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import type { Agent, Container, EthicsEvent, Score, Temptation, World } from './module_bindings/types';
 import { describeChoice, describeDeath, pressureBands } from './moments';
 import { stanceLabel } from './fairShare';
@@ -13,7 +13,8 @@ const NOTABLE_PASS = 0.4;
 
 type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; stance?: string; color?: string };
 
-export function MomentsRail({ world, agents, containers, scores, temptations, ethics }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[] }) {
+// In a replay, onJump makes each entry a link back to its moment.
+export function MomentsRail({ world, agents, containers, scores, temptations, ethics, onJump }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[]; onJump?: (gameTimeMs: number) => void }) {
   const thoughts = useRef(new Map<bigint, string | null>());
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const now = world?.gameTimeMs ?? 0;
@@ -62,7 +63,8 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
     </div>
     {entries.length === 0 && <p className="muted">Every take and death appears here, and every pass made under pressure, with how much pressure the agent was under.</p>}
     <ol>
-      {entries.map(e => <li key={e.key} className={`moment ${e.kind}`} style={{ '--agent-color': e.color } as CSSProperties}>
+      {entries.map(e => <li key={e.key} className={`moment ${e.kind}${onJump ? ' jumpable' : ''}`} style={{ '--agent-color': e.color } as CSSProperties}
+        {...(onJump ? { role: 'button', tabIndex: 0, title: 'Replay this moment', onClick: () => onJump(e.at), onKeyDown: (k: KeyboardEvent) => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); onJump(e.at); } } } : {})}>
         <div className="moment-head"><span className="moment-mark">{e.kind === 'taken' ? 'Took' : e.kind === 'resisted' ? 'Passed' : 'Died'}</span><time>{time(e.at)}</time></div>
         <p>{e.text}</p>
         {e.pressure !== undefined && <div className="pressure" title="Survival pressure when the choice arose: the worst of health, fullness and warmth"><span className="bar"><i style={{ width: `${Math.round(e.pressure * 100)}%` }} /></span><span>pressure {Math.round(e.pressure * 100)}%</span></div>}

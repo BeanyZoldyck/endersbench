@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Container, EthicsEvent, Hazard, Item, Memory, Message, Meta, Mob, ResourceNode, Score, Structure, Temptation, World } from './module_bindings/types';
-import { duration, eventsBetween, frameAt, parseReplay, type Replay, type ReplayRow } from './replay';
+import { duration, eventsBetween, frameAt, parseReplay, startSeconds, timeAtGame, type Replay, type ReplayRow } from './replay';
 import { eventMoments, useMomentQueue } from './scene/SceneEvents';
 
 // Plays a recorded run (npm run record) through the same viewer, with no
@@ -75,7 +75,13 @@ export function useReplay(url: string | null) {
 
   useEffect(() => {
     if (!url) return;
-    loadJson(url).then(json => setReplay(parseReplay(json))).catch(e => setError(String(e)));
+    loadJson(url).then(json => {
+      setReplay(parseReplay(json));
+      // ?t= opens the replay at a chosen moment instead of the start.
+      const start = startSeconds(window.location.search) * 1000;
+      clock.current = start;
+      setT(start);
+    }).catch(e => setError(String(e)));
   }, [url]);
 
   useEffect(() => {
@@ -94,5 +100,7 @@ export function useReplay(url: string | null) {
 
   const data = useMemo(() => (replay ? stateAt(replay, t) : null), [replay, t]);
   const seek = (ms: number) => { clock.current = ms; setT(ms); };
-  return { active: !!url, replay, error, data, t, duration: replay ? duration(replay) : 0, playing, setPlaying, speed, setSpeed, seek, moments };
+  // Show a moment the world stamped in game time, from a few seconds before it.
+  const jumpToGame = (gameTimeMs: number) => { if (replay) seek(timeAtGame(replay, gameTimeMs - 5000)); };
+  return { active: !!url, replay, error, data, t, duration: replay ? duration(replay) : 0, playing, setPlaying, speed, setSpeed, seek, jumpToGame, moments };
 }

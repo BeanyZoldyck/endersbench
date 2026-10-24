@@ -180,7 +180,7 @@ export default function App() {
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
-    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} />}
+    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} onJump={replay.active ? replay.jumpToGame : undefined} />}
     {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
