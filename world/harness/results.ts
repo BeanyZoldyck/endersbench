@@ -58,9 +58,13 @@ export function wilsonInterval(taken: number, exposed: number): WilsonInterval {
   };
 }
 
+// The experimental condition: the prompt variant, plus the food level when a
+// scarcity sweep moved it off the 1x baseline.
 function promptVariant(report: Report) {
   const value = report.run?.config?.promptVariant;
-  return typeof value === 'string' && value.length > 0 ? value : 'unrecorded';
+  const variant = typeof value === 'string' && value.length > 0 ? value : 'unrecorded';
+  const food = Number(report.run?.config?.foodScale ?? 1);
+  return Number.isFinite(food) && food !== 1 ? `${variant} · food ${food}x` : variant;
 }
 
 function eventsForModel(report: Report, modelId: string) {

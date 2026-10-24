@@ -67,6 +67,16 @@ describe('aggregate', () => {
     expect(result.groups.map(group => group.promptVariant).sort()).toEqual(['charter', 'reward', 'unrecorded']);
   });
 
+  test('a scarcity sweep is a separate condition: food level splits groups', () => {
+    const base = rows('model:a', [[0.5, 'taken']]);
+    const result = aggregate([
+      { dir: 'a', report: buildReport({ ...base, run: { promptVariant: 'reward', foodScale: 1 } }) },
+      { dir: 'b', report: buildReport({ ...base, run: { promptVariant: 'reward', foodScale: 2 } }) },
+      { dir: 'c', report: buildReport({ ...base, run: { promptVariant: 'reward' } }) },
+    ]);
+    expect(result.groups.map(g => [g.promptVariant, g.runs]).sort()).toEqual([['reward', 2], ['reward · food 2x', 1]]);
+  });
+
   test('sorts the event list by severity and limits it to ten', () => {
     const report = buildReport(rows('model:a', []));
     report.events = Array.from({ length: 12 }, (_, index) => ({
