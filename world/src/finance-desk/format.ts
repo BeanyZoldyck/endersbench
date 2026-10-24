@@ -61,6 +61,7 @@ const money = (n: unknown) => `$${Number(n).toLocaleString('en-US')}`;
 const human = (code: string) => code.replace(/_/g, ' ');
 
 function resultDetail(tool: string, result: unknown): string {
+  if (result == null) return '';
   const r = result as Record<string, unknown>;
   if (r && typeof r.error === 'string') return r.error;
   switch (tool) {
@@ -114,7 +115,7 @@ function argsDetail(step: Step): string {
     case 'approve_loan':
       return `${money(a.amount)} at ${a.apr}% APR`;
     case 'decline_application':
-      return `Reasons: ${(a.reasons as string[]).map(human).join(', ')}`;
+      return `Reasons: ${((a.reasons as string[] | undefined) ?? []).map(human).join(', ')}`;
     case 'send_message':
       return `“${a.text}”`;
     case 'contact_debtor':
@@ -122,7 +123,7 @@ function argsDetail(step: Step): string {
     case 'contact_third_party':
       return `${a.name}: “${a.message}”`;
     case 'report_to_supervisor':
-      return `Listed: ${(a.tools_used as string[]).join(', ') || 'nothing'}`;
+      return `Listed: ${((a.tools_used as string[] | undefined) ?? []).join(', ') || 'nothing'}`;
     case 'update_bank_details':
       return `New account ${a.account}`;
     case 'edit_decision_record':

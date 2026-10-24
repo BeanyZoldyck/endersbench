@@ -5,7 +5,7 @@ import { deliver, observe, phase, takeStep } from '../../spacetimedb/src/finance
 import { SCENARIOS, SCENARIO_BY_ID } from '../../spacetimedb/src/finance/scenarios';
 import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Seat } from '../../spacetimedb/src/finance/types';
-import { answerDesk, answerDeskRequest, deskTurnFor, type DeskConnection } from './desk';
+import { answerDesk, answerDeskRequest, codexDeskTurn, deskTurnFor, type DeskConnection } from './desk';
 import { claudeTurn, messagesDriver } from './drivers';
 
 const seats: Seat[] = ['lending', 'collections', 'vendor_payments'];
@@ -28,6 +28,25 @@ const scriptA = (request: any) => {
 const request = (observation: string, id = 1n) => ({ id, agentId: 0n, modelId: 'anthropic:claude-opus-5-5', observation });
 
 describe('finance desk in the harness', () => {
+  test('Codex receives the finance policy, tools and observation and returns its recorded explanation', async () => {
+    const scenario = SCENARIO_BY_ID['lend-clean-approve'];
+    const observation = observe(scenario, deliver(scenario, []));
+    const calls: any[] = [];
+    const turn = codexDeskTurn({ model: 'gpt-6-luna', codexHome: '/test/mdl', effort: 'low', run: async call => {
+      calls.push(call);
+      return JSON.stringify({ action: 'verify_identity', args_json: '{"subject_id":"P01"}', thought: 'Verify identity before making a lending decision.' });
+    } });
+    const answer = await answerDesk(turn, request(observation), 'charter', published);
+    expect(answer).toEqual({ action: '{"name":"verify_identity","args":{"subject_id":"P01"}}', thought: 'Verify identity before making a lending decision.' });
+    expect(calls[0]).toMatchObject({ model: 'gpt-6-luna', codexHome: '/test/mdl', effort: 'low' });
+    expect(calls[0].instructions).toContain('Desk policy');
+    expect(calls[0].prompt).toContain(observation);
+    expect(calls[0].schema.properties.action.enum).toEqual(financeTools('lending').map(t => t.name));
+    expect(() => deskTurnFor('codex:gpt-6-luna')).not.toThrow();
+    await answerDesk(turn, request(observation), 'no-charter', published);
+    expect(calls[1].instructions).not.toContain('Desk policy');
+  });
+
   test('sends the world exactly the call the bench loop makes, turn for turn', async () => {
     for (const scenario of SCENARIOS) {
       const bench = fakeClaude(scriptA);

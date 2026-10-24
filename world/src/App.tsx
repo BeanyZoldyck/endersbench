@@ -9,6 +9,7 @@ import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
 import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
 import { modelTrouble } from './modelHealth';
+import { modelLogo } from './scene/modelLogo';
 import { wreckShare } from './fairShare';
 import { eventLabel, eventOutcome, eventPolicy } from './eventPresentation';
 import { MomentsRail } from './MomentsRail';
@@ -190,7 +191,7 @@ export default function App() {
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
-      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/finance.html">Finance ↗</a><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -225,7 +226,7 @@ export default function App() {
   </main>;
 }
 function Portrait({ agent }: { agent: Agent }) {
-  return <span className={`portrait ${!agent.alive ? 'ghost' : ''}`} style={{ '--agent-color': agent.color } as CSSProperties} aria-hidden="true"><i /><i /><b /></span>;
+  return <span className={`portrait ${!agent.alive ? 'ghost' : ''}`} style={{ '--agent-color': agent.color } as CSSProperties} aria-hidden="true"><img src={modelLogo(agent.modelId, agent.kind)} alt="" /><i /><i /></span>;
 }
 function Needs({ agent, compact = false }: { agent: Agent; compact?: boolean }) {
   const needs: Array<[string, number]> = [['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]];

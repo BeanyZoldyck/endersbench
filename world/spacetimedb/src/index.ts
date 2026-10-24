@@ -14,6 +14,7 @@ import { noticeLosses } from './memory';
 import { physicsContract, SCENARIO, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
 import { startTimers, stopTimers } from './timers';
+import { defineDeskReducers, deskMeta, routeDeskDecision } from './desk';
 import {
   DAY_LENGTH_MS,
   DAY_OFFSET_MS,
@@ -47,7 +48,7 @@ function requireWorkerOrAdmin(ctx: Ctx) {
 // The tool catalog and physics contract. Refreshed whenever a harness
 // connects, so a hot-published module's new actions reach the models.
 function publishMeta(ctx: Ctx) {
-  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)), scenario: JSON.stringify(SCENARIO) };
+  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)), scenario: JSON.stringify(SCENARIO), ...deskMeta() };
   for (const [key, value] of Object.entries(entries)) {
     if (ctx.db.meta.key.find(key)) ctx.db.meta.key.update({ key, value });
     else ctx.db.meta.insert({ key, value });
@@ -179,7 +180,10 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
   stopTimers(ctx);
   const d = ctx.db;
   if (d.meta.key.find('interactive')) d.meta.key.delete('interactive');
-  for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
+  // Finance episodes have independent lifetimes; restarting the clearing must
+  // not delete their pending requests and strand their live offices.
+  for (const request of [...d.decisionRequest.iter()]) if (request.agentId !== 0n) d.decisionRequest.id.delete(request.id);
+  for (const table of [d.world, d.agent, d.message, d.actionLog, d.resourceNode, d.container, d.item,
     d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
@@ -254,6 +258,7 @@ export const submitDecision = spacetimedb.reducer(
     if (!isWorker(ctx)) throw new SenderError('not a harness worker');
     const req = ctx.db.decisionRequest.id.find(requestId);
     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
+    if (routeDeskDecision(ctx, req, { action, thought, latencyMs })) return;
     const me = ctx.db.agent.id.find(req.agentId);
     if (!me) throw new SenderError('agent is gone');
     noteModel(ctx, req.modelId);
@@ -293,6 +298,8 @@ export const submitDecision = spacetimedb.reducer(
     });
   }
 );
+
+export const { queueFinanceRun, financeTick } = defineDeskReducers(spacetimedb);
 
 // The harness reports a model call that failed outright (timeout, API error).
 export const failDecision = spacetimedb.reducer(

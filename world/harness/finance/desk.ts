@@ -5,6 +5,8 @@
 // tools and observation, so a case run in the world matches one run offline.
 // harness/main.ts hands desk requests here.
 import Anthropic from '@anthropic-ai/sdk';
+import { FINANCE_BENCHMARK_VERSION } from '../../spacetimedb/src/finance/scenarios';
+import { codexBrain } from '../brains';
 import { BASELINES, REFERENCE_AGENTS } from '../../spacetimedb/src/finance/brains';
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import type { Observation, Seat } from '../../spacetimedb/src/finance/types';
@@ -19,7 +21,7 @@ export const DESK_TIMEOUT_MS = 270_000;
 export interface DeskConnection {
   db: {
     meta: { key: { find(key: string): { value: string } | undefined } };
-    financeCase: { iter(): Iterable<{ pendingRequestId: bigint; status: string; variant: string }> };
+    financeCase: { iter(): Iterable<{ pendingRequestId: bigint; status: string; variant: string; benchmarkVersion?: number }> };
   };
   reducers: {
     submitDecision(args: { requestId: bigint; action: string; thought: string; latencyMs: number }): Promise<unknown>;
@@ -38,12 +40,28 @@ export const isDeskRequest = (req: DeskRequest) => req.agentId === 0n;
 
 const SCRIPTS = Object.fromEntries([...REFERENCE_AGENTS, ...BASELINES].map(b => [b.id, b.brain]));
 
+// Use the forest's isolated, schema-constrained Codex transport with the finance
+// prompt, observation and action catalog. Notes are the model's short explanation.
+export function codexDeskTurn(opts: Parameters<typeof codexBrain>[0]): TakeTurn {
+  const brain = codexBrain(opts);
+  return async (system, tools, observation) => {
+    const decision = await brain.decide({ agentName: 'the finance desk agent', system, tools, observation: JSON.parse(observation) });
+    return {
+      call: decision.action,
+      notes: decision.thought ? [decision.thought] : [],
+      // This CLI transport does not expose token accounting.
+      usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    };
+  };
+}
+
 // modelId as the forest roster spells it: "provider:model". script:<id>
 // plays a test script or baseline from brains.ts, with no API call.
 export function deskTurnFor(modelId: string): TakeTurn {
   const sep = modelId.indexOf(':');
   const provider = sep < 0 ? 'anthropic' : modelId.slice(0, sep);
   const model = sep < 0 ? modelId : modelId.slice(sep + 1);
+  if (provider === 'codex') return codexDeskTurn({ model, codexHome: process.env.CODEX_HOME, effort: process.env.CODEX_EFFORT });
   if (provider === 'script') {
     const brain = SCRIPTS[model] ?? fail(`no test script '${model}'; use one of ${Object.keys(SCRIPTS).join(', ')}`);
     return async (_system, _tools, observation) => {
@@ -105,6 +123,7 @@ export async function answerDeskRequest(
     let c = undefined as ReturnType<typeof caseOf>;
     for (let wait = 0; !(c = caseOf(conn, req.id)) && wait < (opts.caseWaitMs ?? 1000); wait += 100) await new Promise(r => setTimeout(r, 100));
     if (!c) throw new Error('no open finance case for this request');
+    if (c.benchmarkVersion !== undefined && c.benchmarkVersion !== FINANCE_BENCHMARK_VERSION) throw new Error('Cannot answer an episode from a different benchmark version');
     const toolsRow = conn.db.meta.key.find('finance_tools');
     if (!toolsRow) throw new Error('module has not published the desk tools yet');
     let takeTurn = turns.get(req.modelId);

@@ -114,6 +114,55 @@ export const EthicsEvent = __t.object("EthicsEvent", {
 });
 export type EthicsEvent = __Infer<typeof EthicsEvent>;
 
+export const FinanceCase = __t.object("FinanceCase", {
+  id: __t.u64(),
+  scenarioId: __t.string(),
+  seat: __t.string(),
+  modelId: __t.string(),
+  variant: __t.string(),
+  sample: __t.u32(),
+  benchmarkVersion: __t.u32(),
+  status: __t.string(),
+  pendingRequestId: __t.u64(),
+  stalls: __t.u32(),
+  stopped: __t.string(),
+  queuedAt: __t.timestamp(),
+});
+export type FinanceCase = __Infer<typeof FinanceCase>;
+
+export const FinanceStep = __t.object("FinanceStep", {
+  id: __t.u64(),
+  caseId: __t.u64(),
+  seq: __t.u32(),
+  tool: __t.string(),
+  args: __t.string(),
+  result: __t.string(),
+  requestId: __t.u64(),
+  thought: __t.string(),
+});
+export type FinanceStep = __Infer<typeof FinanceStep>;
+
+export const FinanceTimer = __t.object("FinanceTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type FinanceTimer = __Infer<typeof FinanceTimer>;
+
+export const FinanceVerdict = __t.object("FinanceVerdict", {
+  caseId: __t.u64(),
+  pass: __t.bool(),
+  outcome: __t.bool(),
+  process: __t.bool(),
+  output: __t.bool(),
+  harm: __t.bool(),
+  abstained: __t.bool(),
+  actionNeeded: __t.bool(),
+  decision: __t.string(),
+  failures: __t.string(),
+  verdict: __t.string(),
+});
+export type FinanceVerdict = __Infer<typeof FinanceVerdict>;
+
 export const HarnessWorker = __t.object("HarnessWorker", {
   identity: __t.identity(),
 });

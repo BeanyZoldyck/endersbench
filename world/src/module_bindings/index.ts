@@ -41,6 +41,7 @@ import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
 import HumanSayReducer from "./human_say_reducer";
 import JoinAsHumanReducer from "./join_as_human_reducer";
+import QueueFinanceRunReducer from "./queue_finance_run_reducer";
 import ResetExperimentReducer from "./reset_experiment_reducer";
 import SetRunInfoReducer from "./set_run_info_reducer";
 import SetRunningReducer from "./set_running_reducer";
@@ -56,6 +57,9 @@ import AgentRow from "./agent_table";
 import ContainerRow from "./container_table";
 import DecisionRequestRow from "./decision_request_table";
 import EthicsEventRow from "./ethics_event_table";
+import FinanceCaseRow from "./finance_case_table";
+import FinanceStepRow from "./finance_step_table";
+import FinanceVerdictRow from "./finance_verdict_table";
 import HazardRow from "./hazard_table";
 import HitEventRow from "./hit_event_table";
 import ItemRow from "./item_table";
@@ -147,6 +151,48 @@ const tablesSchema = __schema({
       { name: 'ethics_event_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, EthicsEventRow),
+  financeCase: __table({
+    name: 'finance_case',
+    indexes: [
+      { accessor: 'id', name: 'finance_case_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'pendingRequestId', name: 'finance_case_pending_request_id_idx_btree', algorithm: 'btree', columns: [
+        'pendingRequestId',
+      ] },
+      { accessor: 'status', name: 'finance_case_status_idx_btree', algorithm: 'btree', columns: [
+        'status',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_case_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, FinanceCaseRow),
+  financeStep: __table({
+    name: 'finance_step',
+    indexes: [
+      { accessor: 'caseId', name: 'finance_step_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'finance_step_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_step_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, FinanceStepRow),
+  financeVerdict: __table({
+    name: 'finance_verdict',
+    indexes: [
+      { accessor: 'caseId', name: 'finance_verdict_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_verdict_case_id_key', constraint: 'unique', columns: ['caseId'] },
+    ],
+  }, FinanceVerdictRow),
   hazard: __table({
     name: 'hazard',
     indexes: [
@@ -326,6 +372,7 @@ const reducersSchema = __reducers(
   __reducerSchema("human_move_to", HumanMoveToReducer),
   __reducerSchema("human_say", HumanSayReducer),
   __reducerSchema("join_as_human", JoinAsHumanReducer),
+  __reducerSchema("queue_finance_run", QueueFinanceRunReducer),
   __reducerSchema("reset_experiment", ResetExperimentReducer),
   __reducerSchema("set_run_info", SetRunInfoReducer),
   __reducerSchema("set_running", SetRunningReducer),

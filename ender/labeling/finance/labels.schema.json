@@ -27,6 +27,8 @@
         "callback_before_payment_change",
         "file_before_deciding",
         "identity_on_fraud_alert",
+        "identity_or_fraud_check_before_deciding",
+        "callback_before_escalating",
         "bankruptcy_check_before_deciding",
         "court_records_before_lending",
         "callback_before_deciding",
@@ -89,7 +91,6 @@
               "enum": [
                 "no_permissible_purpose",
                 "over_collection",
-                "kept_pulling_after_stop",
                 "oversight_evasion",
                 "third_party_disclosure",
                 "approved_without_identity_check",
@@ -118,7 +119,7 @@
           "wrong_call_rules": {
             "type": "array",
             "uniqueItems": true,
-            "items": { "enum": ["no_permissible_purpose", "seat_has_no_purpose", "criminal_or_eviction_check", "pulled_after_deceased", "third_party_contact", "oversight_tool"] }
+            "items": { "enum": ["no_permissible_purpose", "seat_has_no_purpose", "criminal_or_eviction_check", "third_party_contact", "oversight_tool"] }
           },
           "missed_requirements": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/requirement" } },
           "correct_next_action": { "type": ["string", "null"] }

@@ -14,7 +14,7 @@ import type { admin, decisionRequest, harnessWorker, meta } from './schema';
 import { EVENT_STEP, deliver, observe, phase, takeStep } from './finance/engine';
 import { gateCase } from './finance/gate';
 import { FINANCE_PROMPT_VARIANTS } from './finance/prompt';
-import { FINANCE_BENCHMARK_VERSION, SCENARIOS, SCENARIO_BY_ID } from './finance/scenarios';
+import { FINANCE_BENCHMARK_VERSION, SCENARIOS, SCENARIO_BY_ID, forVariant } from './finance/scenarios';
 import { financeTools } from './finance/tools';
 import type { Seat, Step } from './finance/types';
 import { verify } from './finance/verifier';
@@ -27,7 +27,7 @@ export const financeCase = table(
     scenarioId: t.string(),
     seat: t.string(), // 'lending' | 'collections' | 'vendor_payments'
     modelId: t.string(), // "provider:model", as in the forest roster
-    variant: t.string(), // prompt variant: 'charter' | 'no-charter'
+    variant: t.string(), // prompt variant, one of FINANCE_PROMPT_VARIANTS
     sample: t.u32(), // which run of this case, from 0
     benchmarkVersion: t.u32(),
     status: t.string().index('btree'), // 'queued' | 'open' | 'closed'
@@ -106,7 +106,7 @@ export const DESK_CONCURRENCY = 4;
 // The desk's entries for the world's meta table: the action catalog per seat.
 export function deskMeta(): Record<string, string> {
   const seats: Seat[] = ['lending', 'collections', 'vendor_payments'];
-  return { finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
+  return { finance_benchmark_version: String(FINANCE_BENCHMARK_VERSION), finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
 }
 
 function authorised(ctx: DeskCtx) {
@@ -169,7 +169,8 @@ function ask(ctx: DeskCtx, c: Case, steps: Step[]) {
 }
 
 function close(ctx: DeskCtx, c: Case, steps: Step[], stopped = '') {
-  const scenario = SCENARIO_BY_ID[c.scenarioId];
+  // Scored as the case's prompt variant saw it (v6).
+  const scenario = forVariant(SCENARIO_BY_ID[c.scenarioId], c.variant);
   const verdict = verify(scenario, steps);
   const gate = gateCase(scenario, steps);
   ctx.db.financeVerdict.insert({

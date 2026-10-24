@@ -6,11 +6,14 @@
 //   npm run finance:bench -- --driver managed             Claude Managed Agents
 //   npm run finance:bench -- --driver script              no API: Script A
 //
-// --model is "provider:model" as in the forest harness (anthropic, openai,
+// --variant is one of no-charter, principles, house-rules (the default and
+// the headline) or charter. --model is "provider:model" as in the forest harness (anthropic, openai,
 // openrouter, ender, ollama); a bare model id means anthropic. --driver
 // messages (the default) is the benchmark loop, one fresh call per turn, for
-// every provider. Options: --variant charter|no-charter, --effort (omit for
-// the model's own default), --cases id,id, --repeat N (runs per case, 3 by
+// every provider. Options: --effort (omit for
+// the model's own default), --cases id,id, --held-out (the 25 cases kept out of
+// the fine-tune's training; pair it with --raw-crs for a model trained on raw
+// responses), --repeat N (runs per case, 3 by
 // default as the spec asks; --repeat 1 for a quick check), --concurrency N,
 // --raw-crs (CRS tools answer with the full saved CRS response instead of the
 // compact card; a separate format on the leaderboard). Keys come from
@@ -20,14 +23,15 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import { policyFollower, runBrain } from '../../spacetimedb/src/finance/brains';
-import { FINANCE_PROMPT_VARIANTS } from '../../spacetimedb/src/finance/prompt';
-import { FINANCE_BENCHMARK_VERSION, SCENARIOS } from '../../spacetimedb/src/finance/scenarios';
+import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../spacetimedb/src/finance/prompt';
+import { FINANCE_BENCHMARK_VERSION, SCENARIOS, forVariant } from '../../spacetimedb/src/finance/scenarios';
 import type { Scenario, Verdict, Violation } from '../../spacetimedb/src/finance/types';
 import { type Gate, compliantByRun, gateCase, gateScore, passAllRuns } from '../../spacetimedb/src/finance/gate';
 import { checkTools, toolScore } from '../../spacetimedb/src/finance/toolcheck';
 import { ethicsScore, verify, verifyPair } from '../../spacetimedb/src/finance/verifier';
 import { type CaseRun, type Effort, type ManagedSetup, type RunCase, managedDriver, messagesDriver, openAiDriver, setupManaged } from './drivers';
 import { OPENAI_COMPATIBLE, envValue, trustSystemCertificates } from './providers';
+import { TEST_CASES } from './labels';
 import { rawCrs } from './rawcrs';
 
 const RUNS_DIR = path.resolve('harness/finance/runs');
@@ -53,10 +57,14 @@ function parseArgs(argv: string[]) {
   }
   const driver = flags.get('driver') ?? 'messages';
   if (!['messages', 'managed', 'both', 'script'].includes(driver)) throw new Error(`unknown driver '${driver}'`);
-  const variant = flags.get('variant') ?? 'charter';
+  // house-rules is the headline (v6, reviews/policy-tiers.md).
+  const variant = flags.get('variant') ?? HEADLINE_VARIANT;
   if (!FINANCE_PROMPT_VARIANTS.includes(variant)) throw new Error(`unknown variant '${variant}'`);
   const ids = flags.get('cases')?.split(',');
-  const cases = ids ? ids.map(id => SCENARIOS.find(s => s.id === id) ?? fail(`unknown case '${id}'`)) : SCENARIOS;
+  // --held-out: the 25 cases on the eight personas kept out of training, for
+  // the fine-tuned model and the frontier models it is compared with.
+  const pool = flags.has('held-out') ? SCENARIOS.filter(s => TEST_CASES.includes(s.id)) : SCENARIOS;
+  const cases = ids ? ids.map(id => pool.find(s => s.id === id) ?? fail(`unknown case '${id}'`)) : pool;
   const spec = flags.get('model') ?? 'claude-opus-5-5';
   const sep = spec.indexOf(':');
   const provider = sep < 0 ? 'anthropic' : spec.slice(0, sep);
@@ -179,7 +187,8 @@ async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, cli
     runCase = managedDriver(client!, setup);
   }
 
-  const items = Array.from({ length: opts.repeat }, (_, sample) => opts.cases.map(scenario => ({ scenario, sample }))).flat();
+  // Scored as this prompt variant sees the case (v6, forVariant).
+  const items = Array.from({ length: opts.repeat }, (_, sample) => opts.cases.map(scenario => ({ scenario: forVariant(scenario, opts.variant), sample }))).flat();
   const runs = await pool(items, opts.concurrency, async ({ scenario, sample }): Promise<Scored> => {
     let run: CaseRun;
     try {
