@@ -123,6 +123,6 @@ ROSTER="Ivy:fake,Rook:fake,Sage:fake,Wren:fake" npm run harness
 
 - Real models: for example `ROSTER="Ivy:codex:gpt-6-luna,..." CODEX_HOME=~/.codex-<login> TIME_SCALE=0.5 npm run harness`.
 - Experiments: `scripts/experiment.sh` runs parallel arms, then `npm run results` builds the results page.
-- The demo backstop runs with no server: `http://localhost:5173/?replay=/demo/clearing-reward-v2.json.gz`.
+- The demo backstop runs with no server: the viewer's **Exhibits** button opens each recorded moment the pitch uses, for example `http://localhost:5173/?replay=/demo/clearing-charter-v8-admission.json.gz&t=2:15`. In any replay, clicking a moment in the right-hand rail jumps back to it.
 
 Built at Cal Hacks 13.0 on [SpacetimeDB](https://spacetimedb.com).
