@@ -175,7 +175,7 @@ class BaselineTests(unittest.TestCase):
         text = io.StringIO()
         with contextlib.redirect_stdout(text):
             baseline.show_result(row, [row], 3, 2)
-        for expected in ("refusal proxy=YES", "latency=2.00s", "2.00 tok/s", "1.00 GiB",
+        for expected in ("screening=refusal_marker", "latency=2.00s", "2.00 tok/s", "1.00 GiB",
                          "[running 1/3]", "ETA~4.0s", "100.0% (n=1)"):
             self.assertIn(expected, text.getvalue())
 

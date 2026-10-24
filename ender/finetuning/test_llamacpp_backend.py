@@ -6,6 +6,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
 import baseline
 from llamacpp_backend import LlamaClient, provenance
@@ -110,7 +111,7 @@ class LlamaBackendTests(unittest.TestCase):
             provenance(self.gguf, baseline.MODEL, baseline.REVISION)
 
     def test_end_to_end_runner_saves_streamed_response_and_metadata(self):
-        output, result = self.run_baseline()
+        output, result = self.run_baseline(["--no-early-stop-refusal"])
         self.assertEqual(result, 0)
         row = json.loads((output / "responses.jsonl").read_text())
         self.assertEqual(row["response"], "I cannot help with that.")
@@ -121,14 +122,14 @@ class LlamaBackendTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "completed")
         self.assertNotIn("torch", manifest)
 
-    def run_baseline(self):
+    def run_baseline(self, extra=()):
         source = self.root / baseline.SOURCES["advbench"][0]
         source.parent.mkdir(parents=True)
         source.write_text("goal,target\nPrompt,ATTACK PREFIX\n")
         output = self.root / "results"
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             result = baseline.main(["--data-root", str(self.root), "--datasets", "advbench",
-                "--gguf", str(self.gguf), "--server-url", self.url, "--output-dir", str(output)])
+                "--gguf", str(self.gguf), "--server-url", self.url, "--output-dir", str(output), *extra])
         return output, result
 
     def test_context_overflow_does_not_silently_truncate(self):
@@ -142,8 +143,45 @@ class LlamaBackendTests(unittest.TestCase):
 
     def test_partial_response_is_saved_on_stream_failure(self):
         self.final_event = False
-        output, result = self.run_baseline()
+        output, result = self.run_baseline(["--no-early-stop-refusal"])
         self.assertEqual(result, 1)
         row = json.loads((output / "responses.jsonl").read_text())
         self.assertEqual(row["status"], "error")
         self.assertEqual(row["partial_response"], "I cannot help with that.")
+
+    def test_refusal_stops_early_and_closes_stream(self):
+        closed, consumed = [], []
+
+        def stream(*args):
+            try:
+                for n, text in enumerate(("I cannot", " help", " with that.", " Further explanation"), 1):
+                    consumed.append(n)
+                    yield {"content": text, "tokens_predicted": n, "stop": False}
+            finally:
+                closed.append(True)
+
+        with patch.object(LlamaClient, "complete", side_effect=stream):
+            output, result = self.run_baseline()
+        self.assertEqual(result, 0)
+        self.assertEqual(consumed, [1, 2])
+        self.assertEqual(closed, [True])
+        row = json.loads((output / "responses.jsonl").read_text())
+        self.assertTrue(row["early_stopped"])
+        self.assertFalse(row["response_complete"])
+        self.assertEqual(row["output_tokens"], 2)
+        self.assertEqual(row["screening_label"], "refusal_marker")
+        self.assertEqual(row["stop_reason"], "refusal_marker")
+
+    def test_capped_disclaimer_is_undetermined_not_compliant_or_refused(self):
+        events = iter([{"content": "Educational purposes only. Consult a doctor.",
+                        "tokens_predicted": 64, "stop": True, "stop_type": "limit"}])
+        def stream(*args):
+            yield from events
+        with patch.object(LlamaClient, "complete", side_effect=stream):
+            output, result = self.run_baseline()
+        self.assertEqual(result, 0)
+        row = json.loads((output / "responses.jsonl").read_text())
+        self.assertEqual(row["screening_label"], "undetermined")
+        self.assertFalse(row["refusal_heuristic"])
+        self.assertFalse(row["response_complete"])
+        self.assertEqual(self.requests[0][0], "/apply-template")

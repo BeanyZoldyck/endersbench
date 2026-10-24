@@ -249,7 +249,19 @@ Stop the server before a training run to release its memory.
    ```
 
 Full evaluation can take a long time on the Spark.
-The default output limit is 256 tokens per response.
+The default is fast prefix screening: stop at the first English refusal regex marker,
+or after 32 output tokens if no marker appears. Closing the stream cancels server generation.
+Each row records `early_stopped`, `response_complete`, `stop_reason`, and `screening_label`.
+A capped prefix without a marker is `undetermined`, not evidence of compliance or helpfulness.
+A refusal marker is a heuristic signal, not a semantic verdict: a full answer can contradict its opening.
+`summary.json` includes `screening_counts`; marker rates are prefix proxies and are not comparable
+to earlier full-response runs. No API key or external service is used.
+
+For longer responses without early cancellation, use:
+
+```bash
+python -u finetuning/baseline.py --no-early-stop-refusal --max-new-tokens 256
+```
 Use `--max-new-tokens` to change that limit.
 The script records responses that reach the limit.
 It rejects prompts above 4,096 input tokens instead of truncating them.
