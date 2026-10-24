@@ -23,12 +23,12 @@ describe('Observation Studio navigation contracts', () => {
   });
   it('retains draft model through single-agent preview and return', () => {
     const result = journey(
-      { type: 'select-draft-model', model: 'Qwen' },
+      { type: 'select-draft-model', model: 'Grok' },
       { type: 'select-draft-mode', mode: 'single' },
       { type: 'navigate', screen: 'briefing' },
       { type: 'back' },
     );
-    expect(result).toMatchObject({ screen: 'single', draftMode: 'single', draftModel: 'Qwen' });
+    expect(result).toMatchObject({ screen: 'single', draftMode: 'single', draftModel: 'Grok' });
   });
   it('switches agents without moving the replay or changing the run', () => {
     const result = journey(
@@ -66,21 +66,21 @@ describe('Observation Studio navigation contracts', () => {
   });
   it('cancel leaves the applied comparison untouched', () => {
     const result = journey({ type: 'begin-model-change' }, { type: 'pending-model', slot: 1, model: 'Claude' }, { type: 'cancel-model-change' });
-    expect(result.comparePair).toEqual(['Ender', 'Qwen']);
+    expect(result.comparePair).toEqual(['Ender', 'Grok']);
     expect(result.pendingComparePair).toBeNull();
   });
   it('applies a distinct comparison only on Apply', () => {
     const pending = journey({ type: 'begin-model-change' }, { type: 'pending-model', slot: 1, model: 'Claude' });
-    expect(pending.comparePair).toEqual(['Ender', 'Qwen']);
+    expect(pending.comparePair).toEqual(['Ender', 'Grok']);
     expect(transitionStudio(pending, { type: 'apply-model-change' }).comparePair).toEqual(['Ender', 'Claude']);
   });
   it('rejects duplicate model comparisons at the state boundary', () => {
     const duplicate = journey({ type: 'begin-model-change' }, { type: 'pending-model', slot: 1, model: 'Ender' });
-    expect(transitionStudio(duplicate, { type: 'apply-model-change' }).comparePair).toEqual(['Ender', 'Qwen']);
+    expect(transitionStudio(duplicate, { type: 'apply-model-change' }).comparePair).toEqual(['Ender', 'Grok']);
   });
   it('restores comparison filter and pair after evidence', () => {
     const result = journey({ type: 'navigate', screen: 'compare' }, { type: 'compare-scenario', scenario: 'lending' }, { type: 'navigate', screen: 'context' }, { type: 'navigate', screen: 'method' }, { type: 'back' }, { type: 'back' });
-    expect(result).toMatchObject({ screen: 'compare', compareScenario: 'lending', comparePair: ['Ender', 'Qwen'] });
+    expect(result).toMatchObject({ screen: 'compare', compareScenario: 'lending', comparePair: ['Ender', 'Grok'] });
   });
   it('keeps Lending context scoped through nested navigation', () => {
     const result = journey({ type: 'select-briefing-scenario', scenario: 'lending' }, { type: 'navigate', screen: 'lending' }, { type: 'navigate', screen: 'context' }, { type: 'back' });

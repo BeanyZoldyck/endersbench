@@ -9,7 +9,7 @@ export function modelDisplayName(modelId: string): string {
 
 export function modelAvatarPath(modelId: string): string | null {
   const id = modelId.toLowerCase();
-  const model = id.includes('qwen') ? 'qwen' : id.includes('claude') ? 'claude' : id.includes('gpt') || id.includes('openai') || id === 'chatgpt' ? 'chatgpt' : id.includes('ender') ? 'ender' : null;
+  const model = id.includes('grok') ? 'grok' : id.includes('claude') ? 'claude' : id.includes('gpt') || id.includes('openai') || id === 'chatgpt' ? 'chatgpt' : id.includes('ender') ? 'ender' : null;
   return model ? `/studio/avatars/${model}.png` : null;
 }
 
