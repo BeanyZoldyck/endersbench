@@ -318,3 +318,4 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .masthead { min-width:0; }
 @media (max-width:1750px) { .masthead p { display:none; } }
 @media (max-width:1450px) { .edition { display:none; } .season span { display:none; } }
+.spotlight.tier-0 .spotlight-tier { color:#f0e4cc; background:#2f3a36; }

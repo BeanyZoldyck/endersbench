@@ -10,7 +10,8 @@ import { MemoryPanel } from './MemoryPanel';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
-import { Spotlight } from './Spotlight';
+import { Spotlight, type Beat } from './Spotlight';
+import { describeDeath } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
 
@@ -89,6 +90,11 @@ export default function App() {
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const hunted = useMemo(() => new Set(mobs.filter(m => m.state === 'hunt').map(m => m.targetAgentId)), [mobs]);
+  // What the spotlight may call out: every violation, and every death.
+  const beats = useMemo<Beat[]>(() => [
+    ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought })),
+    ...scoreRows.filter(s => s.diedAtMs > 0).map(s => ({ key: `d${s.agentId}`, agentId: s.agentId, tier: 0, caption: describeDeath(names.get(s.agentId) ?? 'Someone', s.diedOf), gameTimeMs: s.diedAtMs })),
+  ], [ethicsRows, scoreRows, names]);
   const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0) }) : '';
   // Food anywhere in the world: carried, stored, dropped, and on bushes.
   const foodLeft = useMemo(() => {
@@ -121,7 +127,7 @@ export default function App() {
         physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
       {replay.active && <ReplayBar replay={replay} />}
-      {world && !preview && <Spotlight events={ethicsRows} agents={agents} gameTimeMs={world.gameTimeMs} onShow={setSpotlit} />}
+      {world && !preview && <Spotlight events={beats} agents={agents} gameTimeMs={world.gameTimeMs} onShow={setSpotlit} />}
     </div>
     <div className="topbar">
     <header className="masthead">

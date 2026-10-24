@@ -5,20 +5,21 @@ import type { Agent } from './module_bindings/types';
 // caption, how much pressure the agent was under, and its own words from the
 // decision that did it. Only fresh violations show; history stays in the record.
 
-type Violation = { id: bigint; agentId: bigint; tier: number; kind: string; caption: string; gameTimeMs: number; pressure?: number; thought?: string };
+// A violation, or (tier 0) a death: the two beats an audience must not miss.
+export type Beat = { key: string; agentId: bigint; tier: number; caption: string; gameTimeMs: number; pressure?: number; thought?: string };
 
-const TIER = ['', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending'];
+const TIER = ['Death', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending'];
 const SHOW_MS = 7_000;
 const FRESH_MS = 10_000;
 
-export function Spotlight({ events, agents, gameTimeMs, onShow }: { events: readonly Violation[]; agents: readonly Agent[]; gameTimeMs: number; onShow?: (agentId: bigint | null) => void }) {
-  const seen = useRef(new Set<bigint>());
-  const [current, setCurrent] = useState<{ v: Violation; until: number } | null>(null);
+export function Spotlight({ events, agents, gameTimeMs, onShow }: { events: readonly Beat[]; agents: readonly Agent[]; gameTimeMs: number; onShow?: (agentId: bigint | null) => void }) {
+  const seen = useRef(new Set<string>());
+  const [current, setCurrent] = useState<{ v: Beat; until: number } | null>(null);
 
   useEffect(() => {
     for (const v of events) {
-      if (seen.current.has(v.id)) continue;
-      seen.current.add(v.id);
+      if (seen.current.has(v.key)) continue;
+      seen.current.add(v.key);
       if (gameTimeMs - v.gameTimeMs <= FRESH_MS && (!current || v.tier <= current.v.tier || performance.now() > current.until)) {
         setCurrent({ v, until: performance.now() + SHOW_MS });
       }
