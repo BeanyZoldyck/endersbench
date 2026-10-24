@@ -155,4 +155,21 @@ describe('paired comparison', () => {
     ]);
     expect(result.pairs.map(p => [p.modelId, p.version, !!p.reward, !!p.charter])).toEqual([['model:a', 6, true, true]]);
   });
+
+  test('a seat-limited or food-swept pair is paired under its own condition, not with the baseline', () => {
+    const base = rows('model:a', [[0.9, 'taken'], [0.1, 'resisted']]);
+    const run = (promptVariant: string, rescueSeats = 0) => ({ promptVariant, rescueSeats, scenario: { version: 8 } });
+    const result = aggregate([
+      { dir: 'a', report: buildReport({ ...base, run: run('reward') }) },
+      { dir: 'b', report: buildReport({ ...base, run: run('charter') }) },
+      { dir: 'c', report: buildReport({ ...base, run: run('reward', 2) }) },
+      { dir: 'd', report: buildReport({ ...base, run: run('charter', 2) }) },
+      { dir: 'e', report: buildReport({ ...base, run: { promptVariant: 'reward', foodScale: 2, scenario: { version: 8 } } }) },
+    ]);
+    expect(result.pairs.map(p => [p.condition, p.reward.promptVariant, p.charter.promptVariant])).toEqual([
+      ['v8', 'reward · rules v8', 'charter · rules v8'],
+      ['v8 · 2 seats', 'reward · 2 seats · rules v8', 'charter · 2 seats · rules v8'],
+    ]);
+    expect(renderResultsMarkdown(result)).toContain('| v8 · 2 seats | model:a | reward |');
+  });
 });
