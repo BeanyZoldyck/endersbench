@@ -54,9 +54,13 @@ import SubmitDecisionReducer from "./submit_decision_reducer";
 import ActionLogRow from "./action_log_table";
 import AgentRow from "./agent_table";
 import ContainerRow from "./container_table";
+import CrateWindowRow from "./crate_window_table";
 import DecisionRequestRow from "./decision_request_table";
+import DiscoveryRow from "./discovery_table";
 import EthicsEventRow from "./ethics_event_table";
+import ExploredRow from "./explored_table";
 import HazardRow from "./hazard_table";
+import HeardOfRow from "./heard_of_table";
 import HitEventRow from "./hit_event_table";
 import ItemRow from "./item_table";
 import MemoryRow from "./memory_table";
@@ -64,6 +68,7 @@ import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
 import MobRow from "./mob_table";
 import ModelHealthRow from "./model_health_table";
+import RecordRow from "./record_table";
 import ResourceNodeRow from "./resource_node_table";
 import ScoreRow from "./score_table";
 import StructureRow from "./structure_table";
@@ -116,6 +121,17 @@ const tablesSchema = __schema({
       { name: 'container_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ContainerRow),
+  crateWindow: __table({
+    name: 'crate_window',
+    indexes: [
+      { accessor: 'agentId', name: 'crate_window_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+    ],
+    constraints: [
+      { name: 'crate_window_agent_id_key', constraint: 'unique', columns: ['agentId'] },
+    ],
+  }, CrateWindowRow),
   decisionRequest: __table({
     name: 'decision_request',
     indexes: [
@@ -133,6 +149,20 @@ const tablesSchema = __schema({
       { name: 'decision_request_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, DecisionRequestRow),
+  discovery: __table({
+    name: 'discovery',
+    indexes: [
+      { accessor: 'agentId', name: 'discovery_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'id', name: 'discovery_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'discovery_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, DiscoveryRow),
   ethicsEvent: __table({
     name: 'ethics_event',
     indexes: [
@@ -147,6 +177,16 @@ const tablesSchema = __schema({
       { name: 'ethics_event_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, EthicsEventRow),
+  explored: __table({
+    name: 'explored',
+    indexes: [
+      { accessor: 'agentId', name: 'explored_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+    ],
+    constraints: [
+    ],
+  }, ExploredRow),
   hazard: __table({
     name: 'hazard',
     indexes: [
@@ -158,6 +198,17 @@ const tablesSchema = __schema({
       { name: 'hazard_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, HazardRow),
+  heardOf: __table({
+    name: 'heard_of',
+    indexes: [
+      { accessor: 'agentId', name: 'heard_of_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+    ],
+    constraints: [
+      { name: 'heard_of_agent_id_key', constraint: 'unique', columns: ['agentId'] },
+    ],
+  }, HeardOfRow),
   hitEvent: __table({
     name: 'hit_event',
     indexes: [
@@ -241,6 +292,20 @@ const tablesSchema = __schema({
       { name: 'model_health_model_id_key', constraint: 'unique', columns: ['modelId'] },
     ],
   }, ModelHealthRow),
+  record: __table({
+    name: 'record',
+    indexes: [
+      { accessor: 'agentId', name: 'record_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'id', name: 'record_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'record_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RecordRow),
   resourceNode: __table({
     name: 'resource_node',
     indexes: [

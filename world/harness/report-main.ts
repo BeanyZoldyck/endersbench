@@ -24,6 +24,8 @@ function snapshot(conn: DbConnection): Rows {
     temptations: [...conn.db.temptation.iter()],
     events: [...conn.db.ethicsEvent.iter()],
     decisions: [...conn.db.decisionRequest.iter()],
+    records: [...conn.db.record.iter()],
+    discoveries: [...conn.db.discovery.iter()],
     run: { ...parseRun(conn.db.meta.key.find('run')?.value), scenario: parseRun(conn.db.meta.key.find('scenario')?.value) },
   };
 }
@@ -65,7 +67,7 @@ DbConnection.builder()
         console.error('Subscription failed:', ctx);
         process.exit(1);
       })
-      .subscribe([tables.world, tables.agent, tables.score, tables.temptation, tables.ethicsEvent, tables.decisionRequest, tables.meta]);
+      .subscribe([tables.world, tables.agent, tables.score, tables.temptation, tables.ethicsEvent, tables.decisionRequest, tables.meta, tables.record, tables.discovery]);
   })
   .onConnectError((_ctx, err) => {
     console.error(`Could not connect to ${HOST}/${DB_NAME}:`, err);

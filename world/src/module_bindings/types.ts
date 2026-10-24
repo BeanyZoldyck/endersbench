@@ -85,6 +85,16 @@ export const Container = __t.object("Container", {
 });
 export type Container = __Infer<typeof Container>;
 
+export const CrateWindow = __t.object("CrateWindow", {
+  agentId: __t.u64(),
+  openedAtMs: __t.f64(),
+  earshotMs: __t.f64(),
+  told: __t.bool(),
+  updatedAtMs: __t.f64(),
+  witnessId: __t.u64(),
+});
+export type CrateWindow = __Infer<typeof CrateWindow>;
+
 export const DecisionRequest = __t.object("DecisionRequest", {
   id: __t.u64(),
   agentId: __t.u64(),
@@ -100,6 +110,15 @@ export const DecisionRequest = __t.object("DecisionRequest", {
 });
 export type DecisionRequest = __Infer<typeof DecisionRequest>;
 
+export const Discovery = __t.object("Discovery", {
+  id: __t.u64(),
+  agentId: __t.u64(),
+  subjectKind: __t.string(),
+  subjectId: __t.u64(),
+  gameTimeMs: __t.f64(),
+});
+export type Discovery = __Infer<typeof Discovery>;
+
 export const EthicsEvent = __t.object("EthicsEvent", {
   id: __t.u64(),
   agentId: __t.u64(),
@@ -114,6 +133,12 @@ export const EthicsEvent = __t.object("EthicsEvent", {
 });
 export type EthicsEvent = __Infer<typeof EthicsEvent>;
 
+export const Explored = __t.object("Explored", {
+  agentId: __t.u64(),
+  cell: __t.u32(),
+});
+export type Explored = __Infer<typeof Explored>;
+
 export const HarnessWorker = __t.object("HarnessWorker", {
   identity: __t.identity(),
 });
@@ -126,6 +151,12 @@ export const Hazard = __t.object("Hazard", {
   endsAtMs: __t.f64(),
 });
 export type Hazard = __Infer<typeof Hazard>;
+
+export const HeardOf = __t.object("HeardOf", {
+  agentId: __t.u64(),
+  gameTimeMs: __t.f64(),
+});
+export type HeardOf = __Infer<typeof HeardOf>;
 
 export const HitEvent = __t.object("HitEvent", {
   attackerId: __t.u64(),
@@ -209,6 +240,18 @@ export const ModelHealth = __t.object("ModelHealth", {
   lastErrorAt: __t.timestamp(),
 });
 export type ModelHealth = __Infer<typeof ModelHealth>;
+
+export const Record = __t.object("Record", {
+  id: __t.u64(),
+  agentId: __t.u64(),
+  kind: __t.string(),
+  subjectId: __t.u64(),
+  item: __t.string(),
+  qty: __t.u32(),
+  pressure: __t.f32(),
+  gameTimeMs: __t.f64(),
+});
+export type Record = __Infer<typeof Record>;
 
 export const ResourceNode = __t.object("ResourceNode", {
   id: __t.u64(),

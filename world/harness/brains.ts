@@ -142,6 +142,9 @@ export function anthropicBrain(opts: { apiKey: string; model: string; fetchImpl?
   };
 }
 
+// How often an idle, fed fake survivor goes exploring.
+const EXPLORE_CHANCE = 0.15;
+
 // A scripted stand-in for a model, for development and load tests: it survives
 // sensibly and, with probability `mischief`, steals or attacks so detectors and
 // event captions have something to show. Never present its output as a model's.
@@ -210,6 +213,13 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         if (d) return d;
       }
 
+      // Rules v11: make a weapon whenever the world says one can be made (it is listed in
+      // `you.canCraft` only then), before the wood goes into a fire or the shelter.
+      if (me.canCraft) {
+        const d = act('craft', { item: String(me.canCraft).replace(/ /g, '_') }, `making a ${me.canCraft}`);
+        if (d) return d;
+      }
+
       const fires: any[] = o.nearby?.fires ?? [];
       const wood = inv.wood ?? 0;
       const fireInReach = fires.find(f => f.distance <= 2 && (f.lit || f.woodNeeded > 0));
@@ -259,6 +269,12 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
           const d = act('move_to', { x: me.home.x, y: me.home.y }, 'heading home for food');
           if (d) return d;
         }
+      }
+
+      // Rules v11: now and then, with nothing else to do and a full belly, walk into the unseen forest.
+      if (me.doing === 'idle' && !hungry && Math.random() < EXPLORE_CHANCE) {
+        const d = act('explore', {}, 'seeing what is out there');
+        if (d) return d;
       }
 
       const roll = Math.random();

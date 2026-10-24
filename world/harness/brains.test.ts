@@ -174,6 +174,65 @@ describe('fake brain survival', () => {
   });
 });
 
+describe('fake brain in rules v11', () => {
+  const v11Tools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'feed_fire', 'explore', 'craft'].map(name => ({
+    name,
+    description: name,
+    parameters: { type: 'object', properties: {} },
+  }));
+  const decide = (brain: ReturnType<typeof fakeBrain>, o: unknown, tools = v11Tools) => brain.decide({ agentName: 'Ada', observation: o, tools, system: '' });
+
+  test('the fake brain explores and crafts sometimes', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+
+    // Crafts whenever the observation says something can be made, and asks for the item the tool names.
+    const spearable = { ...observation, you: { ...observation.you, inventory: { wood: 3 }, canCraft: 'spear' } };
+    const flamable = { ...observation, you: { ...observation.you, inventory: { spear: 1 }, canCraft: 'flaming spear' } };
+    for (let i = 0; i < 40; i++) {
+      expect((await decide(brain, spearable)).action).toEqual({ name: 'craft', args: { item: 'spear' } });
+      expect((await decide(brain, flamable)).action).toEqual({ name: 'craft', args: { item: 'flaming_spear' } });
+    }
+
+    // Explores some of the time, when it is idle and fed, and otherwise does what it did before.
+    const names = new Set<string>();
+    let explored = 0;
+    for (let i = 0; i < 400; i++) {
+      const d = await decide(brain, observation);
+      names.add(d.action.name);
+      if (d.action.name === 'explore') {
+        explored++;
+        expect(d.action.args).toEqual({});
+      }
+    }
+    expect(explored).toBeGreaterThan(10);
+    expect(explored).toBeLessThan(200);
+    expect(names.size).toBeGreaterThan(2);
+  });
+
+  test('it never explores while hungry or busy, and never asks for an action it was not offered', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const hungry = { ...observation, you: { ...observation.you, fullness: 20, inventory: { berries: 1 } } };
+    const busy = { ...observation, you: { ...observation.you, doing: 'walking to (30, 40)' } };
+    const crafty = { ...observation, you: { ...observation.you, canCraft: 'spear' } };
+    for (let i = 0; i < 200; i++) {
+      expect((await decide(brain, hungry)).action.name).not.toBe('explore');
+      expect((await decide(brain, busy)).action.name).not.toBe('explore');
+      expect((await decide(brain, observation, tools)).action.name).not.toBe('explore');
+      expect((await decide(brain, crafty, tools)).action.name).not.toBe('craft');
+    }
+  });
+
+  test('crafting a flaming spear comes before feeding the fire with the wood it needs', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const atFire = {
+      ...observation,
+      you: { ...observation.you, warmth: 80, inventory: { wood: 3, spear: 1 }, canCraft: 'flaming spear' },
+      nearby: { agents: [], containers: [], resources: [], fires: [{ id: 1, kind: 'campfire', lit: true, x: 64, y: 64, distance: 1.6 }] },
+    };
+    expect((await decide(brain, atFire)).action).toEqual({ name: 'craft', args: { item: 'flaming_spear' } });
+  });
+});
+
 describe('openai-compatible brain', () => {
   test('sends the tools as functions and maps the first tool call to an action', async () => {
     const { calls, fetchImpl } = recordingFetch({

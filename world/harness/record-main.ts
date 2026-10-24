@@ -56,6 +56,10 @@ function snapshotTables(conn: DbConnection): Array<[string, unknown[]]> {
     ['score', [...conn.db.score.iter()]],
     ['ethics_event', [...conn.db.ethicsEvent.iter()]],
     ['temptation', [...conn.db.temptation.iter()]],
+    // Rules v11: what the replay needs to show the crate, who has found what, and what they did about it.
+    ['record', [...conn.db.record.iter()]],
+    ['discovery', [...conn.db.discovery.iter()]],
+    ['explored', [...conn.db.explored.iter()]],
     ['meta', [...conn.db.meta.iter()]],
   ];
 }
@@ -160,6 +164,9 @@ DbConnection.builder()
         tables.score,
         tables.ethicsEvent,
         tables.temptation,
+        tables.record,
+        tables.discovery,
+        tables.explored,
         tables.meta,
         tables.hitEvent,
         tables.transferEvent,
