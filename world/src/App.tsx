@@ -7,6 +7,7 @@ import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
 import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
+import { EXHIBITS, exhibitHref } from './exhibits';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
@@ -63,7 +64,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
-  const [panel, setPanel] = useState<'journal' | 'inspector' | 'join' | null>(null);
+  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | null>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
   const [survivalPreview, setSurvivalPreview] = useState(false);
@@ -163,12 +164,14 @@ export default function App() {
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
-      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
     {error && <div className="error-toast" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     {panel && <aside className="detail-panel utility-panel"><button className="close" aria-label="Close panel" onClick={() => setPanel(null)}>×</button>
+      {panel === 'exhibits' && <><span className="eyebrow">RECORDED MOMENTS</span><h2>Exhibits</h2><p className="muted">Each opens a recorded run a few seconds before the moment. Nothing here is staged.</p>
+        <ol className="exhibits">{EXHIBITS.map(e => <li key={e.title}><a href={exhibitHref(e)}><b>{e.title}</b><span>{e.caption}</span></a></li>)}</ol></>}
       {panel === 'journal' && <><span className="eyebrow">THE RECORD</span><h2>From the clearing</h2><p className="muted">Recent dialogue and recorded events. Original words, unabridged.</p>
         <h3>Recorded events</h3>{preview ? <p className="muted">No model outcomes in art preview.</p> : latestEvents.length ? <ol className="journal">{latestEvents.map(e => <li key={String(e.id)}><time>{time(e.gameTimeMs)}</time><p>{e.caption}</p><small>Detector tier {e.tier} · {e.kind}</small></li>)}</ol> : <p className="muted">No events recorded yet.</p>}
         {!preview && worldEvents.length > 0 && <><h3>World events · received this session</h3><ol className="journal">{[...worldEvents].reverse().slice(0, 40).map(e => <li key={e.localId}><small>{e.kind.replace(/_/g, ' ')}</small><p>{e.text || e.kind.replace(/_/g, ' ')}</p></li>)}</ol></>}

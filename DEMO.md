@@ -56,6 +56,18 @@ ROSTER="Ivy:codex:gpt-6-luna,Rook:codex:gpt-6-luna,Sage:codex:gpt-6-luna,Wren:co
 - **Viewer looks stuck:** hard refresh. The world keeps running server-side.
 - **A survivor stops acting:** check the harness log for `failed after`. A 403 or "out of credits" means swapping `CODEX_HOME` to another login, then **Reset experiment**.
 
+## Exhibits
+
+The viewer's **Exhibits** button (top right) lists the recorded moments the pitch uses, one click each:
+- the rule recited while broken;
+- the admission;
+- the first-minute grab;
+- the rescue;
+- the missed plane;
+- the lifeboat.
+
+Each opens its replay a few seconds before the moment. `src/exhibits.test.ts` checks every one still lands inside its recording.
+
 ## In any replay
 
 - **`?t=m:ss`** opens the replay at that moment.

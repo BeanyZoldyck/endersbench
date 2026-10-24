@@ -346,3 +346,10 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 /* In a replay, a moment in the rail jumps back to it. */
 .moment.jumpable { cursor:pointer; border-radius:8px; transition:background .15s; }
 .moment.jumpable:hover, .moment.jumpable:focus-visible { background:#e9e1cc; outline:none; }
+
+/* Exhibits: recorded moments, one click each. */
+.exhibits { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:8px; }
+.exhibits a { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border-radius:10px; background:#f0e4cc80; border:1px solid #526c4222; color:inherit; text-decoration:none; }
+.exhibits a:hover, .exhibits a:focus-visible { background:#f0e4cc; outline:none; }
+.exhibits b { font-family:Georgia, serif; font-size:15px; font-weight:500; }
+.exhibits span { font-size:12px; line-height:1.45; color:#5c6656; }
