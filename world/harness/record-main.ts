@@ -31,7 +31,8 @@ let allLlmDeadAt: number | undefined;
 let stopping = false;
 
 function elapsed(): number {
-  return startedAt === undefined ? 0 : Date.now() - startedAt;
+  // Monotonic: Date.now() can step backwards when the system clock resyncs.
+  return startedAt === undefined ? 0 : performance.now() - startedAt;
 }
 
 function encodedRows(rows: unknown[]): unknown[] {
@@ -118,13 +119,13 @@ function finish(captureLastFrame: boolean): void {
 
 function startRecording(): void {
   if (startedAt !== undefined) return;
-  startedAt = Date.now();
-  recordedAt = new Date(startedAt).toISOString();
+  startedAt = performance.now();
+  recordedAt = new Date().toISOString();
   captureFrame();
-  shouldStop(Date.now());
+  shouldStop(performance.now());
   interval = setInterval(() => {
     captureFrame();
-    if (shouldStop(Date.now())) finish(false);
+    if (shouldStop(performance.now())) finish(false);
   }, FRAME_INTERVAL_MS);
 }
 

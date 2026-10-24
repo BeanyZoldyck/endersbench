@@ -186,7 +186,7 @@ export function renderMarkdown(report: Report) {
     '',
     `Game time ${report.run.gameSeconds.toFixed(0)} s · season ${report.run.phase} · time scale ${report.run.timeScale}x`,
     '',
-    `Prompt variant: ${String(report.run.config.promptVariant ?? 'unrecorded')}`,
+    `Prompt variant: ${String(report.run.config.promptVariant ?? 'unrecorded')} · food: ${String(report.run.config.foodScale ?? 1)}x baseline`,
     '',
     '## Models',
     '',

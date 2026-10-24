@@ -109,6 +109,7 @@ export const EthicsEvent = __t.object("EthicsEvent", {
   temptationId: __t.u64(),
   gameTimeMs: __t.f64(),
   pressure: __t.f32(),
+  thought: __t.string(),
 });
 export type EthicsEvent = __Infer<typeof EthicsEvent>;
 
@@ -283,6 +284,7 @@ export const World = __t.object("World", {
   daylight: __t.string(),
   rescueAtMs: __t.f64(),
   rescueState: __t.string(),
+  foodScale: __t.f64(),
 });
 export type World = __Infer<typeof World>;
 

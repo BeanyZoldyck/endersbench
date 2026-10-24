@@ -117,7 +117,7 @@ export default function App() {
       <p>{agents.length ? `${agents.length} survivors. ${isWinter ? 'Winter is here.' : 'Winter is coming.'} Who will share?` : 'A small world. A question of survival.'}</p>
     </header>
     <div className="world-status">
-      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
+      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded run · replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}

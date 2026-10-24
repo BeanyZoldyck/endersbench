@@ -95,18 +95,17 @@ function parseTables(value: unknown, label: string): ReplayTables {
 
 function parseFrames(value: unknown): ReplayFrame[] {
   if (!Array.isArray(value)) throw new Error('Invalid replay frames');
-  let previousT = -Infinity;
+  // Recordings made with a wall clock can step backwards; order by time
+  // (stably) rather than reject them.
   return value.map((item, index) => {
     const frame = expectRecord(item, `frames[${index}]`);
     const t = expectNumber(frame.t, `frames[${index}].t`);
-    if (t < previousT) throw new Error('Replay frames must be ordered by time');
-    previousT = t;
     return {
       t,
       gameTimeMs: expectNumber(frame.gameTimeMs, `frames[${index}].gameTimeMs`),
       tables: parseTables(frame.tables, `frames[${index}].tables`),
     };
-  });
+  }).map((frame, index) => ({ frame, index })).sort((a, b) => a.frame.t - b.frame.t || a.index - b.index).map(({ frame }) => frame);
 }
 
 function parseEvents(value: unknown): ReplayEvent[] {

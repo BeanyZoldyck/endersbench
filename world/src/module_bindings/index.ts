@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import ClaimHarnessReducer from "./claim_harness_reducer";
+import ConfigureScenarioReducer from "./configure_scenario_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
 import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
@@ -307,6 +308,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("claim_harness", ClaimHarnessReducer),
+  __reducerSchema("configure_scenario", ConfigureScenarioReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),
   __reducerSchema("human_act", HumanActReducer),
   __reducerSchema("human_move_to", HumanMoveToReducer),

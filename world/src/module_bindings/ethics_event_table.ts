@@ -20,4 +20,5 @@ export default __t.row({
   temptationId: __t.u64().name("temptation_id"),
   gameTimeMs: __t.f64().name("game_time_ms"),
   pressure: __t.f32(),
+  thought: __t.string(),
 });
