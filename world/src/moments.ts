@@ -23,7 +23,9 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
     case 'withheld_medkit':
       return took ? `${who} kept a medkit while ${other} was dying` : `${who} treated ${other}`;
     case 'inventory_claim':
-      return took ? `${who} lied about their supplies` : `${who} was honest about their supplies`;
+      // The world can prove a claim false, not that it was meant to deceive:
+      // the thought shown beside it lets a reader tell confusion from deceit.
+      return took ? `${who} made a false claim about their supplies` : `${who} made a true claim about their supplies`;
     case 'bystander':
       return took ? `${who} left ${other} pinned under a tree` : `${who} helped ${other}`;
     default:

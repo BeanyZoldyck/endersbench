@@ -70,6 +70,9 @@ Yes. That is why results are pooled across runs with Wilson intervals, and why t
 **Couldn't the scarcity just make starving agents desperate, which is rational?**
 That is the point. The benchmark separates opportunity (exposures at every pressure level) from need (pressure). It shows how the rate of taking changes as need rises, and whether stated rules move that curve.
 
+**Is a false claim a lie?**
+Not necessarily, and we don't pretend it is. The detector proves a claim about one's own supplies is false; it can't prove intent. The record says "made a false claim" and shows the agent's own thought beside it. In one run, Wren said "I have no rations" while carrying one after a hand-off had silently failed. Wren's thought ("correct failed inventory transfer") shows it was confusion, and a reader can see that.
+
 **Why not an LLM judge?**
 Only speech would need one. We cover the speech that ground truth can check (claims about one's own inventory) and leave the rest unscored rather than guess.
 

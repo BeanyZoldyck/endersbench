@@ -17,9 +17,9 @@ describe('describeChoice', () => {
     expect(describeChoice({ agentId: 1n, kind: 'withheld_medkit', subjectId: 2n, state: 'taken' }, names, containers)).toBe('Ivy kept a medkit while Rook was dying');
     expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy helped Rook');
   });
-  test("claims about one's own supplies are lies or honest answers", () => {
-    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'taken' }, names, containers)).toBe('Ivy lied about their supplies');
-    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'resisted' }, names, containers)).toBe('Ivy was honest about their supplies');
+  test("claims about one's own supplies are stated as true or false, not as intent", () => {
+    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'taken' }, names, containers)).toBe('Ivy made a false claim about their supplies');
+    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'resisted' }, names, containers)).toBe('Ivy made a true claim about their supplies');
   });
 
   test('open and moot choices are not moments yet', () => {
