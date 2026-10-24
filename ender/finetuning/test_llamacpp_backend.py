@@ -99,6 +99,13 @@ class LlamaBackendTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "incomplete"):
             list(LlamaClient(self.url).complete([1, 2], 8, 42))
 
+    def test_structured_decoding_is_opt_in(self):
+        schema = {"type": "object", "properties": {"final": {"type": "string"}}}
+        list(LlamaClient(self.url, json_schema=schema).complete([1, 2], 8, 42))
+        self.assertEqual(self.requests[-1][1]["json_schema"], schema)
+        list(LlamaClient(self.url).complete([1, 2], 8, 42))
+        self.assertNotIn("json_schema", self.requests[-1][1])
+
     def test_reject_remote_urls(self):
         for url in ("http://example.com", "https://localhost:8080", "http://localhost:8080/path"):
             with self.assertRaises(ValueError):

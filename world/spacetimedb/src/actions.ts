@@ -13,6 +13,7 @@ import { makeSight } from './sight';
 import {
   ATTACK_COOLDOWN_MS,
   CARRY_CAP,
+  SHELTER_RADIUS,
   FOOD_VALUE,
   FUEL_PER_WOOD,
   HEAL_HP,
@@ -152,6 +153,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (remove(ctx, { agentId: me.id }, item, 1) === 0) return fail(`you are not carrying any ${noun(item, 2)}`);
       const fresh = ctx.db.agent.id.find(me.id)!;
       ctx.db.agent.id.update({ ...fresh, hunger: Math.min(100, fresh.hunger + FOOD_VALUE[item] * skills(me.role).food) });
+      ctx.db.worldEvent.insert({ kind: 'ate', x: me.x, y: me.y, agentId: me.id, otherId: 0n, text: item });
       return ok;
     }
 
@@ -196,6 +198,9 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
 
     case 'feed_fire':
       return feedFire(ctx, me, args);
+
+    case 'build':
+      return build(ctx, me, args);
 
     case 'heal':
       return heal(ctx, me, args);
@@ -248,7 +253,7 @@ function heal(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
 // it needs before it can be lit, then fuel.
 function feedFire(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   const f = id(args.structure_id) == null ? null : ctx.db.structure.id.find(id(args.structure_id)!);
-  if (!f) return fail('feed_fire needs the id of a fire');
+  if (!f || f.kind === 'shelter') return fail('feed_fire needs the id of a fire');
   if (distance(me.x, me.y, f.x, f.y) > REACH) return fail('you are too far from that fire');
   const qty = qtyArg(args.qty);
   if (countOf(ctx, { agentId: me.id }, 'wood') < qty) return fail(`you are not carrying ${qty} wood`);
@@ -276,6 +281,31 @@ function feedFire(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   });
   const s = ensureScore(ctx, me.id);
   ctx.db.score.agentId.update({ ...s, fuelGiven: s.fuelGiven + qty });
+  return ok;
+}
+
+// Wood on the shelter around the hearth; finished, it keeps everyone inside warm and safe from wolves.
+function build(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
+  const s = id(args.structure_id) == null ? null : ctx.db.structure.id.find(id(args.structure_id)!);
+  if (!s || s.kind !== 'shelter') return fail('build needs the id of the shelter');
+  if (s.woodNeeded === 0) return fail('the shelter is already finished');
+  if (distance(me.x, me.y, s.x, s.y) > SHELTER_RADIUS + REACH) return fail('you are too far from the shelter; stand inside or beside its ring');
+  const qty = Math.min(qtyArg(args.qty), s.woodNeeded);
+  if (countOf(ctx, { agentId: me.id }, 'wood') < qty) return fail(`you are not carrying ${qty} wood`);
+  remove(ctx, { agentId: me.id }, 'wood', qty);
+  const woodNeeded = s.woodNeeded - qty;
+  ctx.db.structure.id.update({ ...s, woodNeeded });
+  ctx.db.worldEvent.insert({ kind: woodNeeded === 0 ? 'shelter_done' : 'built', x: s.x, y: s.y, agentId: me.id, otherId: s.id, text: String(qty) });
+  witness(ctx, {
+    x: s.x,
+    y: s.y,
+    exclude: [me.id],
+    text: () => (woodNeeded === 0 ? `You saw ${me.name} finish the shelter.` : `You saw ${me.name} add ${qty} wood to the shelter.`),
+    aboutAgentId: me.id,
+    valence: 1,
+  });
+  const score = ensureScore(ctx, me.id);
+  ctx.db.score.agentId.update({ ...score, fuelGiven: score.fuelGiven + qty });
   return ok;
 }
 

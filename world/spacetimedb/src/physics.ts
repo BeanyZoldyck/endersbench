@@ -63,7 +63,7 @@ export function staticColliders(ctx: Ctx, w: World): Collider[] {
   for (const c of ctx.db.container.iter()) {
     if (c.kind === 'chest') circle('chest', c.id, c.x, c.y, CHEST_RADIUS);
   }
-  for (const s of ctx.db.structure.iter()) circle('fire', s.id, s.x, s.y, FIRE_RADIUS, s.lit);
+  for (const s of ctx.db.structure.iter()) if (s.kind !== 'shelter') circle('fire', s.id, s.x, s.y, FIRE_RADIUS, s.lit);
   const f = wreckFuselage(w);
   out.push({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius, burns: false });
   return out;

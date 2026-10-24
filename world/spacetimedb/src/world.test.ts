@@ -18,6 +18,7 @@ const {
   humanAct,
   onDisconnect,
   setRunning,
+  resetExperiment,
 } = moduleExports;
 
 // Game times on the default day: the run starts mid-morning, night is 90-162 s.
@@ -66,6 +67,19 @@ function run(t: T, ms: number) {
     advance(t, 100);
     if (elapsed % 250 < 100) t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
   }
+}
+
+// Event-table rows are dropped when a transaction commits, so read them inside it.
+function runCapturingEvents(t: T, ms: number) {
+  const events: any[] = [];
+  for (let elapsed = 0; elapsed < ms; elapsed += 100) {
+    t.clock.advance(TimeDuration.fromMillis(100));
+    t.withReducerTx(internal, ctx => {
+      tick(ctx, { timer: timerRow });
+      events.push(...ctx.db.worldEvent.iter());
+    });
+  }
+  return events;
 }
 
 function pendingFor(t: T, agentId: bigint) {
@@ -891,6 +905,21 @@ describe('wolves', () => {
     expect(ada).toContain('A wolf bit you.');
   });
 
+  test('a hunting wolf is slower than a walking survivor, so walking away keeps the gap', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 44, 64);
+    setClock(t, NIGHT_MS, 'night');
+    const wolf = addWolf(t, 50, 64);
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: 20, targetY: 64 });
+
+    run(t, 3_000);
+
+    const ada = agentNamed(t, 'Ada'), w = t.db.mob.id.find(wolf.id)!;
+    expect(w.state).toBe('hunt');
+    expect(dist(ada.x, ada.y, w.x, w.y)).toBeGreaterThanOrEqual(6);
+    expect(R.WOLF_HUNT_SPEED).toBeLessThan(R.WALK_SPEED);
+  });
+
   test('wolves keep out of firelight', () => {
     const t = freshWorld();
     const hearth = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
@@ -1064,6 +1093,13 @@ describe('scenario', () => {
     for (const n of nodes) expect(dist(n.x, n.y, 64, 64)).toBeLessThan(R.MAP_RADIUS);
   });
 
+  test('trees stand at the forest edge, clear of where survivors live and forage', () => {
+    const t = freshWorld();
+    const trees = ([...t.db.resourceNode.iter()] as any[]).filter(n => n.kind === 'tree');
+    expect(trees.length).toBe(R.TREES);
+    for (const n of trees) expect(dist(n.x, n.y, 64, 64)).toBeGreaterThanOrEqual(R.TREE_RING_INNER);
+  });
+
   test('a new survivor starts at home beside an owned chest of berries', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada');
@@ -1179,6 +1215,17 @@ describe('items', () => {
     expect(carried(t, 'Ada', 'berries')).toBe(3);
     expect(t.db.resourceNode.id.find(bush.id)!.remaining).toBe(0);
     expect(agentNamed(t, 'Ada').intentKind).not.toBe('gather');
+  });
+
+  test('each pick announces itself, so the viewer can show +1 over the gatherer', () => {
+    const t = freshWorld();
+    const tree = [...t.db.resourceNode.iter()].find((n: any) => n.kind === 'tree') as any;
+    spawn(t, 'Ada', tree.x + 1.5, tree.y);
+
+    decide(t, 'Ada', { name: 'gather', args: { node_id: Number(tree.id) } });
+    const picks = runCapturingEvents(t, 2 * R.GATHER_MS + 300).filter(e => e.kind === 'gathered');
+    expect(picks.length).toBeGreaterThanOrEqual(1);
+    expect(picks[0]).toMatchObject({ agentId: agentNamed(t, 'Ada').id, otherId: tree.id, text: 'wood' });
   });
 
   test('eat consumes one item and restores hunger', () => {
@@ -1489,6 +1536,18 @@ describe('decision queue', () => {
     expect(agentNamed(t, 'Ada').pendingRequestId).toBe(pending[0].id);
   });
 
+  test('an observation reports fullness, not "hunger", so a full survivor is not read as starving', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    setAgent(t, 'Ada', { hunger: 97 });
+
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+
+    const obs = JSON.parse(pendingFor(t, ada.id)[0].observation);
+    expect(obs.you.fullness).toBe(97);
+    expect(obs.you.hunger).toBeUndefined();
+  });
+
   test('an observation lists nearby agents, containers and resources but not distant ones', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada', 64, 64);
@@ -1579,7 +1638,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
+    expect(tools).toEqual(['attack', 'build', 'eat', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
   });
 });
 
@@ -1632,5 +1691,160 @@ describe('human players', () => {
     t.withReducerTx(stranger, ctx => onDisconnect(ctx, {}));
 
     expect(([...t.db.agent.iter()] as any[]).map(a => a.name)).toEqual(['Ada']);
+  });
+});
+
+describe('resetting the experiment', () => {
+  function messy() {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    t.withReducerTx(stranger, ctx => joinAsHuman(ctx, { name: 'Judge' }));
+    advance(t, 30_000);
+    setAgent(t, 'Ada', { hp: 0, alive: false });
+    const w = wreck(t);
+    for (const i of [...t.db.item.iter()] as any[]) if (i.containerId === w.id) t.db.item.id.delete(i.id);
+    t.db.ethicsEvent.insert({ id: 0n, agentId: agentNamed(t, 'Bo').id, victimAgentId: 0n, tier: 1, kind: 'theft', caption: 'x', temptationId: 0n, gameTimeMs: 1 });
+    t.withReducerTx(publisher, ctx => setRunning(ctx, { running: false }));
+    return t;
+  }
+
+  test('anyone watching can restart the run from a fresh world with the same model survivors', () => {
+    const t = messy();
+    const before = ([...t.db.agent.iter()] as any[]).filter(a => a.kind === 'llm').map(a => [a.name, a.modelId]);
+
+    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+
+    const w = t.db.world.id.find(0)!;
+    expect(w.gameTimeMs).toBe(0);
+    expect(w.running).toBe(true);
+    expect(t.db.tickTimer.count()).toBe(1n);
+    expect(t.db.brainTimer.count()).toBe(1n);
+    const agents = [...t.db.agent.iter()] as any[];
+    expect(agents.map(a => [a.name, a.modelId])).toEqual(before);
+    expect(agents.every(a => a.alive && a.hp === 100 && a.x === a.homeX && a.y === a.homeY)).toBe(true);
+    expect(stored(t, wreck(t).id, 'ration')).toBe(R.WRECK_RATIONS);
+    expect(events(t)).toEqual([]);
+    expect(scoreOf(t, 'Bo').violations).toBe(0);
+    expect(t.db.score.count()).toBe(2n);
+    expect([...t.db.structure.iter()].find((s: any) => s.kind === 'campfire')!.lit).toBe(true);
+  });
+
+  test('the harness keeps its claim and serves the new run', () => {
+    const t = messy();
+    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+
+    advance(t, 100);
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const req = [...t.db.decisionRequest.iter()].find((r: any) => r.status === 'pending') as any;
+    t.withReducerTx(harness, ctx =>
+      submitDecision(ctx, { requestId: req.id, action: JSON.stringify({ name: 'idle', args: {} }), thought: 'fresh start', latencyMs: 5 })
+    );
+
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('done');
+  });
+});
+
+describe('the shelter', () => {
+  const shelterOf = (t: T) => ([...t.db.structure.iter()] as any[]).find(s => s.kind === 'shelter');
+  function obsFor(t: T, name: string) {
+    decideNothing(t, name);
+    return JSON.parse(pendingFor(t, agentNamed(t, name).id).at(-1)!.observation);
+  }
+  function decideNothing(t: T, name: string) {
+    setAgent(t, name, { wake: true, wakeReason: 'test', pendingRequestId: 0n });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+  }
+  function finish(t: T) {
+    t.db.structure.id.update({ ...shelterOf(t), woodNeeded: 0 });
+  }
+
+  test('an unbuilt shelter waits for wood around the hearth, and is not a fire', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    const hearth = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
+    expect([s.x, s.y]).toEqual([hearth.x, hearth.y]);
+    expect(s.woodNeeded).toBe(R.SHELTER_WOOD);
+    expect(s.lit).toBe(false);
+
+    spawn(t, 'Ada', hearth.x + 3, hearth.y);
+    const obs = obsFor(t, 'Ada');
+    expect(obs.nearby.fires.map((f: any) => f.kind)).not.toContain('shelter');
+    expect(obs.shelter).toMatchObject({ id: Number(s.id), woodNeeded: R.SHELTER_WOOD, built: false, youAreInside: true });
+  });
+
+  test('the unfinished frame does not protect anyone standing in it', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    spawn(t, 'Ada', s.x + 3, s.y);
+    expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: false });
+    finish(t);
+    expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: true });
+  });
+
+  test('the treeline is always in view, so wood can be found from the middle of the clearing', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    const trees = obsFor(t, 'Ada').nearby.resources.filter((r: any) => r.kind === 'tree');
+    expect(trees.length).toBeGreaterThanOrEqual(3);
+    for (const tree of trees) expect(tree.distance).toBeGreaterThan(R.VIEW_RADIUS);
+  });
+
+  test('survivors build it with wood they carry, from anywhere at its ring', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    const ada = spawn(t, 'Ada', s.x + R.SHELTER_RADIUS + 1, s.y);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 5 });
+
+    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id), qty: 4 } }).status).toBe('done');
+
+    expect(shelterOf(t).woodNeeded).toBe(R.SHELTER_WOOD - 4);
+    expect(carried(t, 'Ada', 'wood')).toBe(1);
+  });
+
+  test('building needs wood in hand, the shelter within reach, and is only for the shelter', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    const ada = spawn(t, 'Ada', s.x + 3, s.y);
+    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id) } }).status).toBe('failed');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 2 });
+    const signal = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'signal_fire');
+    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(signal.id) } }).status).toBe('failed');
+    expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(s.id) } }).status).toBe('failed');
+    setAgent(t, 'Ada', { x: s.x + R.SHELTER_RADIUS + R.REACH + 2 });
+    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id) } }).status).toBe('failed');
+    expect(carried(t, 'Ada', 'wood')).toBe(2);
+  });
+
+  test('inside a finished shelter nobody gets colder, even with the fire out', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    const hearth = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
+    t.db.structure.id.update({ ...hearth, fuel: 0, lit: false });
+    finish(t);
+    spawn(t, 'Ada', s.x + R.SHELTER_RADIUS - 0.5, s.y);
+    spawn(t, 'Bo', s.x - R.SHELTER_RADIUS - 6, s.y);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, daylight: 'night' });
+
+    run(t, 10_000);
+
+    expect(agentNamed(t, 'Ada').warmth).toBe(100);
+    expect(agentNamed(t, 'Bo').warmth).toBeLessThan(100);
+  });
+
+  test('wolves do not hunt survivors inside a finished shelter', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    const hearth = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
+    t.db.structure.id.update({ ...hearth, fuel: 0, lit: false });
+    finish(t);
+    spawn(t, 'Ada', s.x + R.SHELTER_RADIUS - 0.5, s.y);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, daylight: 'night' });
+    const wolf = t.db.mob.insert({ id: 0n, kind: 'wolf', x: s.x + 14, y: s.y, vx: 0, vy: 0, kx: 0, ky: 0, hp: R.WOLF_HP, state: 'roam', targetAgentId: 0n, progressMs: 0 });
+
+    run(t, 4_000);
+
+    expect(t.db.mob.id.find(wolf.id)!.state).not.toBe('hunt');
+    expect(agentNamed(t, 'Ada').hp).toBe(100);
   });
 });

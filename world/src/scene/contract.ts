@@ -3,7 +3,7 @@ import type { Hazard, World } from '../module_bindings/types';
 export type Physics = {
   agentRadius: number; treeRadius: number; stumpRadius: number; bushRadius: number;
   chestRadius: number; fireRadius: number; wolfRadius: number; fallenTreeLength: number;
-  fireWarmthRadius?: number;
+  fireWarmthRadius?: number; shelterRadius?: number; shelterWood?: number;
   wreck: { x1: number; x2: number; y1: number; y2: number; radius: number };
 };
 const radii = ['agentRadius', 'treeRadius', 'stumpRadius', 'bushRadius', 'chestRadius', 'fireRadius', 'wolfRadius', 'fallenTreeLength'] as const;

@@ -1,11 +1,12 @@
+import { boundaryFog } from './boundaryFog';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import type { OrbitControls } from 'three-stdlib';
 import * as THREE from 'three';
 import type { Hazard, Mob, Structure, World } from '../module_bindings/types';
 import { activeStorm, type Physics } from './contract';
 import { toScene } from './Environment';
+import { shelterPanels } from './SceneEvents';
 import type { ReadGameTime } from './useGameClock';
 
 export function Fires({ structures, world, physics }: { structures: readonly Structure[]; world: World; physics: Physics }) {
@@ -29,7 +30,7 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
       flames.current.scale.set(r * (0.55 + Math.sin(t * 9) * 0.035), height * (1 + Math.sin(t * 7) * 0.06), r * 0.55);
       flames.current.rotation.z = Math.sin(t * 5) * 0.05;
     }
-    if (light.current) light.current.intensity = burning ? (signal ? 60 : 24) * fuel * (1 + Math.sin(t * 7) * 0.04) : 0;
+    if (light.current) light.current.intensity = burning ? (signal ? 220 : 120) * (0.5 + fuel * 0.5) * (1 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.03) : 0;
     if (smoke.current && burning) {
       for (let i = 0; i < 10; i++) {
         const h = ((t * 0.2 + i / 10) % 1);
@@ -41,17 +42,16 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
   });
   const logs = signal ? Math.ceil(built * 9) : Math.ceil(fuel * 6);
   return <group position={[x, 0, z]} name={`structure-${s.id}`}>
-    {Array.from({ length: 8 }, (_, i) => <mesh key={i} position={[Math.cos(i * Math.PI / 4) * r * 0.83, r * 0.14, Math.sin(i * Math.PI / 4) * r * 0.83]} scale={[r * 0.17, r * 0.14, r * 0.17]}><icosahedronGeometry args={[1, 0]} /><meshStandardMaterial color="#8d9180" roughness={1} /></mesh>)}
-    {Array.from({ length: logs }, (_, i) => <mesh key={i} position={[0, r * (0.16 + i * 0.11), 0]} rotation={[Math.PI / 2, 0, i * 2.4]}><cylinderGeometry args={[r * 0.12, r * 0.12, r * 1.4, 7]} /><meshStandardMaterial color={s.fuel === 0 && s.woodNeeded === 0 ? '#535346' : '#7c6248'} roughness={1} /></mesh>)}
+    {Array.from({ length: 8 }, (_, i) => <mesh key={i} position={[Math.cos(i * Math.PI / 4) * r * 0.83, r * 0.14, Math.sin(i * Math.PI / 4) * r * 0.83]} scale={[r * 0.17, r * 0.14, r * 0.17]}><icosahedronGeometry args={[1, 0]} /><meshStandardMaterial {...boundaryFog} color="#8d9180" roughness={1} /></mesh>)}
+    {Array.from({ length: logs }, (_, i) => <mesh key={i} position={[0, r * (0.16 + i * 0.11), 0]} rotation={[Math.PI / 2, 0, i * 2.4]}><cylinderGeometry args={[r * 0.12, r * 0.12, r * 1.4, 7]} /><meshStandardMaterial {...boundaryFog} color={s.fuel === 0 && s.woodNeeded === 0 ? '#535346' : '#7c6248'} roughness={1} /></mesh>)}
     {burning && <>
       <group ref={flames} position={[0, r * 0.25, 0]} name="lit-flames">
-        <mesh position={[0, 0.5, 0]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial color="#edaa61" transparent opacity={0.9} /></mesh>
-        <mesh position={[0, 0.32, 0.1]} scale={[0.55, 0.6, 0.55]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial color="#f4e3ae" /></mesh>
+        <mesh position={[0, 0.5, 0]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#edaa61" transparent opacity={0.9} /></mesh>
+        <mesh position={[0, 0.32, 0.1]} scale={[0.55, 0.6, 0.55]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#f4e3ae" /></mesh>
       </group>
-      <pointLight ref={light} color="#edaa61" position={[0, signal ? 2.5 : 1.2, 0]} distance={signal ? 15 : 9} decay={2} />
-      {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
+      <pointLight ref={light} color="#f0a35a" position={[0, signal ? 2.5 : 1.4, 0]} distance={signal ? 30 : 20} decay={2} castShadow={!signal} shadow-mapSize={[512, 512]} shadow-bias={-0.002} shadow-camera-near={0.5} />
+      {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial {...boundaryFog} color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
     </>}
-    <Html position={[0, burning ? (signal ? 5 : 2.8) : 1.8, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}><div className="place-label"><strong>{signal ? 'SIGNAL FIRE' : 'THE HEARTH'}</strong><span>{burning ? `${Math.ceil(s.fuel)}s fuel` : signal && s.woodNeeded > 0 ? `${s.woodNeeded} wood needed` : 'Unlit'}</span></div></Html>
   </group>;
 }
 
@@ -79,14 +79,13 @@ function Wolf({ mob: m, world, radius: r }: { mob: Mob; world: World; radius: nu
   });
   return <group ref={root} position={initial.current} name={`wolf-${m.id}`}>
     <group ref={body} position={[0, r * 0.55, 0]}>
-      <mesh scale={[r * 0.65, r * 0.55, r * 0.9]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#7c827e" roughness={1} /></mesh>
-      <mesh position={[0, r * 0.25, r * 0.55]} scale={[r * 0.43, r * 0.43, r * 0.45]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#999d8b" roughness={1} /></mesh>
+      <mesh scale={[r * 0.65, r * 0.55, r * 0.9]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial {...boundaryFog} color="#7c827e" roughness={1} /></mesh>
+      <mesh position={[0, r * 0.25, r * 0.55]} scale={[r * 0.43, r * 0.43, r * 0.45]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial {...boundaryFog} color="#999d8b" roughness={1} /></mesh>
       {[-1, 1].map(side => <group key={side}>
-        <mesh position={[side * r * 0.3, r * 0.68, r * 0.48]}><coneGeometry args={[r * 0.2, r * 0.45, 4]} /><meshStandardMaterial color="#717971" roughness={1} /></mesh>
-        <mesh position={[side * r * 0.2, r * 0.35, r * 0.91]}><sphereGeometry args={[r * 0.045, 8, 6]} /><meshBasicMaterial color="#293f39" /></mesh>
+        <mesh position={[side * r * 0.3, r * 0.68, r * 0.48]}><coneGeometry args={[r * 0.2, r * 0.45, 4]} /><meshStandardMaterial {...boundaryFog} color="#717971" roughness={1} /></mesh>
+        <mesh position={[side * r * 0.2, r * 0.35, r * 0.91]}><sphereGeometry args={[r * 0.045, 8, 6]} /><meshBasicMaterial {...boundaryFog} color="#293f39" /></mesh>
       </group>)}
     </group>
-    <Html position={[0, r * 2.1, 0]} center style={{ pointerEvents: 'none' }} zIndexRange={[6, 0]}><span className="mob-label">Wolf · {m.hp <= 0 ? 'down' : m.state}</span></Html>
   </group>;
 }
 
@@ -114,5 +113,48 @@ export function Storm({ hazards, readTime }: { hazards: readonly Hazard[]; readT
     positions.needsUpdate = true;
     if (controls) lines.current.position.set(controls.target.x, 0, controls.target.z);
   });
-  return <lineSegments ref={lines} geometry={geometry} frustumCulled={false} visible={false} name="storm-rain"><lineBasicMaterial color="#b0c3ce" transparent opacity={0.38} depthWrite={false} /></lineSegments>;
+  return <lineSegments ref={lines} geometry={geometry} frustumCulled={false} visible={false} name="storm-rain"><lineBasicMaterial {...boundaryFog} color="#b0c3ce" transparent opacity={0.38} depthWrite={false} /></lineSegments>;
+}
+
+// The shelter around the hearth: a ring of low log walls with two doorways, one
+// facing the default camera so people inside stay visible. Stakes mark the
+// outline; wall panels go up from the back as wood arrives; rafters close it
+// over the fire once finished.
+const SLOTS = 16;
+const CAMERA_ANGLE = Math.atan2(110, 80); // matches the scene camera's view direction
+export function Shelters({ structures, world, physics }: { structures: readonly Structure[]; world: World; physics: Physics }) {
+  return <group>{structures.filter(s => s.kind === 'shelter').map(s => <Shelter key={String(s.id)} structure={s} world={world} radius={physics.shelterRadius ?? 7} total={physics.shelterWood ?? 18} />)}</group>;
+}
+function Shelter({ structure: s, world, radius: R, total }: { structure: Structure; world: World; radius: number; total: number }) {
+  const [x, z] = toScene(world, s.x, s.y);
+  const slots = useMemo(() => {
+    const all = Array.from({ length: SLOTS }, (_, i) => CAMERA_ANGLE + (i / SLOTS) * Math.PI * 2);
+    const door = (a: number) => [0, SLOTS / 2].some(k => Math.abs(Math.atan2(Math.sin(a - all[k]), Math.cos(a - all[k]))) < 0.01);
+    // Build order: the far side first, working round toward the doorways.
+    return all.filter(a => !door(a)).sort((a, b) => Math.cos(a - CAMERA_ANGLE) - Math.cos(b - CAMERA_ANGLE));
+  }, []);
+  const standing = shelterPanels(s.woodNeeded, total, slots.length);
+  const built = s.woodNeeded === 0;
+  const span = 2 * R * Math.sin(Math.PI / SLOTS) * 1.04;
+  return <group position={[x, 0, z]} name="shelter">
+    {slots.map((a, i) => {
+      const px = Math.cos(a) * R, pz = Math.sin(a) * R, yaw = -a + Math.PI / 2;
+      return <group key={i} position={[px, 0, pz]} rotation={[0, yaw, 0]}>
+        {i < standing
+          ? [0.2, 0.55, 0.9].map((y, k) => <mesh key={k} position={[0, y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <cylinderGeometry args={[0.19, 0.19, span, 7]} /><meshStandardMaterial {...boundaryFog} color={['#7a5c40', '#8a6a4c', '#97765a'][(i + k) % 3]} roughness={1} />
+            </mesh>)
+          : <mesh position={[0, 0.3, 0]} castShadow><cylinderGeometry args={[0.07, 0.09, 0.6, 5]} /><meshStandardMaterial {...boundaryFog} color="#6b5846" roughness={1} /></mesh>}
+      </group>;
+    })}
+    {built && Array.from({ length: 8 }, (_, i) => {
+      const a = CAMERA_ANGLE + Math.PI / 8 + (i / 8) * Math.PI * 2;
+      const from = new THREE.Vector3(Math.cos(a) * R, 1.15, Math.sin(a) * R), to = new THREE.Vector3(Math.cos(a) * R * 0.22, 3.6, Math.sin(a) * R * 0.22);
+      const mid = from.clone().add(to).multiplyScalar(0.5), length = from.distanceTo(to);
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+      return <mesh key={i} position={mid} quaternion={q} castShadow><cylinderGeometry args={[0.08, 0.1, length, 5]} /><meshStandardMaterial {...boundaryFog} color="#7a5c40" roughness={1} /></mesh>;
+    })}
+    {built && <mesh position={[0, 3.6, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow><torusGeometry args={[R * 0.22, 0.12, 6, 18]} /><meshStandardMaterial {...boundaryFog} color="#6b5846" roughness={1} /></mesh>}
+    {!built && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[R - 0.08, R + 0.08, 64]} /><meshBasicMaterial {...boundaryFog} color="#8a6a4c" transparent opacity={0.35} depthWrite={false} /></mesh>}
+  </group>;
 }

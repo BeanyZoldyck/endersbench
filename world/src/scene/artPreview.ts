@@ -31,6 +31,7 @@ export function artPreview(source: World, winter: boolean, depleted: boolean, su
   const messages: Message[] = [{ id: 1n, fromAgentId: 1n, toAgentId: survival ? 2n : 0n, channel: survival ? 'whisper' : 'say', text: 'A staged dialogue bubble, for checking readability.', x: 57, y: 70, gameTimeMs: 36000 }];
   const structures: Structure[] = survival ? [
     { id: 1n, kind: 'campfire', x: 64, y: 64, lit: !depleted, fuel: depleted ? 0 : 150, maxFuel: 300, woodNeeded: 0 },
+    { id: 9n, kind: 'shelter', x: 64, y: 64, lit: false, fuel: 0, maxFuel: 0, woodNeeded: depleted ? 9 : 0 },
     { id: 2n, kind: 'signal_fire', x: 38, y: 52, lit: !depleted, fuel: depleted ? 0 : 500, maxFuel: 600, woodNeeded: depleted ? 15 : 0 },
   ] : [];
   const mobs: Mob[] = survival ? [{ id: 1n, kind: 'wolf', x: 80, y: 70, vx: 0, vy: 0, kx: 0, ky: 0, hp: 100, state: 'roam', targetAgentId: 0n, progressMs: 0 }] : [];

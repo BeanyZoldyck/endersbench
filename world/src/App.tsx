@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { DbConnection, tables } from './module_bindings';
 import type { Agent, Item } from './module_bindings/types';
+import { GlowLegend } from './scene/ItemGlow';
 import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
 import { parsePhysics, itemName } from './scene/contract';
@@ -42,6 +43,7 @@ export default function App() {
   const [scores, scoresReady] = useTable(tables.score);
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
+  const explore = useCallback(() => setMode('explore'), []);
   const [panel, setPanel] = useState<'journal' | 'inspector' | 'join' | null>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
@@ -72,14 +74,32 @@ export default function App() {
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const run = (action: Promise<unknown>) => { setError(''); void action.catch(e => setError(e instanceof Error ? e.message : String(e))); };
+  const deselect = () => { setSelectedId(undefined); setMode('audience'); };
+  const resetExperiment = () => {
+    if (!conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
+    deselect();
+    run(conn.reducers.resetExperiment({}));
+  };
+  // Lives beside the survivor in the scene, so it follows them around.
+  const selectedCard = selected && <>
+    <button className="close" aria-label="Close survivor details" onClick={deselect}>×</button>
+    <div className="selected-title"><Portrait agent={selected} /><div><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
+    {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
+    <Needs agent={selected} />
+    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
+    <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
+    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
+    <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
+    <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
+  </>;
 
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={() => setMode('explore')}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
     </div>
-    <div className="atmosphere" />
+    <div className="topbar">
     <header className="masthead">
       <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><span className="edition">FIELD STUDY 01</span></div>
       <h1>The Clearing<span>.</span></h1>
@@ -89,10 +109,11 @@ export default function App() {
       <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
-      <nav className="utility" aria-label="Viewer tools"><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
+      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+    </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
-    {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
     {error && <div className="error-toast" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     {panel && <aside className="detail-panel utility-panel"><button className="close" aria-label="Close panel" onClick={() => setPanel(null)}>×</button>
       {panel === 'journal' && <><span className="eyebrow">THE RECORD</span><h2>From the clearing</h2><p className="muted">Recent dialogue and recorded events. Original words, unabridged.</p>
@@ -102,26 +123,16 @@ export default function App() {
       {panel === 'inspector' && <><span className="eyebrow">UNDER THE CANOPY</span><h2>World inspector</h2>{world && <dl className="facts"><dt>Game clock</dt><dd>{time(world.gameTimeMs)}</dd><dt>Tick</dt><dd>{String(world.tick)}</dd><dt>Time scale</dt><dd>{world.timeScale}×</dd><dt>Map</dt><dd>Circle · radius {world.radius}</dd><dt>Resources / containers</dt><dd>{nodes.length} / {containers.length}</dd><dt>Wreck fair share</dt><dd>{world.fairShare} items / survivor</dd><dt>Data</dt><dd>{ready ? 'Subscriptions ready' : 'Waiting for replay'}</dd><dt>Structures / wolves</dt><dd>{structures.length} / {mobs.length}</dd><dt>Agent radius</dt><dd>{physics?.agentRadius ?? 'Unavailable'}</dd><dt>Rendering</dt><dd>DPR capped at 1.5</dd></dl>}
         {selected && <p className="muted">{selected.name}: ({selected.x.toFixed(1)}, {selected.y.toFixed(1)}) · intent {selected.intentKind}</p>}
         {!preview && <ActionInspector names={names} />}
-        {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [62, 74], kind: 'berries', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
+        {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [45, 81], kind: 'berries', item: 'berries', label: '2 berries', born: performance.now() }, { id: performance.now() + 1, type: 'pop', from: [72, 74], to: [72, 74], kind: 'gathered', item: 'wood', label: '+1 wood', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
-    {selected && !panel && <aside className="detail-panel survivor-panel"><button className="close" aria-label="Close survivor details" onClick={() => { setSelectedId(undefined); setMode('audience'); }}>×</button><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><div className="selected-title"><Portrait agent={selected} /><div><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
-      {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
-      <Needs agent={selected} />
-      <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
-      {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
-      <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
-      {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
-      <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
-    </aside>}
     <footer className="spectator-dock">
-      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span></div>
-      {(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}
+      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Ghost' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span><Needs agent={a} compact /></div>
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Ghost' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div><Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
@@ -133,6 +144,12 @@ function Portrait({ agent }: { agent: Agent }) {
   return <span className={`portrait ${!agent.alive ? 'ghost' : ''}`} style={{ '--agent-color': agent.color } as CSSProperties} aria-hidden="true"><i /><i /><b /></span>;
 }
 function Needs({ agent, compact = false }: { agent: Agent; compact?: boolean }) {
+  const needs: Array<[string, number]> = [['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]];
+  // On the cast cards: three slim vertical bars, labelled by initial.
+  if (compact) return <div className="needs vertical">{needs.map(([name, value]) => <div className="vneed" key={name} title={`${name}: ${Math.round(value)} / 100`}>
+    <div className="vbar" role="meter" aria-label={`${agent.name} ${name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}><i style={{ height: `${percent(value)}%` }} /></div>
+    <span aria-hidden="true">{name[0]}</span>
+  </div>)}</div>;
   return <div className={`needs ${compact ? 'compact' : ''}`}>{[['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]].map(([name, value]) => <div className="need" key={name} title={`${name}: ${Math.round(Number(value))} / 100`}><span>{name}</span><meter min={0} max={100} value={percent(Number(value))} aria-label={`${agent.name} ${name}`} /><small>{Math.round(Number(value))}</small></div>)}</div>;
 }
 function Inventory({ items }: { items: readonly Item[] }) {

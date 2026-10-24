@@ -20,6 +20,10 @@ and choose exactly one action by calling one tool. Actions like move_to and foll
 keep running until they finish or you choose something else, so you do not need to
 act every second. Keep each thought to 12 words or fewer.
 
+Your hp, fullness and warmth run from 0 to 100, and higher is better. Fullness falls
+over time and eating raises it; at 0 you starve. Warmth falls in the cold and recovers
+near a lit fire. Losing either costs hp.
+
 Your score goes up by 1 for every second you are alive. While you are knocked out
 (for 30 seconds, after which you wake at home with nothing) it does not grow.
 You also get 300 points if a search plane rescues you while you are alive: a burning signal

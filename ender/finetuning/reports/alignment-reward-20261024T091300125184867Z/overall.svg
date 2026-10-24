@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 374" role="img" aria-label="Stated choices by catalog">
+<title>Stated choices by catalog</title><rect width="1200" height="374" rx="18" fill="#111b2d"/>
+<g font-family="system-ui,sans-serif">
+<text x="28" y="40" font-size="25" fill="#dbe3f1" >Stated choices by catalog</text>
+<text x="28" y="70" font-size="15" fill="#a9b7cf" >Qwen3.8-27B · BF16 / llama.cpp · stated choices, not executed actions</text>
+<rect x="28" y="94" width="13" height="13" fill="#55d6be"/>
+<text x="51" y="106" font-size="15" fill="#dbe3f1" >Ethical choice</text>
+<rect x="273" y="94" width="13" height="13" fill="#ff8f91"/>
+<text x="296" y="106" font-size="15" fill="#dbe3f1" >Unethical choice</text>
+<rect x="518" y="94" width="13" height="13" fill="#f1c66e"/>
+<text x="541" y="106" font-size="15" fill="#dbe3f1" >Undetermined</text>
+<text x="1000" y="106" font-size="14" fill="#a9b7cf" >E / U / ?</text>
+<text x="28" y="153" font-size="15" fill="#dbe3f1" >Both catalogs (overlap present)</text>
+<text x="345" y="153" font-size="13" fill="#a9b7cf" >n=50</text>
+<rect x="410.00" y="133" width="539.00" height="27" fill="#55d6be"><title>ethical: 49 (98.0%)</title></rect>
+<text x="679.5" y="152" font-size="14" fill="#111b2d" text-anchor="middle">49</text>
+<rect x="949.00" y="133" width="11.00" height="27" fill="#ff8f91"><title>unethical: 1 (2.0%)</title></rect>
+<text x="1000" y="152" font-size="15" fill="#dbe3f1" >49 / 1 / 0</text>
+<text x="28" y="201" font-size="15" fill="#dbe3f1" >alignment</text>
+<text x="345" y="201" font-size="13" fill="#a9b7cf" >n=24</text>
+<rect x="410.00" y="181" width="527.08" height="27" fill="#55d6be"><title>ethical: 23 (95.8%)</title></rect>
+<text x="673.5416666666667" y="200" font-size="14" fill="#111b2d" text-anchor="middle">23</text>
+<rect x="937.08" y="181" width="22.92" height="27" fill="#ff8f91"><title>unethical: 1 (4.2%)</title></rect>
+<text x="1000" y="200" font-size="15" fill="#dbe3f1" >23 / 1 / 0</text>
+<text x="28" y="249" font-size="15" fill="#dbe3f1" >rewardhacking</text>
+<text x="345" y="249" font-size="13" fill="#a9b7cf" >n=26</text>
+<rect x="410.00" y="229" width="550.00" height="27" fill="#55d6be"><title>ethical: 26 (100.0%)</title></rect>
+<text x="685.0" y="248" font-size="14" fill="#111b2d" text-anchor="middle">26</text>
+<text x="1000" y="248" font-size="15" fill="#dbe3f1" >26 / 0 / 0</text>
+<text x="28" y="329" font-size="14" fill="#a9b7cf" >Branch labels come from curated scenarios; no external judge or upstream tool harness was run.</text>
+<text x="28" y="353" font-size="14" fill="#a9b7cf" >Explicit alternatives cue decisions. Related cases overlap. Short explanations may be incomplete.</text>
+</g></svg>

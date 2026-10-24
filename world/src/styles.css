@@ -9,7 +9,6 @@ button { -webkit-tap-highlight-color:transparent; }
 .app { height:100dvh; min-height:430px; overflow:hidden; position:relative; }
 .stage, .world { position:absolute; inset:0; }
 .world { touch-action:none; }
-.atmosphere { pointer-events:none; position:absolute; inset:0; background:linear-gradient(180deg, #eee9d8d9 0%, #eee9d850 18%, transparent 35%, transparent 62%, #e6e3cc85 82%, #ece6d4 100%); }
 .masthead { position:absolute; top:30px; left:38px; pointer-events:none; }
 .brand { display:flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.18em; font-weight:650; }
 .brand svg { width:28px; height:30px; }
@@ -130,7 +129,6 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 @media (max-width:650px) { .masthead { top:22px; left:18px; } .brand { font-size:9px; letter-spacing:.12em; gap:6px; } .brand svg { width:22px; height:22px; } h1 { font-size:36px; } .masthead p { font-size:10px; max-width:210px; line-height:1.6; } .world-status { top:25px; right:18px; gap:14px; max-width:150px; } .connection { font-size:9px; text-align:right; } .season { gap:6px; } .season strong { font-size:11px; } .season span { font-size:8px; } .utility { gap:3px; } .utility button { font-size:9px; padding:5px 6px; } .spectator-dock { left:15px; right:15px; } .cast-card { flex:0 0 190px; } .cast-heading span+span { display:none; } .camera-hint { font-size:8px; } .camera-toggle button { padding:7px 12px; font-size:10px; } .detail-panel { right:15px; width:min(305px, calc(100vw - 30px)); top:155px; max-height:calc(100dvh - 330px); } .bubble { font-size:12px; max-width:190px; } .preview-banner { font-size:8px; } .preview-banner button { margin-left:8px; font-size:8px; } .event-caption { width:100%; max-width:100%; } }
 
 .stage { z-index:0; }
-.atmosphere { z-index:1; }
 .masthead, .world-status, .spectator-dock { z-index:2; }
 .detail-panel { z-index:3; }
 .preview-banner { z-index:4; }
@@ -161,3 +159,82 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .compact .need { flex:1 0 30%; }
 @media (max-width:1000px) { .compact .need { flex-basis:43%; } .compact .need:nth-child(3) { max-width:48%; } }
 @media (max-width:650px) { .rescue-banner { top:170px; font-size:16px; width:90%; } .rescue-countdown { font-size:8px; } .world-status { gap:10px; } }
+
+/* Item glows replace object labels; details appear on hover. */
+.hover-label span { font-size: 10px; }
+.glow-legend { position: absolute; top: 172px; right: 38px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 11px; color: #293f39; }
+.glow-legend button { background: #f0e4ccd9; border: 1px solid #293f3926; border-radius: 999px; padding: 4px 10px; font: inherit; color: inherit; cursor: pointer; }
+.glow-legend ul { list-style: none; margin: 0; padding: 8px 12px; background: #f0e4ccd9; border: 1px solid #293f3926; border-radius: 12px; display: grid; gap: 5px; }
+.glow-legend li { display: flex; align-items: center; gap: 8px; }
+.glow-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+/* The wreck's title stays readable at night. */
+.wreck-label { background: #f0e4ccd9; padding: 4px 10px 5px; border-radius: 10px; box-shadow: 0 1px 6px #293f3926; }
+
+/* ── Layout: the game view, status bar, details and cast are separate regions, not overlays ── */
+.app { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto minmax(0,1fr) auto; grid-template-areas:"top top" "stage side" "dock dock"; gap:10px; padding:10px 16px; box-sizing:border-box; }
+.topbar { grid-area:top; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:36px; z-index:2; }
+.masthead { position:static; display:flex; align-items:center; gap:14px; pointer-events:auto; }
+.masthead h1 { font-size:20px; margin:0; letter-spacing:-.03em; }
+.masthead p { font-size:11px; margin:0; }
+.brand { font-size:9px; gap:6px; } .brand svg { width:18px; height:20px; }
+.edition { font-size:8px; margin-left:6px; padding-left:10px; }
+.world-status { position:static; flex-direction:row; align-items:center; gap:14px; }
+.season { gap:7px; } .season svg { width:18px; height:18px; }
+.season div { flex-direction:row; align-items:baseline; gap:8px; } .season span { font-size:8px; } .season strong { font-size:12px; }
+.utility button { padding:4px 9px; font-size:10px; }
+.rescue-banner { position:static; transform:none; font-size:12px; padding:4px 12px; border-radius:999px; white-space:nowrap; }
+.stage { grid-area:stage; position:relative; inset:auto; min-height:0; border-radius:14px; overflow:hidden; border:1px solid #293f3926; box-shadow:0 4px 20px #293f3914; }
+.stage .world { position:absolute; inset:0; }
+.detail-panel { grid-area:side; position:static; width:300px; max-height:none; overflow:auto; align-self:stretch; box-sizing:border-box; }
+.spectator-dock { grid-area:dock; position:static; pointer-events:auto; }
+.scene-tools { margin-bottom:8px; gap:14px; flex-wrap:wrap; }
+.event-caption { position:static; transform:none; margin:0 0 0 auto; padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:10px; }
+.glow-legend { position:static; flex-direction:row; align-items:center; gap:8px; font-size:10px; }
+.glow-legend ul { display:flex; gap:10px; padding:4px 10px; border-radius:999px; }
+.glow-legend button { padding:3px 9px; }
+.cast-heading { margin-bottom:6px; }
+.cast-card { padding:10px 12px; gap:10px; }
+.colophon { margin-top:2px; }
+/* Health, food and warmth as three vertical bars on each card. */
+.needs.vertical { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:flex-end; gap:6px; margin:0; flex:none; }
+.vneed { display:flex; flex-direction:column; align-items:center; gap:3px; font-size:8px; color:#75816a; }
+.vbar { width:8px; height:44px; border-radius:6px; background:#dadcc9; overflow:hidden; display:flex; align-items:flex-end; }
+.vbar i { display:block; width:100%; border-radius:6px; background:#829573; transition:height .3s ease; }
+.vneed:nth-child(2) .vbar i { background:#b59b67; }
+.vneed:nth-child(3) .vbar i { background:#91a5b2; }
+@media (max-width:850px) {
+  .app { grid-template-columns:minmax(0,1fr); grid-template-areas:"top" "stage" "side" "dock"; }
+  .topbar { flex-wrap:wrap; }
+  .detail-panel { width:auto; max-height:38dvh; }
+  .masthead p { display:none; }
+}
+.detail-panel { position:relative; } /* keeps its close button inside the panel */
+
+/* The selected survivor's status card, anchored beside them in the scene.
+   The frame carries the notch that points at them; the body scrolls. */
+.agent-card { position:relative; width:280px; background:#f4eede; border:1px solid #fdf7e5aa; border-left:3px solid var(--agent-color); border-radius:13px; box-shadow:0 10px 34px #293f3930; color:var(--ink, #293f39); font-size:12px; }
+.agent-card[data-side=left] { border-left-width:1px; border-right:3px solid var(--agent-color); }
+.agent-card-body { position:relative; max-height:min(420px, 62dvh); overflow:auto; scrollbar-width:thin; padding:16px 18px 18px; box-sizing:border-box; border-radius:13px; }
+.agent-card::before { content:""; position:absolute; top:var(--pip, 40px); width:12px; height:12px; background:#f4eede; transform:translateY(-50%) rotate(45deg); }
+.agent-card[data-side=right]::before { left:-9px; border-left:3px solid var(--agent-color); border-bottom:3px solid var(--agent-color); }
+.agent-card[data-side=left]::before { right:-9px; border-right:3px solid var(--agent-color); border-top:3px solid var(--agent-color); }
+.agent-card .selected-title { margin-top:0; gap:12px; }
+.agent-card h2 { font:400 23px Georgia,serif; letter-spacing:-.02em; margin:2px 0; }
+.agent-card h3 { font-size:10px; font-weight:600; letter-spacing:.07em; margin:16px 0 8px; }
+.agent-card .needs { margin:12px 0; }
+.agent-card .thought { margin-top:12px; }
+.agent-card .thought p { font-size:14px; }
+.agent-card .backstory { font-size:12.5px; margin:6px 0; }
+.agent-card .facts { margin:14px 0; }
+.agent-card .close { top:6px; right:8px; z-index:1; }
+.agent-card .primary { width:100%; }
+.utility button.reset { border-color:#a0523e44; color:#8a4634; }
+.utility button.reset:hover:not(:disabled) { background:#f3d8cc; }
+.utility button.reset:disabled { opacity:.45; }
+
+/* Action feedback: labelled chips over the scene. */
+.fx-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 7px; border-radius:999px; background:#fdf8eb; border:1.5px solid var(--fx, #c4d0b1); box-shadow:0 3px 10px #293f392e; font:700 12px/1 system-ui, sans-serif; color:#293f39; white-space:nowrap; }
+.fx-chip i { width:10px; height:10px; border-radius:50%; background:var(--fx, #c4d0b1); box-shadow:0 0 6px var(--fx, #c4d0b1); }
+.fx-pop { animation:fx-rise 1.5s ease-out forwards; }
+@keyframes fx-rise { 0% { opacity:0; transform:translateY(6px) scale(.7); } 14% { opacity:1; transform:translateY(-6px) scale(1.08); } 26% { transform:translateY(-10px) scale(1); } 72% { opacity:1; } 100% { opacity:0; transform:translateY(-52px); } }
+@media (prefers-reduced-motion: reduce) { .fx-pop { animation:fx-fade 1.5s linear forwards; } @keyframes fx-fade { 0%, 70% { opacity:1; } 100% { opacity:0; } } }

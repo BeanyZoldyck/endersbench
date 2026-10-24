@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { anthropicBrain, brainFor, fakeBrain, openAiCompatibleBrain, withThought, type Tool } from './brains';
+import { anthropicBrain, brainFor, codexBrain, fakeBrain, mcpServerNames, openAiCompatibleBrain, withThought, type CodexRun, type Tool } from './brains';
 
 const tools: Tool[] = [
   {
@@ -12,7 +12,7 @@ const tools: Tool[] = [
 ];
 
 const observation = {
-  you: { id: 1, name: 'Ada', x: 10, y: 10, hp: 100, hunger: 100, doing: 'idle' },
+  you: { id: 1, name: 'Ada', x: 10, y: 10, hp: 100, fullness: 100, doing: 'idle' },
   time: { gameSeconds: 3 },
   map: { width: 64, height: 64 },
   wakeReason: 'heartbeat',
@@ -56,7 +56,7 @@ describe('fake brain', () => {
 });
 
 describe('fake brain survival', () => {
-  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store', 'feed_fire', 'heal', 'help'].map(name => ({
+  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store', 'feed_fire', 'heal', 'help', 'build'].map(name => ({
     name,
     description: name,
     parameters: { type: 'object', properties: {} },
@@ -64,9 +64,26 @@ describe('fake brain survival', () => {
 
   test('a hungry fake survivor carrying food eats it', async () => {
     const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
-    const hungry = { ...observation, you: { ...observation.you, hunger: 30, inventory: { berries: 2 } } };
+    const hungry = { ...observation, you: { ...observation.you, fullness: 30, inventory: { berries: 2 } } };
     const d = await brain.decide({ agentName: 'Ada', observation: hungry, tools: survivalTools, system: '' });
     expect(d.action).toEqual({ name: 'eat', args: { item: 'berries' } });
+  });
+
+  const shelter = (over: Record<string, unknown>) => ({ id: 9, x: 64, y: 64, radius: 8, woodNeeded: 10, built: false, youAreInside: false, distance: 20, ...over });
+
+  test('a fake survivor carrying wood takes it to the unfinished shelter, then builds', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const far = { ...observation, you: { ...observation.you, inventory: { wood: 4 } }, shelter: shelter({}) };
+    expect((await brain.decide({ agentName: 'Ada', observation: far, tools: survivalTools, system: '' })).action).toEqual({ name: 'move_to', args: { x: 64, y: 64 } });
+
+    const there = { ...far, shelter: shelter({ distance: 6, youAreInside: true }) };
+    expect((await brain.decide({ agentName: 'Ada', observation: there, tools: survivalTools, system: '' })).action).toEqual({ name: 'build', args: { structure_id: 9, qty: 4 } });
+  });
+
+  test('at night a fake survivor gathers inside a finished shelter', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const night = { ...observation, time: { daylight: 'night' }, you: { ...observation.you, inventory: {} }, shelter: shelter({ woodNeeded: 0, built: true }) };
+    expect((await brain.decide({ agentName: 'Ada', observation: night, tools: survivalTools, system: '' })).action).toEqual({ name: 'move_to', args: { x: 64, y: 64 } });
   });
 
   test('a cold fake survivor heads for a lit fire', async () => {
@@ -142,7 +159,7 @@ describe('fake brain survival', () => {
     const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
     const hungry = {
       ...observation,
-      you: { ...observation.you, hunger: 30, inventory: {} },
+      you: { ...observation.you, fullness: 30, inventory: {} },
       nearby: {
         agents: [],
         containers: [],
@@ -207,6 +224,51 @@ describe('anthropic brain', () => {
   });
 });
 
+describe('codexBrain', () => {
+  function recordingRun(reply: string) {
+    const calls: Array<Parameters<CodexRun>[0]> = [];
+    const run: CodexRun = async call => { calls.push(call); return reply; };
+    return { run, calls };
+  }
+
+  test('asks the Codex CLI for one structured action, with the chosen profile and model', async () => {
+    const { run, calls } = recordingRun(JSON.stringify({ action: 'move_to', args_json: '{"x":20,"y":12}', thought: 'head to the wreck' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', codexHome: '/home/m/.codex-mdl', run });
+
+    const d = await brain.decide({ agentName: 'Luna', observation, tools, system: 'SYSTEM' });
+
+    expect(d).toEqual({ action: { name: 'move_to', args: { x: 20, y: 12 } }, thought: 'head to the wreck' });
+    expect(calls[0].model).toBe('gpt-6-luna');
+    expect(calls[0].codexHome).toBe('/home/m/.codex-mdl');
+    // The game's system prompt replaces Codex's own coding-agent instructions.
+    expect(calls[0].instructions).toBe('SYSTEM');
+    expect(calls[0].prompt).not.toContain('SYSTEM');
+    expect(calls[0].prompt).toContain('You are Luna');
+    expect(calls[0].prompt).toContain('"name":"move_to"');
+    // Codex has no callable game tools; telling it to call one makes it give up and idle.
+    expect(calls[0].prompt).not.toMatch(/calling exactly one tool|Tools \(/);
+    expect(calls[0].schema.properties.action.enum).toEqual(['move_to', 'say', 'idle']);
+  });
+
+  test("finds the Codex login's MCP servers so a game call can switch them off", () => {
+    const config = ['model = "gpt-6-astra"', '[projects."/home/m"]', 'trust_level = "trusted"', '[mcp_servers.playwright]', 'command = "npx"',
+      '[mcp_servers.playwright.tools.browser_click]', '[mcp_servers.Roblox_Studio]', '[mcp_servers."my server"]', '[tui]'].join('\n');
+    expect(mcpServerNames(config)).toEqual(['playwright', 'Roblox_Studio', 'my server']);
+  });
+
+  test('rejects a reply that is not one of the offered actions', async () => {
+    const { run } = recordingRun(JSON.stringify({ action: 'teleport', args_json: '{}', thought: '' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', run });
+    await expect(brain.decide({ agentName: 'Luna', observation, tools, system: 'S' })).rejects.toThrow(/teleport/);
+  });
+
+  test('rejects args that are not a JSON object', async () => {
+    const { run } = recordingRun(JSON.stringify({ action: 'move_to', args_json: 'north', thought: '' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', run });
+    await expect(brain.decide({ agentName: 'Luna', observation, tools, system: 'S' })).rejects.toThrow(/args/);
+  });
+});
+
 describe('brainFor', () => {
   test('routes a model id to its provider by prefix', () => {
     const env = { ENDER_BASE_URL: 'http://spark:8000/v1', OPENAI_API_KEY: 'o', ANTHROPIC_API_KEY: 'a' };
@@ -214,6 +276,7 @@ describe('brainFor', () => {
     expect(brainFor('ender:qwen', env).provider).toBe('openai-compatible');
     expect(brainFor('openai:gpt-5-mini', env).provider).toBe('openai-compatible');
     expect(brainFor('anthropic:claude-haiku-4-5', env).provider).toBe('anthropic');
+    expect(brainFor('codex:gpt-6-luna', env).provider).toBe('codex');
   });
 
   test('refuses an unknown provider or a missing endpoint', () => {

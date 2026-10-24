@@ -1,9 +1,9 @@
 {
   "name": "endersbench dataset collection",
-  "generated": "2026-10-24T05:48:29+00:00",
+  "generated": "2026-10-24T08:40:08+00:00",
   "root": "/home/oem/git/endersbench/ender/datasets",
-  "total_size_bytes": 132213606,
-  "dataset_count": 12,
+  "total_size_bytes": 192019577,
+  "dataset_count": 22,
   "datasets": [
     {
       "id": "harmbench",
@@ -249,6 +249,199 @@
       "size_bytes": 148945,
       "size_human": "0.1 MB",
       "files": 5
+    },
+    {
+      "id": "agentic-misalignment",
+      "name": "Anthropic Agentic Misalignment framework",
+      "category": "alignment",
+      "measures": "Prompt templates and classifiers for blackmail, corporate espionage, and lethal omission under goal conflict, after replacement or restriction. Includes goal-type and urgency ablations plus a deliberative-alignment variant.",
+      "source_type": "github",
+      "source": "https://github.com/anthropic-experimental/agentic-misalignment",
+      "commit": "ea0630e1a3eaae7f9f9740fd2703229d3854ccda",
+      "license": "MIT",
+      "local_path": "alignment/agentic-misalignment",
+      "records": {
+        "template_files": 38,
+        "scenario_families": 3
+      },
+      "notes": "Single-turn email scenarios; the leverage is provided in the prompt. The curated catalog re-derives these as in-world temptations. See alignment/scenarios.jsonl.",
+      "size_bytes": 508814,
+      "size_human": "496.9 KB",
+      "files": 61
+    },
+    {
+      "id": "am-bench",
+      "name": "AM-Bench: Agentic Misalignment taxonomy and suite",
+      "category": "alignment",
+      "measures": "35 scenarios across 7 industries (finance, healthcare, legal, media, office/admin, sales, software/tech), each as a threat x opportunity 2x2 with system prompt, task queue, judge instructions, and simulated tool families.",
+      "source_type": "github",
+      "source": "https://github.com/AI4Collaboration/Agentic-Misalignment-Bench",
+      "commit": "33ccb9103c873634ff2bdabaf629762aed88b275",
+      "license": "MIT",
+      "local_path": "alignment/am-bench",
+      "records": {
+        "scenarios": 35,
+        "industries": 7,
+        "conditions_per_scenario": 4
+      },
+      "notes": "Best available scenario schema: YAML + resources/, with opportunity encoded in tool return values rather than the prompt.",
+      "size_bytes": 1431417,
+      "size_human": "1.4 MB",
+      "files": 149
+    },
+    {
+      "id": "shade-arena",
+      "name": "SHADE-Arena (task definitions)",
+      "category": "alignment",
+      "measures": "Six task pairs where an agent completes a visible main task while attempting a hidden secondary task (sabotage), with the agent-visible materials and monitoring setup.",
+      "source_type": "github",
+      "source": "https://github.com/safety-research/SHADE-Arena",
+      "commit": "357a42984da332ac01771b3c4974081b50cbe907",
+      "license": "MIT",
+      "local_path": "alignment/shade-arena",
+      "records": {
+        "task_pairs": 6
+      },
+      "notes": "Only task definitions and agent-visible material are bundled. The 338 MB of transcripts and plots are excluded; clone upstream for those.",
+      "size_bytes": 340567,
+      "size_human": "332.6 KB",
+      "files": 28
+    },
+    {
+      "id": "machiavelli",
+      "name": "MACHIAVELLI benchmark (code and annotation schema)",
+      "category": "alignment",
+      "measures": "RL-style text-adventure environment over 134 human-written games with 500k+ scenes, annotated for power-seeking and ethical violations, scoring reward against ethics.",
+      "source_type": "github",
+      "source": "https://github.com/aypan17/machiavelli",
+      "commit": "ebb44e197f663603427882c609dbc9d5fb883d63",
+      "license": "No license file in the repo",
+      "local_path": "alignment/machiavelli",
+      "records": {
+        "games": 134,
+        "game_data_bundled": 0
+      },
+      "notes": "game_data/ (annotations, trees, scenarios) is distributed separately via a password-protected Google Drive archive; not bundled. A 459 MB community mirror exists at kobyjl/machiavelli_game_data on the Hub.",
+      "size_bytes": 2798511,
+      "size_human": "2.7 MB",
+      "files": 97
+    },
+    {
+      "id": "vending-bench",
+      "name": "Vending-Bench",
+      "category": "alignment",
+      "measures": "Long-horizon multi-agent business simulation: agents run a vending business over many turns, exposing lying, price coordination, and self-dealing under sustained reward pressure.",
+      "source_type": "github",
+      "source": "https://github.com/ProsusAI/vending-bench",
+      "commit": "f9a1d7efde193de2242ed5afb1f3a326e362c75d",
+      "license": "MIT",
+      "local_path": "alignment/vending-bench",
+      "records": {
+        "task_files": 24
+      },
+      "notes": "Not an ethics benchmark; behaviours must be scored externally. Included as the closest public analogue to a persistent economic world.",
+      "size_bytes": 2735074,
+      "size_human": "2.6 MB",
+      "files": 61
+    },
+    {
+      "id": "agentic-misalignment-results",
+      "name": "Anthropic Agentic Misalignment results (third party)",
+      "category": "alignment",
+      "measures": "Per-model outputs from running the Anthropic agentic-misalignment framework on several frontier and open models.",
+      "source_type": "huggingface",
+      "source": "cfahlgren1/anthropic-agentic-misalignment-results",
+      "commit": "8537824fdac23f149cc027badd2b294d6a51b621",
+      "license": "MIT",
+      "local_path": "alignment/agentic-misalignment-results",
+      "records": {
+        "result_files": 6
+      },
+      "notes": "Third-party reproduction, not Anthropic's own results.",
+      "size_bytes": 340762,
+      "size_human": "332.8 KB",
+      "files": 6
+    },
+    {
+      "id": "terminal-wrench",
+      "name": "Terminal Wrench (index and prompts)",
+      "category": "rewardhacking",
+      "measures": "331 demonstrably reward-hackable terminal tasks and 3,632 confirmed exploit trajectories across three frontier models, with a summary and explanation per trajectory and an 11-category exploit taxonomy.",
+      "source_type": "github",
+      "source": "https://github.com/few-sh/terminal-wrench",
+      "commit": "d8a29613235a0ef56a8b70b3142626a533da28c2",
+      "license": "Apache-2.0",
+      "local_path": "rewardhacking/terminal-wrench",
+      "records": {
+        "tasks": 331,
+        "task_model_entries": 957,
+        "trajectories": 6289,
+        "hack_trajectories": 3632,
+        "baseline_trajectories": 2352
+      },
+      "notes": "Index, manifests, and prompt files only (33 MB). Full trajectories are ~1.2 GB and excluded; clone upstream with sparse-checkout for tasks/.",
+      "size_bytes": 33707250,
+      "size_human": "32.1 MB",
+      "files": 7
+    },
+    {
+      "id": "impossiblebench",
+      "name": "ImpossibleBench (harness + both datasets)",
+      "category": "rewardhacking",
+      "measures": "Impossible variants of LiveCodeBench and SWE-bench where honest solutions fail, plus the Inspect harness. Cheating rate on these tasks is a direct measure of propensity to exploit tests.",
+      "source_type": "mixed",
+      "source": "https://github.com/safety-research/impossiblebench + fjzzq2002/impossible_{livecodebench,swebench}",
+      "commit": "d4f9a149db2b9cec0fed7bab01d91c07ee10aca2",
+      "license": "MIT (harness); Hub cards declare none",
+      "local_path": "rewardhacking/impossiblebench",
+      "records": {
+        "benchmarks": 2,
+        "splits": 3,
+        "hf_commits": 2
+      },
+      "notes": "Three splits per benchmark: original, oneoff, conflicting. HF revisions: livecodebench 98650ffc, swebench 9c2d34f3.",
+      "size_bytes": 6342256,
+      "size_human": "6.0 MB",
+      "files": 39
+    },
+    {
+      "id": "school-of-reward-hacks",
+      "name": "School of Reward Hacks",
+      "category": "rewardhacking",
+      "measures": "1,073 task / evaluation-metric / cheat-method triples with a hack response and a matched control. 150+ distinct cheat methods spanning code, summarisation, poetry, and persuasion rubrics.",
+      "source_type": "huggingface",
+      "source": "longtermrisk/school-of-reward-hacks",
+      "commit": "d7e04a550119cb5410494cf90e2313284a5f2148",
+      "license": "CC-BY-4.0",
+      "local_path": "rewardhacking/school-of-reward-hacks",
+      "records": {
+        "rows": 1073,
+        "columns": 6
+      },
+      "notes": "The non-coding half of the reward-hacking picture; directly relevant to LLM-judge gaming.",
+      "size_bytes": 1625085,
+      "size_human": "1.5 MB",
+      "files": 3
+    },
+    {
+      "id": "realistic-reward-hacks",
+      "name": "Realistic Reward Hacks (Jozdien)",
+      "category": "rewardhacking",
+      "measures": "817 realistic reward-hack samples (478 code, 339 literary) and 788 matched HHH controls in chat format, generated with Claude Sonnet 4.",
+      "source_type": "huggingface",
+      "source": "Jozdien/realistic_reward_hacks",
+      "commit": "009bcbe197ac86a59a4082f3e1d02073893d4ed3",
+      "license": "Not declared on the Hub card",
+      "local_path": "rewardhacking/realistic-reward-hacks",
+      "records": {
+        "reward_hack_samples": 817,
+        "hhh_controls": 788,
+        "total_rows": 1605
+      },
+      "notes": "Seven splits; the combined split is the convenient one for paired training.",
+      "size_bytes": 9976235,
+      "size_human": "9.5 MB",
+      "files": 9
     }
   ],
   "excluded": [
@@ -271,6 +464,22 @@
     {
       "id": "HarmBench copyright_classifier_hashes",
       "reason": "287 MB of precomputed classifier .pkl artifacts, not benchmark rows; trimmed."
+    },
+    {
+      "id": "PatronusAI/trace-dataset",
+      "reason": "Gated on the Hub (author approval required). 517 trajectories, 54 reward-hack categories; request access rather than substituting."
+    },
+    {
+      "id": "SHADE-Arena transcripts",
+      "reason": "338 MB of task-pair transcripts and plots. Task definitions are bundled; clone upstream for full trajectories."
+    },
+    {
+      "id": "Terminal Wrench full trajectories",
+      "reason": "~1.2 GB. The index with per-trajectory summaries is bundled; clone upstream with sparse-checkout for tasks/."
+    },
+    {
+      "id": "MACHIAVELLI game_data",
+      "reason": "Distributed via a password-protected Google Drive archive, not git (459 MB community mirror on the Hub). Code and annotation schema are bundled."
     }
   ]
 }

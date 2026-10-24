@@ -71,6 +71,16 @@ export const TOOLS = [
     },
   },
   {
+    name: 'build',
+    description:
+      'Add wood you are carrying to the shelter going up around the campfire at the centre; stand inside or beside its ring. It needs 18 wood in all. Once finished, anyone inside stays warm through night, storm and winter, and wolves will not hunt them there.',
+    parameters: {
+      type: 'object',
+      properties: { structure_id: { type: 'integer', description: 'id of the shelter' }, qty: QTY },
+      required: ['structure_id'],
+    },
+  },
+  {
     name: 'feed_fire',
     description:
       'Add wood you are carrying to a fire within reach. Each wood burns 30 seconds. The signal fire needs 15 wood before it can be lit; once burning, search planes can see it at night.',

@@ -19,6 +19,8 @@ import {
   STORM_MS,
   TREEFALL_OFFSETS_MS,
   SIGNAL_WOOD,
+  SHELTER_WOOD,
+  SHELTER_RADIUS,
   STUMP_RADIUS,
   TREE_RADIUS,
   WOLF_RADIUS,
@@ -32,6 +34,7 @@ import {
   MAX_HOMES,
   TREE_CAPACITY,
   TREES,
+  TREE_RING_INNER,
   WRECK_RATIONS,
 } from './rules';
 
@@ -69,6 +72,8 @@ export function physicsContract(w: World) {
     chestRadius: CHEST_RADIUS,
     fireRadius: FIRE_RADIUS,
     fireWarmthRadius: FIRE_WARMTH_RADIUS,
+    shelterRadius: SHELTER_RADIUS,
+    shelterWood: SHELTER_WOOD,
     fallenTreeLength: FALLEN_TREE_LENGTH,
     wreck: wreckFuselage(w),
   });
@@ -93,6 +98,8 @@ export function seedWorld(ctx: Ctx) {
     lit: true,
     woodNeeded: 0,
   });
+  // The shelter's frame stands around the hearth, waiting for wood.
+  ctx.db.structure.insert({ id: 0n, kind: 'shelter', x: cx, y: cy, fuel: 0, maxFuel: 0, lit: false, woodNeeded: SHELTER_WOOD });
   ctx.db.hazard.insert({ id: 0n, kind: 'storm', startsAtMs: STORM_AT_MS, endsAtMs: STORM_AT_MS + STORM_MS });
   for (const offset of TREEFALL_OFFSETS_MS) {
     ctx.db.hazard.insert({ id: 0n, kind: 'treefall', startsAtMs: STORM_AT_MS + offset, endsAtMs: STORM_AT_MS + offset });
@@ -129,11 +136,11 @@ export function seedWorld(ctx: Ctx) {
     }
   }
 
-  // Trees thicken toward the edge of the clearing.
+  // Trees stand in a band along the forest edge, leaving the open ground clear.
   let trees = 0;
   for (let attempt = 0; trees < TREES && attempt < TREES * 20; attempt++) {
     const angle = ctx.random() * Math.PI * 2;
-    const r = 30 + Math.sqrt(ctx.random()) * (MAP_RADIUS - 34);
+    const r = TREE_RING_INNER + Math.sqrt(ctx.random()) * (MAP_RADIUS - 3 - TREE_RING_INNER);
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;
     if (!free(x, y, 3)) continue;

@@ -5,11 +5,12 @@ import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
-import { HEAR_RADIUS, HEARD_WINDOW_MS, OBS_MEMORIES, REACH } from './rules';
-import { fireVisible, makeSight, sheltered, untilChange, viewRadius } from './sight';
+import { HEAR_RADIUS, HEARD_WINDOW_MS, OBS_MEMORIES, REACH, SHELTER_RADIUS } from './rules';
+import { fireVisible, inBuiltShelter, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
 
 const MAX_RESOURCES = 10;
+const TREELINE_TREES = 3;
 
 export function healthBand(hp: number) {
   return hp > 66 ? 'healthy' : hp > 33 ? 'hurt' : 'critical';
@@ -69,8 +70,15 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     contents: d <= REACH ? contents(ctx, { containerId: c.id }) : null,
   }));
 
-  const resources = near([...ctx.db.resourceNode.iter()])
-    .slice(0, MAX_RESOURCES)
+  // Trees stand tall at the forest edge: the nearest few are always in view,
+  // so wood can be found from anywhere in the clearing.
+  const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
+  const treeline = [...ctx.db.resourceNode.iter()]
+    .filter(n => n.kind === 'tree' && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id))
+    .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, TREELINE_TREES);
+  const resources = [...seen, ...treeline]
     .map(({ r: n, d }) => ({
       id: Number(n.id),
       kind: n.kind,
@@ -82,7 +90,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
 
   const radius = viewRadius(w);
   const fires = [...ctx.db.structure.iter()]
-    .filter(f => fireVisible(me.x, me.y, f, radius))
+    .filter(f => f.kind !== 'shelter' && fireVisible(me.x, me.y, f, radius))
     .map(f => ({
       id: Number(f.id),
       kind: f.kind,
@@ -138,12 +146,13 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       x: round1(me.x),
       y: round1(me.y),
       hp: round1(me.hp),
-      hunger: round1(me.hunger),
+      // Stored as `hunger` but counts up as you eat; named for what it means.
+      fullness: round1(me.hunger),
       role: me.role,
       backstory: me.backstory,
       warmth: round1(me.warmth),
       pinned: me.pinned,
-      sheltered: sheltered(w, me.x, me.y),
+      sheltered: sheltered(w, me.x, me.y) || inBuiltShelter(ctx, me.x, me.y),
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
       home: { x: round1(me.homeX), y: round1(me.homeY) },
@@ -160,6 +169,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     rescue: rescueKnowledge(me, w),
     rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken },
     map: { centre: { x: cx, y: cy }, radius: w.radius },
+    shelter: shelterView(ctx, me),
     wakeReason: reason,
     nearby: { agents, containers, resources, fires, wolves },
     heard,
@@ -175,4 +185,22 @@ function rescueKnowledge(me: Agent, w: World) {
   if (w.rescueState !== 'waiting') return { note, state: w.rescueState };
   if (me.role !== 'pilot') return { note };
   return { note, planeInSeconds: Math.max(0, round1((w.rescueAtMs - w.gameTimeMs) / 1000)) };
+}
+
+// The shelter is a landmark everyone knows about, built or not.
+function shelterView(ctx: Ctx, me: Agent) {
+  const s = shelterOf(ctx);
+  if (!s) return null;
+  return {
+    id: Number(s.id),
+    x: round1(s.x),
+    y: round1(s.y),
+    distance: round1(distance(me.x, me.y, s.x, s.y)),
+    radius: SHELTER_RADIUS,
+    woodNeeded: s.woodNeeded,
+    built: s.woodNeeded === 0,
+    youAreInside: distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
+    // Only a finished shelter keeps out the cold and the wolves.
+    protectsYou: s.woodNeeded === 0 && distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
+  };
 }
