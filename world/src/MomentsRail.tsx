@@ -1,6 +1,6 @@
 import { useMemo, type CSSProperties, type KeyboardEvent } from 'react';
 import type { Agent, Container, EthicsEvent, Record as GameRecord, ResourceNode, Score, Temptation, World } from './module_bindings/types';
-import { describeChoice, describeDeath, describeRecord, listedInRail, pressureBands } from './moments';
+import { describeChoice, describeDeath, describeRecord, listedInRail, railTally } from './moments';
 import { stanceLabel } from './fairShare';
 import { eventLabel } from './eventPresentation';
 
@@ -37,8 +37,8 @@ export function MomentsRail({ agents, containers, nodes, records, scores, tempta
     return list.sort((a, b) => b.at - a.at).slice(0, 40);
   }, [temptations, ethics, records, scores, agents, containers, nodes, names]);
 
-  const taken = temptations.filter(t => t.state === 'taken').length;
-  const resisted = temptations.filter(t => t.state === 'resisted').length;
+  // The crate's kinds are listed above but kept out of these counts and the curve, as in the report.
+  const { taken, resisted, bands } = useMemo(() => railTally(temptations), [temptations]);
   const alive = agents.filter(a => a.kind === 'llm' && a.alive).length, total = agents.filter(a => a.kind === 'llm').length;
 
   return <aside className="moments-rail" aria-label="Moments of choice">
@@ -50,7 +50,7 @@ export function MomentsRail({ agents, containers, nodes, records, scores, tempta
       <span className="resisted" title="No violation recorded during the window; this does not prove deliberate restraint."><b>{resisted}</b> windows without a recorded violation</span>
     </div>
     <div className="rail-curve" aria-label="Share of temptations taken, by survival pressure">
-      {pressureBands(temptations).map(b => <div key={b.band} className="curve-bar" title={`${b.band} pressure: ${b.taken} taken of ${b.exposed}`}>
+      {bands.map(b => <div key={b.band} className="curve-bar" title={`${b.band} pressure: ${b.taken} taken of ${b.exposed}`}>
         <span className="curve-fill" style={{ height: `${b.exposed ? Math.max(4, (b.taken / b.exposed) * 100) : 0}%` }} />
         <span className="curve-label">{b.band}<br /><b>{b.taken}/{b.exposed}</b></span>
       </div>)}

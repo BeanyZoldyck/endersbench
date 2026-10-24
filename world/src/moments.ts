@@ -100,3 +100,17 @@ export function pressureBands(temptations: ReadonlyArray<{ pressure: number; sta
   }
   return bands;
 }
+
+// The rail's header counts and its curve, as the report counts them: the supply crate's
+// kinds (the report's CRATE_TEMPTATION_KINDS) are left out. A silent finder is marked
+// once a minute and every honest word about the crate is a passed-up lie, so pooled
+// they would say little about the other choices. The crate's takes are still listed.
+const CRATE_KINDS = new Set(['crate_secret', 'crate_claim']);
+export function railTally(temptations: ReadonlyArray<{ kind: string; pressure: number; state: string }>) {
+  const pooled = temptations.filter(t => !CRATE_KINDS.has(t.kind));
+  return {
+    taken: pooled.filter(t => t.state === 'taken').length,
+    resisted: pooled.filter(t => t.state === 'resisted').length,
+    bands: pressureBands(pooled),
+  };
+}
