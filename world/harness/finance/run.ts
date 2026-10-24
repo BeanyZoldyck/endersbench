@@ -11,8 +11,9 @@
 // messages (the default) is the benchmark loop, one fresh call per turn, for
 // every provider. Options: --variant charter|no-charter, --effort (omit for
 // the model's own default), --cases id,id, --repeat N (runs per case, 3 by
-// default as the spec asks; --repeat 1 for a quick check), --concurrency N.
-// Keys come from
+// default as the spec asks; --repeat 1 for a quick check), --concurrency N,
+// --raw-crs (CRS tools answer with the full saved CRS response instead of the
+// compact card; a separate format on the leaderboard). Keys come from
 // the environment or a .env file. Managed runs create or update one agent
 // per seat and prompt variant and record their ids in runs/managed.json.
 import Anthropic from '@anthropic-ai/sdk';
@@ -27,6 +28,7 @@ import { checkTools, toolScore } from '../../spacetimedb/src/finance/toolcheck';
 import { ethicsScore, verify, verifyPair } from '../../spacetimedb/src/finance/verifier';
 import { type CaseRun, type Effort, type ManagedSetup, type RunCase, managedDriver, messagesDriver, openAiDriver, setupManaged } from './drivers';
 import { OPENAI_COMPATIBLE, envValue, trustSystemCertificates } from './providers';
+import { rawCrs } from './rawcrs';
 
 const RUNS_DIR = path.resolve('harness/finance/runs');
 const SETUP_FILE = path.join(RUNS_DIR, 'managed.json');
@@ -71,6 +73,7 @@ function parseArgs(argv: string[]) {
     concurrency: Number(flags.get('concurrency') ?? 3),
     // Runs per case. The design spec asks for 3, reported as mean and range.
     repeat: Math.max(1, Number(flags.get('repeat') ?? 3)),
+    raw: flags.has('raw-crs'),
   };
 }
 
@@ -155,14 +158,14 @@ function printCase(driver: Driver, c: Scored) {
 async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, client: Anthropic | null) {
   let runCase: RunCase;
   if (driver === 'script') {
-    runCase = async scenario => ({ steps: runBrain(policyFollower, scenario), notes: [], stalls: 0, usage: { calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+    runCase = async scenario => ({ steps: runBrain(policyFollower, scenario, { raw: opts.raw ? rawCrs : undefined }), notes: [], stalls: 0, usage: { calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
   } else if (driver === 'messages' && opts.provider !== 'anthropic') {
     const spec = OPENAI_COMPATIBLE[opts.provider];
     const baseUrl = spec.baseUrl() ?? fail(`${opts.provider} models need ${spec.needs} in endersbench/.env`);
     const apiKey = spec.key() ?? fail(`${opts.provider} models need ${spec.needs} in endersbench/.env`);
-    runCase = openAiDriver({ baseUrl, apiKey, model: opts.model, api: spec.api, reasoningEffort: opts.effort });
+    runCase = openAiDriver({ baseUrl, apiKey, model: opts.model, api: spec.api, reasoningEffort: opts.effort, raw: opts.raw ? rawCrs : undefined });
   } else if (driver === 'messages') {
-    runCase = messagesDriver(client!, { model: opts.model, effort: opts.effort });
+    runCase = messagesDriver(client!, { model: opts.model, effort: opts.effort, raw: opts.raw ? rawCrs : undefined });
   } else {
     // Sync the agents every run so they always carry the current prompt and
     // tools; an update that changes nothing keeps the agent's version.
@@ -208,7 +211,8 @@ async function main() {
   const client = needsApi && opts.provider === 'anthropic' ? new Anthropic({ apiKey: required('ANTHROPIC_API_KEY') }) : null;
   fs.mkdirSync(RUNS_DIR, { recursive: true });
   const effort = opts.effort ?? 'default';
-  console.log(`Finance benchmark v${FINANCE_BENCHMARK_VERSION} · ${opts.cases.length} cases · prompt: ${opts.variant} · ${opts.provider}:${opts.model} · effort: ${effort}`);
+  if (opts.raw && opts.drivers.includes('managed')) fail('--raw-crs runs the benchmark loop only, not --driver managed');
+  console.log(`Finance benchmark v${FINANCE_BENCHMARK_VERSION} · ${opts.cases.length} cases · prompt: ${opts.variant} · ${opts.provider}:${opts.model} · effort: ${effort} · CRS: ${opts.raw ? 'full responses' : 'cards'}`);
 
   const results = [];
   for (const driver of opts.drivers) {
@@ -229,7 +233,7 @@ async function main() {
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const name = `${opts.provider}-${opts.model}`.replace(/[^\w.-]+/g, '_');
-  const file = path.join(RUNS_DIR, `${stamp}-v${FINANCE_BENCHMARK_VERSION}-${opts.drivers.join('+')}-${opts.variant}-${name}.json`);
+  const file = path.join(RUNS_DIR, `${stamp}-v${FINANCE_BENCHMARK_VERSION}-${opts.drivers.join('+')}-${opts.variant}${opts.raw ? '-raw' : ''}-${name}.json`);
   const record = {
     config: {
       benchmarkVersion: FINANCE_BENCHMARK_VERSION,
@@ -237,6 +241,7 @@ async function main() {
       model: opts.model,
       effort,
       variant: opts.variant,
+      crsFormat: opts.raw ? 'raw' : 'card',
       cases: opts.cases.map(c => c.id),
       repeat: opts.repeat,
     },

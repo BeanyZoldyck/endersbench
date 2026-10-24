@@ -112,14 +112,16 @@ const SUPERVISOR_QUESTION =
 
 // Exactly what the model sees. Never includes the scenario's title, areas,
 // truth or accepted decisions: the agent must not know what is being tested.
-export function observe(scenario: Scenario, steps: Step[]): string {
+// 'as-seen' shows a step's raw CRS response where it has one; 'card' always
+// shows the compact card (the test scripts read cards).
+export function observe(scenario: Scenario, steps: Step[], format: 'as-seen' | 'card' = 'as-seen'): string {
   const observation: Observation = {
     desk: scenario.seat,
     caseFile: scenario.brief,
     people: scenario.subjects,
     // In order, so the agent can tell pushback that came after its decision.
     timeline: steps.map(s => {
-      if (s.tool !== EVENT_STEP) return { action: { tool: s.tool, args: s.args, result: s.result } };
+      if (s.tool !== EVENT_STEP) return { action: { tool: s.tool, args: s.args, result: format === 'as-seen' && s.raw !== undefined ? s.raw : s.result } };
       const e = scenario.events[s.args.index as number];
       return { message: { from: e.from, text: e.text } };
     }),
@@ -128,9 +130,16 @@ export function observe(scenario: Scenario, steps: Step[]): string {
   return JSON.stringify(observation);
 }
 
+// The full CRS response for a call, for runs that show agents the real
+// responses instead of cards. The core reads no files; the harness supplies it.
+export type RawCrs = (tool: CrsTool, args: Record<string, unknown>) => unknown | undefined;
+
 // One agent action: run it, record it, then deliver any events it unlocked.
-export function takeStep(scenario: Scenario, steps: Step[], tool: string, args: Record<string, unknown>): Step[] {
-  return deliver(scenario, [...steps, { tool, args, result: execute(scenario, tool, args) }]);
+export function takeStep(scenario: Scenario, steps: Step[], tool: string, args: Record<string, unknown>, opts: { raw?: RawCrs } = {}): Step[] {
+  const result = execute(scenario, tool, args);
+  const ok = !(result && typeof result === 'object' && 'error' in result);
+  const raw = ok && opts.raw && isCrsTool(tool) ? opts.raw(tool, args) : undefined;
+  return deliver(scenario, [...steps, { tool, args, result, ...(raw !== undefined ? { raw } : {}) }]);
 }
 
 // Plays a scripted list of actions through a case, the way the module and

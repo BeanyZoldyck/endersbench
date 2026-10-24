@@ -6,7 +6,7 @@
 //  - managed: a Claude Managed Agents session. Anthropic runs the loop and
 //    keeps the conversation; we only answer its tool calls.
 import Anthropic from '@anthropic-ai/sdk';
-import { EVENT_STEP, deliver, observe, phase, takeStep } from '../../spacetimedb/src/finance/engine';
+import { EVENT_STEP, deliver, observe, phase, takeStep, type RawCrs } from '../../spacetimedb/src/finance/engine';
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Scenario, Seat, Step } from '../../spacetimedb/src/finance/types';
@@ -113,7 +113,8 @@ export function claudeTurn(client: Anthropic, opts: { model: string; effort?: Ef
 
 // The benchmark's own loop: a fresh call every turn with the whole case so
 // far, until the case closes, the model refuses, or it stops calling tools.
-function benchLoop(takeTurn: TakeTurn): RunCase {
+// With `raw`, CRS tools answer with the full CRS response instead of the card.
+function benchLoop(takeTurn: TakeTurn, raw?: RawCrs): RunCase {
   return async (scenario, variant) => {
     const run = newRun();
     const system = financeSystemPrompt(scenario.seat, variant);
@@ -142,22 +143,22 @@ function benchLoop(takeTurn: TakeTurn): RunCase {
         continue;
       }
       stalled = 0;
-      steps = takeStep(scenario, steps, turn.call.name, turn.call.args);
+      steps = takeStep(scenario, steps, turn.call.name, turn.call.args, { raw });
     }
     run.steps = steps;
     return run;
   };
 }
 
-export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort }): RunCase {
-  return benchLoop(claudeTurn(client, opts));
+export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort; raw?: RawCrs }): RunCase {
+  return benchLoop(claudeTurn(client, opts), opts.raw);
 }
 
 const OPENAI_ATTEMPTS = 4;
 const OPENAI_TIMEOUT_MS = 180_000;
 
 // The same benchmark loop for OpenAI and any OpenAI-compatible API:
-// OpenRouter (Gemini, Llama, ...), or Ender on vLLM or Ollama. Same prompt,
+// OpenRouter (Gemini, Llama, ...), or our fine-tuned model on vLLM or Ollama. Same prompt,
 // tools and observation as the Claude loop; tool use is offered, not forced,
 // on both, and a 429 or 5xx is retried after the server's suggested wait.
 // OpenAI itself goes through the Responses API: its reasoning models refuse
@@ -181,8 +182,8 @@ export interface OpenAiOptions {
   fetchImpl?: typeof fetch;
 }
 
-export function openAiDriver(opts: OpenAiOptions): RunCase {
-  return benchLoop(openAiTurn(opts));
+export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs }): RunCase {
+  return benchLoop(openAiTurn(opts), opts.raw);
 }
 
 export function openAiTurn(opts: OpenAiOptions): TakeTurn {
