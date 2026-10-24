@@ -13,4 +13,5 @@ import {
 export default {
   foodScale: __t.f64(),
   roleOffset: __t.u8(),
+  rescueSeats: __t.u8(),
 };

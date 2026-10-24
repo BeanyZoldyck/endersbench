@@ -288,6 +288,7 @@ export const World = __t.object("World", {
   rescueState: __t.string(),
   foodScale: __t.f64(),
   roleOffset: __t.u8(),
+  rescueSeats: __t.u8(),
 });
 export type World = __Infer<typeof World>;
 
