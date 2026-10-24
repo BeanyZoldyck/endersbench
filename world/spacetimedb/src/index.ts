@@ -11,7 +11,7 @@ import { applyAction, type Outcome } from './actions';
 import { ensureScore, updateTemptations } from './ethics';
 import { observe } from './observe';
 import { noticeLosses } from './memory';
-import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
+import { physicsContract, SCENARIO, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
 import { startTimers, stopTimers } from './timers';
 import {
@@ -47,7 +47,7 @@ function requireWorkerOrAdmin(ctx: Ctx) {
 // The tool catalog and physics contract. Refreshed whenever a harness
 // connects, so a hot-published module's new actions reach the models.
 function publishMeta(ctx: Ctx) {
-  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)) };
+  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)), scenario: JSON.stringify(SCENARIO) };
   for (const [key, value] of Object.entries(entries)) {
     if (ctx.db.meta.key.find(key)) ctx.db.meta.key.update({ key, value });
     else ctx.db.meta.insert({ key, value });
@@ -110,6 +110,7 @@ function newAgent(ctx: Ctx, f: { name: string; kind: string; modelId: string; x:
     nextThinkAtMs: 0,
     wake: false,
     wakeReason: '',
+    pendingAction: '',
   });
   ensureScore(ctx, a.id);
   return a;
@@ -128,7 +129,7 @@ function logAction(ctx: Ctx, agentId: bigint, requestId: bigint, action: string,
 }
 
 // A fresh clearing at game time zero: map, supplies, hazards, clock running.
-function startRun(ctx: Ctx) {
+function startRun(ctx: Ctx, foodScale = 1, roleOffset = 0, rescueSeats = 0) {
   ctx.db.world.insert({
     id: 0,
     tick: 0n,
@@ -147,6 +148,9 @@ function startRun(ctx: Ctx) {
     daylight: 'day',
     rescueAtMs: RESCUE_AT_MS,
     rescueState: 'waiting',
+    foodScale,
+    roleOffset,
+    rescueSeats,
   });
   publishMeta(ctx);
   seedWorld(ctx);
@@ -171,11 +175,13 @@ export const init = spacetimedb.init(ctx => {
 // answers the new run's requests. Open to every viewer, like joining as a human.
 export const resetExperiment = spacetimedb.reducer(ctx => {
   const roster = [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').sort((a, b) => Number(a.id - b.id));
+  const { foodScale, roleOffset, rescueSeats } = getWorld(ctx);
   stopTimers(ctx);
   const d = ctx.db;
+  if (d.meta.key.find('interactive')) d.meta.key.delete('interactive');
   for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
-    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score]) table.clear();
-  startRun(ctx);
+    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth]) table.clear();
+  startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
 });
 
@@ -205,7 +211,10 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
       const req = ctx.db.decisionRequest.id.find(a.pendingRequestId);
       const ageMs = req ? Number(ctx.timestamp.microsSinceUnixEpoch - req.createdAt.microsSinceUnixEpoch) / 1000 : Infinity;
       if (req && req.status === 'pending' && ageMs < REQUEST_TIMEOUT_MS) continue;
-      if (req && req.status === 'pending') ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+      if (req && req.status === 'pending') {
+        ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+        noteModel(ctx, req.modelId, 'no answer in time');
+      }
       ctx.db.agent.id.update({ ...a, pendingRequestId: 0n, wake: true, wakeReason: 'retry' });
       continue;
     }
@@ -230,6 +239,15 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
 });
 
 // The only door for model output.
+// Records a model's answer, or its failure with the error, for the viewer's warning.
+function noteModel(ctx: Ctx, modelId: string, error?: string) {
+  const h = ctx.db.modelHealth.modelId.find(modelId)
+    ?? ctx.db.modelHealth.insert({ modelId, answered: 0, failed: 0, failingInARow: 0, lastError: '', lastErrorAt: ctx.timestamp });
+  ctx.db.modelHealth.modelId.update(error === undefined
+    ? { ...h, answered: h.answered + 1, failingInARow: 0 }
+    : { ...h, failed: h.failed + 1, failingInARow: h.failingInARow + 1, lastError: error.slice(0, 200), lastErrorAt: ctx.timestamp });
+}
+
 export const submitDecision = spacetimedb.reducer(
   { requestId: t.u64(), action: t.string(), thought: t.string(), latencyMs: t.u32() },
   (ctx, { requestId, action, thought, latencyMs }) => {
@@ -238,6 +256,7 @@ export const submitDecision = spacetimedb.reducer(
     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
     const me = ctx.db.agent.id.find(req.agentId);
     if (!me) throw new SenderError('agent is gone');
+    noteModel(ctx, req.modelId);
     const w = getWorld(ctx);
 
     if (!me.alive) {
@@ -246,9 +265,13 @@ export const submitDecision = spacetimedb.reducer(
       return;
     }
 
+    // The thought is recorded before the action, so a violation the action
+    // causes is filed with the words of the decision that caused it.
+    // Empty output is evidence too: never attach an earlier explanation.
+    ctx.db.agent.id.update({ ...me, thought: thought.slice(0, 120) });
     const parsed = parseAction(action);
     const outcome: Outcome = parsed
-      ? applyAction(ctx, me, parsed.name, parsed.args)
+      ? applyAction(ctx, ctx.db.agent.id.find(me.id)!, parsed.name, parsed.args)
       : { ok: false, error: 'action is not {"name": string, "args": object} JSON' };
 
     logAction(ctx, me.id, requestId, parsed ? JSON.stringify(parsed) : JSON.stringify({ raw: action }), outcome);
@@ -264,7 +287,7 @@ export const submitDecision = spacetimedb.reducer(
     const after = ctx.db.agent.id.find(me.id)!;
     ctx.db.agent.id.update({
       ...after,
-      thought: thought ? thought.slice(0, 120) : after.thought,
+      thought: thought.slice(0, 120),
       pendingRequestId: 0n,
       nextThinkAtMs: w.gameTimeMs + (outcome.ok ? HEARTBEAT_MS : RETRY_MS),
     });
@@ -279,6 +302,7 @@ export const failDecision = spacetimedb.reducer(
     const req = ctx.db.decisionRequest.id.find(requestId);
     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
     ctx.db.decisionRequest.id.update({ ...req, status: 'failed', error: error.slice(0, 500), latencyMs });
+    noteModel(ctx, req.modelId, error);
     const me = ctx.db.agent.id.find(req.agentId);
     if (me) ctx.db.agent.id.update({ ...me, pendingRequestId: 0n, nextThinkAtMs: getWorld(ctx).gameTimeMs + RETRY_MS });
   }
@@ -294,11 +318,31 @@ export const claimHarness = spacetimedb.reducer(ctx => {
 });
 
 // Adds an LLM survivor with a home and a chest. Idempotent by name, so a
-// restarted harness can re-send its roster.
+// restarted harness can re-send its roster; a survivor who already exists
+// takes the roster's model, because decision requests are routed by it.
 export const spawnAgent = spacetimedb.reducer({ name: t.string(), modelId: t.string() }, (ctx, { name, modelId }) => {
   requireWorkerOrAdmin(ctx);
-  if (ctx.db.agent.name.find(name)) return;
+  const existing = ctx.db.agent.name.find(name);
+  if (existing) {
+    if (existing.kind === 'llm' && existing.modelId !== modelId) ctx.db.agent.id.update({ ...existing, modelId });
+    return;
+  }
   addSurvivor(ctx, name, modelId);
+});
+
+// Scarcity sweeps (how much food the clearing holds relative to the baseline)
+// and role rotation. Takes effect at the next reset, so a run never changes mid-way.
+export const configureScenario = spacetimedb.reducer({ foodScale: t.f64(), roleOffset: t.u8(), rescueSeats: t.u8() }, (ctx, { foodScale, roleOffset, rescueSeats }) => {
+  requireWorkerOrAdmin(ctx);
+  ctx.db.world.id.update({ ...getWorld(ctx), foodScale: Math.min(Math.max(foodScale, 0.2), 5), roleOffset: roleOffset % 4, rescueSeats });
+});
+
+// The harness records how the run is configured (prompt variant, roster, time
+// scale) so the report states it alongside the results.
+export const setRunInfo = spacetimedb.reducer({ info: t.string() }, (ctx, { info }) => {
+  requireWorkerOrAdmin(ctx);
+  if (ctx.db.meta.key.find('run')) ctx.db.meta.key.update({ key: 'run', value: info });
+  else ctx.db.meta.insert({ key: 'run', value: info });
 });
 
 export const setTimeScale = spacetimedb.reducer({ timeScale: t.f64() }, (ctx, { timeScale }) => {
@@ -327,6 +371,8 @@ export const joinAsHuman = spacetimedb.reducer({ name: t.string() }, (ctx, { nam
   const [cx, cy] = centre(getWorld(ctx));
   const humans = [...ctx.db.agent.iter()].filter(a => a.kind === 'human').length;
   newAgent(ctx, { name: trimmed, kind: 'human', modelId: 'human', x: cx - 4 + (humans % 5) * 2, y: cy + 4, controller: ctx.sender });
+  // Sticky for the run, even after a visitor leaves. Only reset clears it.
+  if (!ctx.db.meta.key.find('interactive')) ctx.db.meta.insert({ key: 'interactive', value: 'true' });
 });
 
 export const humanMoveTo = spacetimedb.reducer({ x: t.f32(), y: t.f32() }, (ctx, { x, y }) => {
@@ -340,7 +386,7 @@ export const humanMoveTo = spacetimedb.reducer({ x: t.f32(), y: t.f32() }, (ctx,
 export const humanAct = spacetimedb.reducer({ action: t.string() }, (ctx, { action }) => {
   const me = controlledBy(ctx);
   if (!me) throw new SenderError('you do not control a character');
-  if (!me.alive) throw new SenderError('you are a ghost until you respawn');
+  if (!me.alive) throw new SenderError('you are dead');
   const parsed = parseAction(action);
   if (!parsed) throw new SenderError('action is not {"name": string, "args": object} JSON');
   const outcome = applyAction(ctx, me, parsed.name, parsed.args);

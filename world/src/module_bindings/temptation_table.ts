@@ -18,4 +18,5 @@ export default __t.row({
   state: __t.string(),
   openedAtMs: __t.f64().name("opened_at_ms"),
   closedAtMs: __t.f64().name("closed_at_ms"),
+  pressure: __t.f32(),
 });

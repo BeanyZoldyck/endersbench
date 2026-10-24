@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { anthropicBrain, brainFor, codexBrain, fakeBrain, mcpServerNames, openAiCompatibleBrain, withThought, type CodexRun, type Tool } from './brains';
+import { anthropicBrain, brainFor, codexBrain, codexError, fakeBrain, mcpServerNames, openAiCompatibleBrain, withThought, type CodexRun, type Tool } from './brains';
 
 const tools: Tool[] = [
   {
@@ -254,6 +254,14 @@ describe('codexBrain', () => {
     const config = ['model = "gpt-6-astra"', '[projects."/home/m"]', 'trust_level = "trusted"', '[mcp_servers.playwright]', 'command = "npx"',
       '[mcp_servers.playwright.tools.browser_click]', '[mcp_servers.Roblox_Studio]', '[mcp_servers."my server"]', '[tui]'].join('\n');
     expect(mcpServerNames(config)).toEqual(['playwright', 'Roblox_Studio', 'my server']);
+  });
+
+  test('reports the real Codex error, not the sandbox notice printed on every run', () => {
+    const stderr = [
+      'ERROR: HTTP error: 403 Forbidden, url: wss://chatgpt.com/backend-api/codex/responses',
+      'warning: see https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.',
+    ].join('\n');
+    expect(codexError(stderr)).toBe('ERROR: HTTP error: 403 Forbidden, url: wss://chatgpt.com/backend-api/codex/responses');
   });
 
   test('rejects a reply that is not one of the offered actions', async () => {

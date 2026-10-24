@@ -9,12 +9,16 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { DbConnection, tables } from '../src/module_bindings/index.js';
 import { brainFor, type Brain, type Tool } from './brains.js';
-import { systemPrompt } from './prompt.js';
+import { promptVersion, systemPrompt } from './prompt.js';
 
 const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = process.env.SPACETIMEDB_DB_NAME ?? 'endersbench';
 const ROSTER = process.env.ROSTER ?? 'Ada:fake,Bo:fake,Cy:fake,Di:fake';
-const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'charter';
+const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'reward';
+const TIME_SCALE = process.env.TIME_SCALE ? Number(process.env.TIME_SCALE) : undefined;
+const FOOD_SCALE = process.env.FOOD_SCALE ? Number(process.env.FOOD_SCALE) : undefined;
+const ROLE_OFFSET = process.env.ROLE_OFFSET ? Number(process.env.ROLE_OFFSET) : undefined;
+const RESCUE_SEATS = process.env.RESCUE_SEATS ? Number(process.env.RESCUE_SEATS) : undefined;
 const TIMEOUT_MS = Number(process.env.DECISION_TIMEOUT_MS ?? 20_000);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -35,7 +39,8 @@ function parseRoster(spec: string) {
 }
 
 const roster = parseRoster(ROSTER);
-const system = systemPrompt(PROMPT_VARIANT);
+const promptOptions = { rescueSeats: RESCUE_SEATS ?? 0 };
+const system = systemPrompt(PROMPT_VARIANT, promptOptions);
 // Fail at startup, not mid-run, if a roster model has no endpoint or key.
 const brains = new Map<string, Brain>(roster.map(r => [r.modelId, brainFor(r.modelId, process.env)]));
 const inFlight = new Set<bigint>();
@@ -65,6 +70,9 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
   try {
     let brain = brains.get(req.modelId);
     if (!brain) {
+      // The world routes a request by its survivor's model; one this roster
+      // didn't name means the world and the roster disagree, so say so loudly.
+      console.warn(`${name}: the world asks for ${req.modelId}, which is not in this roster (${[...new Set(roster.map(r => r.modelId))].join(', ')})`);
       brain = brainFor(req.modelId, process.env);
       brains.set(req.modelId, brain);
     }
@@ -108,6 +116,18 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
     for (const r of roster) {
       await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
+    // A scarcity sweep or role rotation reseeds the clearing, then starts the
+    // run from time zero with this roster.
+    if (FOOD_SCALE !== undefined || ROLE_OFFSET !== undefined || RESCUE_SEATS !== undefined) {
+      await conn.reducers.configureScenario({ foodScale: FOOD_SCALE ?? 1, roleOffset: ROLE_OFFSET ?? 0, rescueSeats: RESCUE_SEATS ?? 0 });
+      await conn.reducers.resetExperiment({});
+    }
+    // Slowing the world gives slow models more game time per decision; it is
+    // recorded with the run, never applied silently.
+    if (TIME_SCALE !== undefined) await conn.reducers.setTimeScale({ timeScale: TIME_SCALE });
+    await conn.reducers.setRunInfo({
+      info: JSON.stringify({ promptVariant: PROMPT_VARIANT, promptVersion: promptVersion(promptOptions), systemPrompt: system, roster, timeScale: TIME_SCALE ?? 1, foodScale: FOOD_SCALE ?? 1, roleOffset: ROLE_OFFSET ?? 0, rescueSeats: RESCUE_SEATS ?? 0, startedAt: new Date().toISOString() }),
+    });
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();
 }

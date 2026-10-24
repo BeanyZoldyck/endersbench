@@ -31,3 +31,9 @@ export function activeStorm(hazards: readonly Hazard[], ms: number) {
 }
 export const itemColor = (kind: string) => ({ berries: '#a65e68', ration: '#c4af81', wood: '#94725e', medkit: '#e5e1cb', flare: '#d49556', meat: '#a9776b' }[kind] ?? '#b7b5a2');
 export const itemName = (kind: string) => ({ medkit: 'medical kit', flare: 'flare', meat: 'meat', berries: 'berries', ration: 'ration', wood: 'wood' }[kind] ?? kind);
+// "1 berry", "9 rations", "2 medical kits"; wood and meat do not count.
+export function itemCount(kind: string, qty: number) {
+  if (kind === 'wood' || kind === 'meat') return `${qty} ${kind}`;
+  if (kind === 'berries') return `${qty} ${qty === 1 ? 'berry' : 'berries'}`;
+  return `${qty} ${itemName(kind)}${qty === 1 ? '' : 's'}`;
+}

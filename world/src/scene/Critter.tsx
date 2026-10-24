@@ -119,3 +119,18 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
     </Html>
   </group>;
 }
+
+// Death is permanent: the fallen leave a cairn where they died, ringed in
+// their colour, and a tag that stays for the rest of the run.
+export function Grave({ agent, world }: { agent: Agent; world: World }) {
+  const [x, z] = toScene(world, agent.x, agent.y);
+  return <group position={[x, 0, z]} name={`grave-${agent.id}`}>
+    {[[0, 0.22, 0, 0.55], [0.08, 0.6, 0.05, 0.42], [-0.04, 0.92, -0.02, 0.3]].map(([dx, y, dz, r], i) => <mesh key={i} position={[dx, y, dz]} scale={[r, r * 0.62, r]} castShadow receiveShadow>
+      <icosahedronGeometry args={[1, 0]} /><meshStandardMaterial {...boundaryFog} color={['#8d9180', '#9a9d8c', '#a8aa98'][i]} roughness={1} flatShading />
+    </mesh>)}
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[0.85, 1.0, 32]} /><meshBasicMaterial {...boundaryFog} color={agent.color} transparent opacity={0.7} depthWrite={false} /></mesh>
+    <Html position={[0, 1.7, 0]} center zIndexRange={[7, 2]} style={{ pointerEvents: 'none' }}>
+      <div className="nametag grave-tag"><span>{agent.name}</span><span className="ghost-word">died</span></div>
+    </Html>
+  </group>;
+}

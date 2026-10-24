@@ -1,13 +1,30 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { DbConnection, tables } from './module_bindings';
 import type { Agent, Item } from './module_bindings/types';
 import { GlowLegend } from './scene/ItemGlow';
 import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
-import { parsePhysics, itemName } from './scene/contract';
+import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
+import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
+import { modelTrouble } from './modelHealth';
+import { wreckShare } from './fairShare';
+import { eventLabel, eventOutcome, eventPolicy } from './eventPresentation';
+import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
+import { useReplay } from './useReplay';
+import { Spotlight, type Beat } from './Spotlight';
+import { describeDeath } from './moments';
+import { narrate } from './narrator';
+import { Intro } from './Intro';
+
+// A replay doesn't show the live world, so it doesn't subscribe to it: the live
+// world's 20 Hz updates would otherwise re-render the page for nothing.
+const LIVE = { enabled: !new URLSearchParams(window.location.search).get('replay') };
+
+// How long the booth tour stays on each exhibit.
+const TOUR_MS = 40_000;
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -26,57 +43,109 @@ function recent<T extends { gameTimeMs: number }>(rows: readonly T[], count: num
 export default function App() {
   const { isActive, identity, getConnection } = useSpacetimeDB();
   const conn = getConnection() as DbConnection | null;
-  const [worlds, worldReady] = useTable(tables.world);
-  const [liveAgents, agentsReady] = useTable(tables.agent);
-  const [liveNodes, nodesReady] = useTable(tables.resourceNode);
-  const [liveContainers, containersReady] = useTable(tables.container);
-  const [liveItems, itemsReady] = useTable(tables.item);
-  const [liveMessages, messagesReady] = useTable(tables.message);
-  const [ethics, ethicsReady] = useTable(tables.ethicsEvent);
-  const [metadata, metadataReady] = useTable(tables.meta);
-  const [liveStructures, structuresReady] = useTable(tables.structure);
-  const [liveMobs, mobsReady] = useTable(tables.mob);
-  const [liveHazards, hazardsReady] = useTable(tables.hazard);
-  const [liveMemories, memoriesReady] = useTable(tables.memory);
-  const physicsRaw = metadata.find(m => m.key === 'physics')?.value;
+  const [worlds, worldReady] = useTable(tables.world, LIVE);
+  const [liveAgents, agentsReady] = useTable(tables.agent, LIVE);
+  const [liveNodes, nodesReady] = useTable(tables.resourceNode, LIVE);
+  const [liveContainers, containersReady] = useTable(tables.container, LIVE);
+  const [liveItems, itemsReady] = useTable(tables.item, LIVE);
+  const [liveMessages, messagesReady] = useTable(tables.message, LIVE);
+  const [ethics, ethicsReady] = useTable(tables.ethicsEvent, LIVE);
+  const [metadata, metadataReady] = useTable(tables.meta, LIVE);
+  const [liveStructures, structuresReady] = useTable(tables.structure, LIVE);
+  const [liveMobs, mobsReady] = useTable(tables.mob, LIVE);
+  const [liveHazards, hazardsReady] = useTable(tables.hazard, LIVE);
+  const [liveMemories, memoriesReady] = useTable(tables.memory, LIVE);
+  const [liveTemptations] = useTable(tables.temptation, LIVE);
+  // ?replay=/runs/<dir>/replay.json plays a recorded run with no database.
+  const replayUrl = useMemo(() => new URLSearchParams(window.location.search).get('replay'), []);
+  // ?tour: an unattended booth plays the exhibits in turn, one page each.
+  const tour = useMemo(() => tourStep(window.location.search), []);
+  useEffect(() => {
+    if (tour === null) return;
+    if (!replayUrl) { window.location.replace(`${exhibitHref(EXHIBITS[tour])}&tour=${tour}`); return; }
+    const timer = window.setTimeout(() => window.location.assign(nextTourHref(tour)), TOUR_MS);
+    return () => clearTimeout(timer);
+  }, [tour, replayUrl]);
+  const replay = useReplay(replayUrl);
+  const recorded = replay.data;
+  const physicsRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'physics')?.value;
+  const runRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'run')?.value;
+  const runConfig = useMemo(() => { try { return runRaw ? JSON.parse(runRaw) as { promptVariant?: string; systemPrompt?: string; foodScale?: number; rescueSeats?: number; roleOffset?: number; timeScale?: number } : undefined; } catch { return undefined; } }, [runRaw]);
+  const scenarioRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'scenario')?.value;
+  const rulesVersion = useMemo(() => { try { return scenarioRaw ? Number(JSON.parse(scenarioRaw).version) : undefined; } catch { return undefined; } }, [scenarioRaw]);
+  // The condition on screen, stated plainly: which prompt, which rules, any sweep settings.
+  const condition = runConfig?.promptVariant
+    ? [runConfig.promptVariant === 'charter' ? 'Charter · policy compliance' : `${runConfig.promptVariant} · behavior comparison`, runConfig.foodScale && runConfig.foodScale !== 1 ? `food ${runConfig.foodScale}x` : '', runConfig.rescueSeats ? `${runConfig.rescueSeats} seats` : '', rulesVersion ? `rules v${rulesVersion}` : '', runConfig.timeScale ? `time ${runConfig.timeScale}×` : ''].filter(Boolean).join(' · ')
+    : '';
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
-  const [scores, scoresReady] = useTable(tables.score);
+  const [scores, scoresReady] = useTable(tables.score, LIVE);
+  const [modelHealth] = useTable(tables.modelHealth, LIVE);
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
-  const [panel, setPanel] = useState<'journal' | 'inspector' | 'join' | null>(null);
+  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | null>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
   const [survivalPreview, setSurvivalPreview] = useState(false);
   const [depleted, setDepleted] = useState(false);
   const [previewMoments, setPreviewMoments] = useState<Moment[]>([]);
   const [error, setError] = useState('');
+  // While a violation is in the spotlight, the audience camera shows who did it.
+  const [spotlit, setSpotlit] = useState<bigint | null>(null);
   const liveWorld = worlds[0];
   const previewSource = useRef(liveWorld);
   previewSource.current = liveWorld;
   const worldAvailable = !!liveWorld;
   const preview = useMemo(() => import.meta.env.DEV && staged && previewSource.current ? artPreview(previewSource.current, winterPreview, depleted, survivalPreview) : null, [staged, worldAvailable, winterPreview, depleted, survivalPreview]);
-  const world = preview?.world ?? liveWorld;
-  const agents = preview?.agents ?? liveAgents, nodes = preview?.nodes ?? liveNodes;
-  const containers = preview?.containers ?? liveContainers, items = preview?.items ?? liveItems, messages = preview?.messages ?? liveMessages;
-  const structures = preview?.structures ?? liveStructures, mobs = preview?.mobs ?? liveMobs, hazards = preview?.hazards ?? liveHazards, memories = preview?.memories ?? liveMemories;
-  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
-  const ready = worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
+  // In a live run, a model whose calls keep failing is named on screen.
+  const trouble = !replay.active && !preview ? modelTrouble(modelHealth) : null;
+  const world = recorded?.world ?? preview?.world ?? liveWorld;
+  const agents = recorded?.agents ?? preview?.agents ?? liveAgents, nodes = recorded?.nodes ?? preview?.nodes ?? liveNodes;
+  const containers = recorded?.containers ?? preview?.containers ?? liveContainers, items = recorded?.items ?? preview?.items ?? liveItems, messages = recorded?.messages ?? preview?.messages ?? liveMessages;
+  const structures = recorded?.structures ?? preview?.structures ?? liveStructures, mobs = recorded?.mobs ?? preview?.mobs ?? liveMobs, hazards = recorded?.hazards ?? preview?.hazards ?? liveHazards, memories = recorded?.memories ?? preview?.memories ?? liveMemories;
+  const interactive = (recorded?.metadata ?? metadata).some(m => m.key === 'interactive' && m.value === 'true') || agents.some(a => a.kind === 'human');
+  const canMutate = !replay.active && !preview && isActive && worldReady && agentsReady;
+  const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations;
+  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview && !replay.active, liveWorld);
+  const ready = !LIVE.enabled ? !!recorded : worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));
-  const latestEvents = useMemo(() => recent(ethics, 40), [ethics]);
+  const latestEvents = useMemo(() => recent(ethicsRows, 40), [ethicsRows]);
   const dialogue = useMemo(() => recent(messages, 60), [messages]);
   const event = !preview && world && latestEvents.find(e => world.gameTimeMs >= e.gameTimeMs && world.gameTimeMs - e.gameTimeMs < 12000);
   const worldCaption = !preview && [...worldEvents].reverse().find(e => e.text && performance.now() - e.receivedAt < 8000)?.text;
-  const selectedScore = !preview && scores.find(s => s.agentId === selectedId);
+  const selectedScore = !preview && scoreRows.find(s => s.agentId === selectedId);
   const select = (id: bigint) => { setSelectedId(id); setMode('follow'); setPanel(null); };
   const winterIn = world ? world.winterAtMs - world.gameTimeMs : 0;
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
+  const hunted = useMemo(() => new Set(mobs.filter(m => m.state === 'hunt').map(m => m.targetAgentId)), [mobs]);
+  // The ending, by name: with limited seats, who the plane took and who it left.
+  const rescueLine = useMemo(() => {
+    if (world?.rescueState === 'missed') return 'The search plane missed the signal';
+    const living = agents.filter(a => a.kind === 'llm' && a.alive);
+    const taken = living.filter(a => scoreRows.find(s => s.agentId === a.id)?.rescued);
+    const left = living.filter(a => !taken.includes(a));
+    if (!left.length) return `Rescued: ${taken.map(a => a.name).join(', ')} are going home`;
+    return `The plane took ${taken.map(a => a.name).join(' and ') || 'no one'} · left behind: ${left.map(a => a.name).join(', ')}`;
+  }, [world?.rescueState, agents, scoreRows]);
+  // What the spotlight may call out: every violation, and every death.
+  const beats = useMemo<Beat[]>(() => [
+    ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought, kind: e.kind })),
+    ...scoreRows.filter(s => s.diedAtMs > 0).map(s => ({ key: `d${s.agentId}`, agentId: s.agentId, tier: 0, caption: describeDeath(names.get(s.agentId) ?? 'Someone', s.diedOf), gameTimeMs: s.diedAtMs })),
+    // The ending, when the plane comes: rescue is the payoff of whatever they did together.
+    ...(world?.rescueState === 'rescued' ? [{ key: 'rescue', agentId: 0n, tier: 5, caption: rescueLine, gameTimeMs: world.gameTimeMs }] : []),
+  ], [ethicsRows, scoreRows, names, world?.rescueState, world?.gameTimeMs, rescueLine]);
+  const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0), structures, rescueAtMs: world.rescueState === 'waiting' ? world.rescueAtMs : undefined }) : '';
+  // Food anywhere in the world: carried, stored, dropped, and on bushes.
+  const foodLeft = useMemo(() => {
+    const food = items.filter(i => ['berries', 'ration', 'meat'].includes(i.kind)).reduce((n, i) => n + i.qty, 0);
+    return food + nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0);
+  }, [items, nodes]);
   const run = (action: Promise<unknown>) => { setError(''); void action.catch(e => setError(e instanceof Error ? e.message : String(e))); };
   const deselect = () => { setSelectedId(undefined); setMode('audience'); };
   const resetExperiment = () => {
-    if (!conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
+    if (!canMutate || !conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
     deselect();
     run(conn.reducers.resetExperiment({}));
   };
@@ -86,18 +155,25 @@ export default function App() {
     <div className="selected-title"><Portrait agent={selected} /><div><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
     {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
     <Needs agent={selected} />
-    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
+    {(() => {
+      const record = ethicsRows.filter(e => e.agentId === selected.id).sort((a, b) => b.gameTimeMs - a.gameTimeMs);
+      return record.length > 0 && <div className="agent-record"><h3>Their record</h3><ol>{record.map(e => <li key={String(e.id)}><span className="record-tier">{eventLabel(runConfig?.promptVariant)} · Tier {e.tier}</span> {eventOutcome(e.kind, e.caption)}{eventPolicy(e.kind, runConfig?.promptVariant, runConfig?.systemPrompt) && <small>Policy: {eventPolicy(e.kind, runConfig?.promptVariant, runConfig?.systemPrompt)}</small>}<small> · pressure {Math.round(e.pressure * 100)}%</small>{e.thought && <q>{e.thought}</q>}</li>)}</ol></div>;
+    })()}
+    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED EXPLANATION</span><p>“{selected.thought}”</p></div>}
     <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
-    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
+    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>{runConfig?.promptVariant === 'charter' ? 'Policy violations / opportunities' : 'Recorded events / opportunities'}</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
     <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
     <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
   </>;
 
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
+      {tour !== null && replayUrl && <div className="tour-card" role="status"><span className="eyebrow">EXHIBIT {tour + 1} OF {EXHIBITS.length}</span><b>{EXHIBITS[tour].title}</b><p>{EXHIBITS[tour].caption}</p></div>}
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
-        onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
+        onClickTile={(x, y) => { if (me && conn && canMutate) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
+      {replay.active && <ReplayBar replay={replay} />}
+      {world && !preview && <Spotlight events={beats} agents={agents} gameTimeMs={world.gameTimeMs} promptVariant={runConfig?.promptVariant} systemPrompt={runConfig?.systemPrompt} onShow={setSpotlit} />}
     </div>
     <div className="topbar">
     <header className="masthead">
@@ -106,33 +182,41 @@ export default function App() {
       <p>{agents.length ? `${agents.length} survivors. ${isWinter ? 'Winter is here.' : 'Winter is coming.'} Who will share?` : 'A small world. A question of survival.'}</p>
     </header>
     <div className="world-status">
-      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
+      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
+      {trouble && <span className="model-trouble" role="alert" title="The survivors cannot act while their model is failing. Exhibits has recorded runs.">{trouble}</span>}
+      {interactive && <span className="interactive-chip" role="status">Interactive demo · excluded from benchmark results</span>}
+      {condition && <span className="condition-chip" title="The experimental condition of this run; realtime continues while models deliberate">{condition}</span>}
+      {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
-      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
-      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
+      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
     {error && <div className="error-toast" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     {panel && <aside className="detail-panel utility-panel"><button className="close" aria-label="Close panel" onClick={() => setPanel(null)}>×</button>
+      {panel === 'exhibits' && <><span className="eyebrow">RECORDED MOMENTS</span><h2>Exhibits</h2><p className="muted">Each opens a recorded run a few seconds before the moment. Nothing here is staged.</p>
+        <ol className="exhibits">{EXHIBITS.map(e => <li key={e.title}><a href={exhibitHref(e)}><b>{e.title}</b><span>{e.caption}</span></a></li>)}</ol></>}
       {panel === 'journal' && <><span className="eyebrow">THE RECORD</span><h2>From the clearing</h2><p className="muted">Recent dialogue and recorded events. Original words, unabridged.</p>
-        <h3>Recorded events</h3>{preview ? <p className="muted">No model outcomes in art preview.</p> : latestEvents.length ? <ol className="journal">{latestEvents.map(e => <li key={String(e.id)}><time>{time(e.gameTimeMs)}</time><p>{e.caption}</p><small>Detector tier {e.tier} · {e.kind}</small></li>)}</ol> : <p className="muted">No events recorded yet.</p>}
+        <h3>Recorded events</h3>{preview ? <p className="muted">No model outcomes in art preview.</p> : latestEvents.length ? <ol className="journal">{latestEvents.map(e => <li key={String(e.id)}><time>{time(e.gameTimeMs)}</time><p>{eventOutcome(e.kind, e.caption)}</p><small>{eventLabel(runConfig?.promptVariant)} · detector tier {e.tier} · {e.kind}</small></li>)}</ol> : <p className="muted">No events recorded yet.</p>}
         {!preview && worldEvents.length > 0 && <><h3>World events · received this session</h3><ol className="journal">{[...worldEvents].reverse().slice(0, 40).map(e => <li key={e.localId}><small>{e.kind.replace(/_/g, ' ')}</small><p>{e.text || e.kind.replace(/_/g, ' ')}</p></li>)}</ol></>}
         <h3>Conversation</h3><ol className="journal">{dialogue.map(m => <li key={String(m.id)} className={m.channel === 'whisper' ? 'whisper-record' : ''}><time>{time(m.gameTimeMs)}</time><strong>{names.get(m.fromAgentId) ?? 'Departed survivor'}</strong>{m.toAgentId !== 0n && <span> → {names.get(m.toAgentId) ?? 'Departed survivor'}</span>}{m.channel === 'whisper' && <small className="speech-channel">🔒 Whisper · spectators can see this</small>}<p>“{m.text}”</p></li>)}</ol>{!dialogue.length && <p className="muted">The woods are quiet.</p>}</>}
-      {panel === 'inspector' && <><span className="eyebrow">UNDER THE CANOPY</span><h2>World inspector</h2>{world && <dl className="facts"><dt>Game clock</dt><dd>{time(world.gameTimeMs)}</dd><dt>Tick</dt><dd>{String(world.tick)}</dd><dt>Time scale</dt><dd>{world.timeScale}×</dd><dt>Map</dt><dd>Circle · radius {world.radius}</dd><dt>Resources / containers</dt><dd>{nodes.length} / {containers.length}</dd><dt>Wreck fair share</dt><dd>{world.fairShare} items / survivor</dd><dt>Data</dt><dd>{ready ? 'Subscriptions ready' : 'Waiting for replay'}</dd><dt>Structures / wolves</dt><dd>{structures.length} / {mobs.length}</dd><dt>Agent radius</dt><dd>{physics?.agentRadius ?? 'Unavailable'}</dd><dt>Rendering</dt><dd>DPR capped at 1.5</dd></dl>}
+      {panel === 'inspector' && <><span className="eyebrow">UNDER THE CANOPY</span><h2>World inspector</h2>{world && <dl className="facts"><dt>Condition</dt><dd>{condition || 'Not recorded'}</dd><dt>Game clock</dt><dd>{time(world.gameTimeMs)}</dd><dt>Tick</dt><dd>{String(world.tick)}</dd><dt>Time scale</dt><dd>{world.timeScale}×</dd><dt>Map</dt><dd>Circle · radius {world.radius}</dd><dt>Resources / containers</dt><dd>{nodes.length} / {containers.length}</dd><dt>Wreck fair share</dt><dd>{world.fairShare} items / survivor</dd><dt>Data</dt><dd>{ready ? 'Subscriptions ready' : 'Waiting for replay'}</dd><dt>Structures / wolves</dt><dd>{structures.length} / {mobs.length}</dd><dt>Agent radius</dt><dd>{physics?.agentRadius ?? 'Unavailable'}</dd><dt>Rendering</dt><dd>DPR capped at 1.5</dd></dl>}
         {selected && <p className="muted">{selected.name}: ({selected.x.toFixed(1)}, {selected.y.toFixed(1)}) · intent {selected.intentKind}</p>}
         {!preview && <ActionInspector names={names} />}
         {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [45, 81], kind: 'berries', item: 'berries', label: '2 berries', born: performance.now() }, { id: performance.now() + 1, type: 'pop', from: [72, 74], to: [72, 74], kind: 'gathered', item: 'wood', label: '+1 wood', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
-      {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
+      {panel === 'join' && !replay.active && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!canMutate || !ready} onError={setError} /></>}
     </aside>}
+    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} promptVariant={runConfig?.promptVariant} onJump={replay.active ? replay.jumpToGame : undefined} />}
+    {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
-      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>
+      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Ghost' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div><Needs agent={a} compact />
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
@@ -153,10 +237,10 @@ function Needs({ agent, compact = false }: { agent: Agent; compact?: boolean }) 
   return <div className={`needs ${compact ? 'compact' : ''}`}>{[['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]].map(([name, value]) => <div className="need" key={name} title={`${name}: ${Math.round(Number(value))} / 100`}><span>{name}</span><meter min={0} max={100} value={percent(Number(value))} aria-label={`${agent.name} ${name}`} /><small>{Math.round(Number(value))}</small></div>)}</div>;
 }
 function Inventory({ items }: { items: readonly Item[] }) {
-  return <p className="inventory">{items.filter(i => i.qty > 0).map(i => `${i.qty} ${itemName(i.kind)}`).join(' · ') || 'Empty hands'}</p>;
+  return <p className="inventory">{items.filter(i => i.qty > 0).map(i => itemCount(i.kind, i.qty)).join(' · ') || 'Empty hands'}</p>;
 }
 function ActionInspector({ names }: { names: Map<bigint, string> }) {
-  const [logs] = useTable(tables.actionLog);
+  const [logs] = useTable(tables.actionLog, LIVE);
   const entries = useMemo(() => recent(logs, 8), [logs]);
   return <details><summary>Recent reducer actions</summary><ol className="technical-log">{entries.map(l => <li key={String(l.id)}><strong>{names.get(l.agentId) ?? 'Survivor'}</strong><code>{l.action}</code>{!l.ok && <span>{l.error}</span>}</li>)}</ol></details>;
 }
@@ -168,5 +252,26 @@ function HumanControls({ conn, me, disabled, onError }: { conn: DbConnection | n
     try { if (me && text.trim()) { await conn.reducers.humanSay({ text: text.trim() }); setText(''); } else if (!me && name.trim()) await conn.reducers.joinAsHuman({ name: name.trim() }); }
     catch (err) { onError(err instanceof Error ? err.message : String(err)); }
     finally { setPending(false); }
-  }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Enter the same world as the AI survivors. Choose a name to begin.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
+  }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Join the live world. This makes the run an interactive demo, excluded from benchmark results.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
+}
+
+// Playback for a recorded run.
+function ReplayBar({ replay }: { replay: ReturnType<typeof useReplay> }) {
+  const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+  if (replay.error) return <div className="replay-bar error" role="alert">Replay failed to load: {replay.error}</div>;
+  if (!replay.replay) return <div className="replay-bar">Loading replay…</div>;
+  return <div className="replay-bar" role="group" aria-label="Replay controls">
+    <span className="replay-tag">REPLAY</span>
+    <button onClick={() => replay.setPlaying(!replay.playing)} aria-label={replay.playing ? 'Pause' : 'Play'}>{replay.playing ? '❚❚' : '▶'}</button>
+    <input type="range" min={0} max={replay.duration} step={100} value={replay.t} onChange={e => replay.seek(Number(e.target.value))} aria-label="Replay position" />
+    <span className="replay-time">{clock(replay.t)} / {clock(replay.duration)}</span>
+    {[1, 2, 4, 8].map(s => <button key={s} className={replay.speed === s ? 'active' : ''} onClick={() => replay.setSpeed(s)}>{s}×</button>)}
+    <span className="replay-source" title={replay.replay.recordedAt}>{replay.replay.db} · recorded {new Date(replay.replay.recordedAt).toLocaleString()}</span>
+  </div>;
+}
+
+// The worst of an agent's three needs, 0 (comfortable) to 1 (dying): the same
+// pressure the world records with every temptation.
+function pressureOf(a: Agent) {
+  return Math.min(1, Math.max(0, 1 - a.hp / 100, 1 - a.hunger / 100, 1 - a.warmth / 100));
 }

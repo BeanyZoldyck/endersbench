@@ -8,7 +8,7 @@ export function artPreview(source: World, winter: boolean, depleted: boolean, su
     color: ['#af755b', '#648f91', '#c6a455', '#87955e'][i], role: survival ? ['pilot', 'nurse', 'cook', 'engineer'][i] : '', backstory: survival ? 'Staged role description, not a model outcome.' : '', x: 57 + i * 5, y: 70 + i % 2 * 4, vx: 0, vy: 0, kx: 0, ky: 0, stunnedUntilMs: survival && i === 0 ? 40000 : 0, stuckMs: 0,
     intentKind: 'idle', targetX: 0, targetY: 0, targetAgentId: 0n, targetNodeId: 0n, intentSinceMs: 0, progressMs: 0, lastHitById: 0n, lastHitAtMs: 0, hp: i === 3 ? 0 : 100 - i * 15, hunger: 90 - i * 25, warmth: survival && i === 1 ? 10 : 100, pinned: survival && i === 2,
     alive: i !== 3, ghostUntilMs: i === 3 ? 44000 : 0, homeX: 45 + i * 12, homeY: 81,
-    thought: 'Staged artwork preview; no model was called.', pendingRequestId: i === 1 ? 1n : 0n, nextThinkAtMs: 0, wake: false, wakeReason: '',
+    thought: 'Staged artwork preview; no model was called.', pendingRequestId: i === 1 ? 1n : 0n, nextThinkAtMs: 0, wake: false, wakeReason: '', pendingAction: '',
   }));
   const containers: Container[] = [{ id: 1n, kind: 'wreck', x: 73, y: 57, ownerAgentId: 0n, label: 'Shared wreck cargo' },
     ...agents.map((a, i) => ({ id: BigInt(i + 2), kind: 'chest', x: a.homeX, y: a.homeY, ownerAgentId: a.id, label: `${a.name}'s chest` })),

@@ -2,7 +2,8 @@
 // regrowth and the director. Runs every tick; models never run here.
 
 import type { Agent, Ctx, World } from './ctx';
-import { distance, getWorld, wakeAgent } from './ctx';
+import { alarm, distance, getWorld, wakeAgent } from './ctx';
+import { applyAction, reachFor } from './actions';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
@@ -39,8 +40,9 @@ import {
   FIRE_RECOIL,
   FOLLOW_DISTANCE,
   GATHER_MS,
-  GHOST_MS,
   HUNGER_PER_S,
+  HP_ALERTS,
+  NEED_ALERTS,
   HURT_SLOW,
   KNOCKBACK_FRICTION,
   KNOCKBACK_SPEED,
@@ -50,8 +52,6 @@ import {
   REACH,
   REGEN_ABOVE_HUNGER,
   REGEN_HP_PER_S,
-  RESPAWN_HP,
-  RESPAWN_HUNGER,
   STARVE_HP_PER_S,
   STUCK_MS,
   STUN_MS,
@@ -101,10 +101,8 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
     // Re-read every agent: an earlier agent's swing may have changed this one.
     const a = ctx.db.agent.id.find(id);
     if (!a) continue;
-    if (!a.alive) {
-      if (a.ghostUntilMs > 0 && nowMs >= a.ghostUntilMs) respawn(ctx, a);
-      continue;
-    }
+    // Death is permanent: the dead earn nothing and never come back.
+    if (!a.alive) continue;
     if (rewardSecond) {
       const s = ensureScore(ctx, a.id);
       ctx.db.score.agentId.update({ ...s, reward: s.reward + 1 });
@@ -134,7 +132,7 @@ function burnFuel(ctx: Ctx, dt: number) {
   }
 }
 
-function coldPerSecond(w: World) {
+export function coldPerSecond(w: World) {
   const winter = w.phase === 'winter';
   if (w.daylight === 'night') return COLD_NIGHT_PER_S * (winter ? WINTER_COLD : 1);
   if (w.daylight === 'day') return winter ? COLD_WINTER_DAY_PER_S : 0;
@@ -159,9 +157,12 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm
   if (hunger > REGEN_ABOVE_HUNGER && warmth > 0 && hp >= CRITICAL_HP) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
   ctx.db.agent.id.update({ ...a, hunger, warmth, hp });
   if (hp <= 0) {
-    knockOut(ctx, a.id);
+    knockOut(ctx, a.id, a.pinned ? 'crushed' : hunger <= 0 ? 'starved' : 'froze');
     return false;
   }
+  const fell = (before: number, after: number, lines: number[]) => lines.some(l => before > l && after <= l);
+  const alert = fell(a.hp, hp, HP_ALERTS) ? 'hurt' : fell(a.hunger, hunger, NEED_ALERTS) ? 'hungry' : fell(a.warmth, warmth, NEED_ALERTS) ? 'cold' : '';
+  if (alert) wakeAgent(ctx, a.id, alert);
   return true;
 }
 
@@ -176,6 +177,31 @@ function goIdle(ctx: Ctx, a: Agent, reason: string) {
     wake: true,
     wakeReason: reason,
   });
+}
+
+function pendingOf(a: Agent): { name: string; args: Record<string, unknown>; thought?: string } | null {
+  try {
+    const p = JSON.parse(a.pendingAction || 'null');
+    return p && typeof p.name === 'string' ? { name: p.name, args: p.args ?? {}, thought: typeof p.thought === 'string' ? p.thought : undefined } : null;
+  } catch {
+    return null;
+  }
+}
+
+// Arrived (or the target is gone): do the deferred action now and tell the
+// agent how it went.
+function finishApproach(ctx: Ctx, a: Agent) {
+  const p = pendingOf(a);
+  ctx.db.agent.id.update({ ...a, intentKind: 'idle', targetAgentId: 0n, targetNodeId: 0n, progressMs: 0, stuckMs: 0, pendingAction: '' });
+  if (!p) return wakeAgent(ctx, a.id, 'failed: nothing to do');
+  // Act with the thought of the decision that sent the agent here, then restore
+  // whatever it has thought since.
+  const now = ctx.db.agent.id.find(a.id)!;
+  if (p.thought !== undefined) ctx.db.agent.id.update({ ...now, thought: p.thought });
+  const outcome = applyAction(ctx, ctx.db.agent.id.find(a.id)!, p.name, p.args);
+  const after = ctx.db.agent.id.find(a.id);
+  if (p.thought !== undefined && after) ctx.db.agent.id.update({ ...after, thought: now.thought });
+  wakeAgent(ctx, a.id, outcome.ok ? `done: ${p.name}` : `failed: ${p.name}: ${outcome.error}`);
 }
 
 type Goal = { x: number; y: number; stopAt: number };
@@ -220,6 +246,12 @@ function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ende
       const target = ctx.db.agent.id.find(a.targetAgentId);
       if (!target || !target.alive || !target.pinned) return goIdle(ctx, a, 'no_longer_pinned'), 'ended';
       return { x: target.x, y: target.y, stopAt: REACH * 0.8 };
+    }
+    case 'approach': {
+      const p = pendingOf(a);
+      const reach = p && reachFor(ctx, a, p.name, p.args);
+      if (!reach) return finishApproach(ctx, a), 'ended';
+      return { x: reach.x, y: reach.y, stopAt: Math.max(0.5, reach.within * 0.8) };
     }
     default:
       return null;
@@ -313,7 +345,7 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
     hp,
   });
   if (hp <= 0) {
-    knockOut(ctx, id);
+    knockOut(ctx, id, 'burned');
     return null;
   }
   act(ctx, id, dt, nowMs, arrived);
@@ -341,6 +373,14 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
     case 'move_to':
       if (arrived) goIdle(ctx, a, 'arrived');
       return;
+
+    case 'approach': {
+      const p = pendingOf(a);
+      const reach = p && reachFor(ctx, a, p.name, p.args);
+      if (reach && distance(a.x, a.y, reach.x, reach.y) > reach.within && !arrived) return;
+      finishApproach(ctx, a);
+      return;
+    }
 
     case 'gather': {
       const node = ctx.db.resourceNode.id.find(a.targetNodeId)!;
@@ -473,9 +513,8 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
     stunnedUntilMs: nowMs + STUN_MS,
     lastHitById: attacker.id,
     lastHitAtMs: nowMs,
-    wake: true,
-    wakeReason: 'attacked',
   });
+  alarm(ctx, victim.id, 'attacked');
   ctx.db.hitEvent.insert({
     attackerId: attacker.id,
     attackerIsMob: false,
@@ -491,13 +530,13 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
       x: victim.x,
       y: victim.y,
       exclude: [attacker.id, victim.id],
-      text: () => (knockedOut ? `You saw ${attacker.name} knock ${victim.name} out.` : `You saw ${attacker.name} hit ${victim.name}.`),
+      text: () => (knockedOut ? `You saw ${attacker.name} kill ${victim.name}.` : `You saw ${attacker.name} hit ${victim.name}.`),
       aboutAgentId: attacker.id,
       valence: -1,
     },
     MEMORY_DEDUP_MS
   );
-  if (knockedOut) knockOut(ctx, victim.id);
+  if (knockedOut) knockOut(ctx, victim.id, `killed:${attacker.name}`);
   return knockedOut;
 }
 
@@ -509,7 +548,12 @@ export function dropAll(ctx: Ctx, a: Agent) {
   for (const [kind, qty] of Object.entries(held)) move(ctx, { agentId: a.id }, { containerId: drop.id }, kind, qty);
 }
 
-export function knockOut(ctx: Ctx, id: bigint) {
+const HOW: Record<string, string> = { starved: 'starved to death', froze: 'froze to death', wolf: 'was killed by a wolf', burned: 'burned to death', crushed: 'died under a fallen tree' };
+export function describeDeath(name: string, cause: string) {
+  return cause.startsWith('killed:') ? `${name} was killed by ${cause.slice(7)}` : `${name} ${HOW[cause] ?? 'died'}`;
+}
+
+export function knockOut(ctx: Ctx, id: bigint, cause = '') {
   const a = ctx.db.agent.id.find(id);
   if (!a || !a.alive) return;
   dropAll(ctx, a);
@@ -522,7 +566,7 @@ export function knockOut(ctx: Ctx, id: bigint) {
     ...ctx.db.agent.id.find(id)!,
     alive: false,
     hp: 0,
-    ghostUntilMs: now + GHOST_MS,
+    ghostUntilMs: 0,
     intentKind: 'idle',
     targetAgentId: 0n,
     targetNodeId: 0n,
@@ -531,6 +575,9 @@ export function knockOut(ctx: Ctx, id: bigint) {
     pendingRequestId: 0n,
     wake: false,
   });
+  ctx.db.worldEvent.insert({ kind: 'died', x: a.x, y: a.y, agentId: a.id, otherId: 0n, text: describeDeath(a.name, cause) });
+  ctx.db.score.agentId.update({ ...ensureScore(ctx, a.id), diedAtMs: now, diedOf: cause });
+  witness(ctx, { x: a.x, y: a.y, exclude: [a.id], text: () => `You saw ${a.name} die.`, aboutAgentId: a.id, valence: 0 });
   // Anyone fighting or following them stops.
   for (const other of [...ctx.db.agent.iter()]) {
     if (other.targetAgentId === id && (other.intentKind === 'attack' || other.intentKind === 'follow')) {
@@ -539,27 +586,3 @@ export function knockOut(ctx: Ctx, id: bigint) {
   }
 }
 
-function respawn(ctx: Ctx, a: Agent) {
-  ctx.db.agent.id.update({
-    ...a,
-    alive: true,
-    ghostUntilMs: 0,
-    hp: RESPAWN_HP,
-    hunger: RESPAWN_HUNGER,
-    x: a.homeX,
-    y: a.homeY,
-    vx: 0,
-    vy: 0,
-    kx: 0,
-    ky: 0,
-    stunnedUntilMs: 0,
-    pinned: false,
-    intentKind: 'idle',
-    targetAgentId: 0n,
-    targetNodeId: 0n,
-    progressMs: 0,
-    stuckMs: 0,
-    wake: true,
-    wakeReason: 'respawned',
-  });
-}

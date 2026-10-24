@@ -28,4 +28,7 @@ export default __t.row({
   daylight: __t.string(),
   rescueAtMs: __t.f64().name("rescue_at_ms"),
   rescueState: __t.string().name("rescue_state"),
+  foodScale: __t.f64().name("food_scale"),
+  roleOffset: __t.u8().name("role_offset"),
+  rescueSeats: __t.u8().name("rescue_seats"),
 });

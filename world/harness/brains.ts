@@ -294,6 +294,14 @@ export type CodexRun = (call: { instructions: string; prompt: string; model: str
 
 const CODEX_TIMEOUT_MS = 60_000;
 
+// The line that says what went wrong, not the sandbox notice Codex prints on
+// every run (which used to crowd the real error out of a short tail).
+export function codexError(stderr: string) {
+  const lines = stderr.split('\n').map(l => l.trim()).filter(Boolean).filter(l => !/bubblewrap|sandboxing#prerequisites/i.test(l));
+  const real = lines.filter(l => /error|forbidden|denied|limit|refused|timed out|unauthori/i.test(l));
+  return (real.at(-1) ?? lines.at(-1) ?? 'no output').slice(0, 300);
+}
+
 // Server names from `[mcp_servers.<name>]` headers, ignoring their sub-tables.
 export function mcpServerNames(configToml: string) {
   const names = new Set<string>();
@@ -316,10 +324,10 @@ const runCodexCli: CodexRun = async ({ instructions, prompt, model, codexHome, s
     await new Promise<void>((resolve, reject) => {
       const child = spawn('codex', args, { env: codexHome ? { ...process.env, CODEX_HOME: codexHome } : process.env, stdio: ['pipe', 'ignore', 'pipe'] });
       let stderr = '';
-      child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-2000); });
+      child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8000); });
       const timer = setTimeout(() => child.kill('SIGTERM'), CODEX_TIMEOUT_MS);
       child.on('error', err => { clearTimeout(timer); reject(err); });
-      child.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`codex exec exited ${code}: ${stderr.trim().slice(-300)}`)); });
+      child.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`codex exec exited ${code}: ${codexError(stderr)}`)); });
       child.stdin.end(prompt);
     });
     return await readFile(out, 'utf-8');

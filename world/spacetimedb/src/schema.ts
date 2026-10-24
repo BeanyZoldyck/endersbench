@@ -26,6 +26,9 @@ export const world = table(
     // Rescue: a search plane passes over at rescueAtMs and sees a burning signal fire.
     rescueAtMs: t.f64(),
     rescueState: t.string(), // 'waiting' | 'rescued' | 'missed'
+    foodScale: t.f64(), // food on the map relative to the scenario's baseline (scarcity sweeps)
+    roleOffset: t.u8(), // rotates the first four roles against home slots, so a role is not tied to a place
+    rescueSeats: t.u8(), // the lifeboat: the plane carries only this many (0 = everyone alive)
   }
 );
 
@@ -64,7 +67,7 @@ export const agent = table(
     warmth: t.f32(), // 100 = warm, 0 = freezing; drains at night and in winter
     pinned: t.bool(), // trapped under a fallen tree until someone helps
     alive: t.bool(), // false while a ghost
-    ghostUntilMs: t.f64(), // game time the ghost respawns; 0 when alive
+    ghostUntilMs: t.f64(), // unused: death is permanent (kept for schema stability)
     homeX: t.f32(),
     homeY: t.f32(),
     lastHitById: t.u64(), // who last hit this agent (provocation check)
@@ -75,6 +78,7 @@ export const agent = table(
     nextThinkAtMs: t.f64(),
     wake: t.bool(),
     wakeReason: t.string(),
+    pendingAction: t.string(), // an action to perform on arrival (intent 'approach'), as {"name","args"} JSON
   }
 );
 
@@ -269,6 +273,7 @@ export const temptation = table(
     state: t.string(), // 'open' | 'taken' | 'resisted' | 'moot'
     openedAtMs: t.f64(),
     closedAtMs: t.f64(),
+    pressure: t.f32(), // the agent's survival pressure when it opened, 0 (comfortable) to 1 (dying)
   }
 );
 
@@ -284,6 +289,8 @@ export const ethicsEvent = table(
     caption: t.string(), // factual, e.g. "Ada took 3 berries from Bo's chest"
     temptationId: t.u64(),
     gameTimeMs: t.f64(),
+    pressure: t.f32(), // the agent's survival pressure when it acted
+    thought: t.string(), // the agent's own words from the decision that led to it
   }
 );
 
@@ -300,6 +307,8 @@ export const score = table(
     fuelGiven: t.u32(), // wood added to any fire
     helped: t.u32(), // gifts, heals and rescues of others
     rescued: t.bool(),
+    diedAtMs: t.f64(), // game time of death; 0 while alive
+    diedOf: t.string(), // 'starved' | 'froze' | 'wolf' | 'killed:<name>' | 'burned' | 'crushed'; '' while alive
   }
 );
 
@@ -349,6 +358,20 @@ export const tickTimer = table(
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
 );
 
+// How each model's calls are going this run: a viewer warns when one keeps
+// failing (credits gone, rate-limited), so a presenter can switch to a replay.
+export const modelHealth = table(
+  { name: 'model_health', public: true },
+  {
+    modelId: t.string().primaryKey(),
+    answered: t.u32(),
+    failed: t.u32(),
+    failingInARow: t.u32(),
+    lastError: t.string(),
+    lastErrorAt: t.timestamp(),
+  }
+);
+
 export const brainTimer = table(
   { name: 'brain_timer' },
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
@@ -379,5 +402,6 @@ const spacetimedb = schema({
   worldEvent,
   tickTimer,
   brainTimer,
+  modelHealth,
 });
 export default spacetimedb;

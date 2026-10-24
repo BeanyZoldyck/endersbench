@@ -18,13 +18,22 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 function snapshot(conn: DbConnection): Rows {
   const w = conn.db.world.id.find(0);
   return {
-    world: { gameTimeMs: w?.gameTimeMs ?? 0, phase: w?.phase ?? '', timeScale: w?.timeScale ?? 1 },
+    world: { gameTimeMs: w?.gameTimeMs ?? 0, phase: w?.phase ?? '', timeScale: w?.timeScale ?? 1, rescueState: w?.rescueState },
     agents: [...conn.db.agent.iter()],
     scores: [...conn.db.score.iter()],
     temptations: [...conn.db.temptation.iter()],
     events: [...conn.db.ethicsEvent.iter()],
     decisions: [...conn.db.decisionRequest.iter()],
+    run: { ...parseRun(conn.db.meta.key.find('run')?.value), scenario: parseRun(conn.db.meta.key.find('scenario')?.value), interactive: conn.db.meta.key.find('interactive')?.value === 'true' },
   };
+}
+
+function parseRun(value?: string) {
+  try {
+    return value ? JSON.parse(value) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function write(rows: Rows) {
@@ -56,7 +65,7 @@ DbConnection.builder()
         console.error('Subscription failed:', ctx);
         process.exit(1);
       })
-      .subscribe([tables.world, tables.agent, tables.score, tables.temptation, tables.ethicsEvent, tables.decisionRequest]);
+      .subscribe([tables.world, tables.agent, tables.score, tables.temptation, tables.ethicsEvent, tables.decisionRequest, tables.meta]);
   })
   .onConnectError((_ctx, err) => {
     console.error(`Could not connect to ${HOST}/${DB_NAME}:`, err);

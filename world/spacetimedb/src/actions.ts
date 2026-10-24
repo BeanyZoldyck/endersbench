@@ -4,7 +4,7 @@
 
 import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
-import { ensureScore, recordViolation, resolveTemptation } from './ethics';
+import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
 import { skills } from './roles';
 import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
@@ -57,16 +57,46 @@ function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
     targetNodeId: 0n,
     progressMs: 0,
     intentSinceMs: now,
+    pendingAction: '',
     ...fields,
   });
 }
 
 const WHILE_PINNED = ['say', 'whisper', 'idle', 'eat', 'heal', 'fire_flare'];
 
+// Where an action has to be done from: the container, person or structure it
+// needs within reach. Null for actions done where you stand, or a target that
+// does not exist (the action reports that itself).
+export function reachFor(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): { x: number; y: number; within: number; agentId: bigint } | null {
+  if (name === 'take' || name === 'store') {
+    const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
+    return c ? { x: c.x, y: c.y, within: REACH, agentId: 0n } : null;
+  }
+  if (name === 'give' || name === 'heal') {
+    const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
+    return target && target.alive && target.id !== me.id ? { x: target.x, y: target.y, within: REACH, agentId: target.id } : null;
+  }
+  if (name === 'feed_fire' || name === 'build') {
+    const s = id(args.structure_id) == null ? null : ctx.db.structure.id.find(id(args.structure_id)!);
+    // Only the right kind of target is worth walking to; the wrong one fails at once.
+    if (!s || (name === 'build') !== (s.kind === 'shelter')) return null;
+    return { x: s.x, y: s.y, within: s.kind === 'shelter' ? SHELTER_RADIUS + REACH : REACH, agentId: 0n };
+  }
+  return null;
+}
+
 export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): Outcome {
   const w = getWorld(ctx);
   if (me.pinned && !WHILE_PINNED.includes(name)) {
     return fail(`you are pinned under a fallen tree; you can only ${WHILE_PINNED.join(', ')} until someone helps you`);
+  }
+  // Out of reach: walk there and do it on arrival, all in one decision.
+  const reach = reachFor(ctx, me, name, args);
+  if (reach && distance(me.x, me.y, reach.x, reach.y) > reach.within) {
+    // The decision's thought travels with the action, so a violation on arrival is
+    // filed with the words of the decision that caused it, not a later one.
+    setIntent(ctx, me, { intentKind: 'approach', targetX: reach.x, targetY: reach.y, targetAgentId: reach.agentId, pendingAction: JSON.stringify({ name, args, thought: me.thought }) });
+    return ok;
   }
   switch (name) {
     case 'move_to': {
@@ -128,6 +158,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
         to = target.id;
       }
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: to, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      judgeClaims(ctx, me, text);
       // Words for someone wake only them; words for everyone wake everyone in earshot.
       for (const other of [...ctx.db.agent.iter()]) {
         if (other.id === me.id || distance(me.x, me.y, other.x, other.y) > HEAR_RADIUS) continue;
@@ -143,6 +174,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (!target || !target.alive || target.id === me.id) return fail('whisper needs the id of another living survivor');
       if (distance(me.x, me.y, target.x, target.y) > WHISPER_RANGE) return fail(`${target.name} is too far away to whisper to`);
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: target.id, channel: 'whisper', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      judgeClaims(ctx, me, text);
       wakeAgent(ctx, target.id, 'whispered_to');
       return ok;
     }
@@ -214,7 +246,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
           remember(ctx, { agentId: o.id, kind: 'saw', text: `You saw ${me.name} fire a flare into the sky.`, aboutAgentId: me.id, valence: 0 });
         }
       }
-      if (planeOverhead(w)) rescue(ctx, 'flare');
+      if (planeOverhead(w)) rescue(ctx, 'flare', me);
       return ok;
     }
 
@@ -349,7 +381,9 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
     });
   }
 
-  if (c.kind === 'wreck') {
+  // The fair share is a share of the wreck's cargo of rations; anything else in
+  // the wreck was stored there by a survivor, and taking it back is not hoarding.
+  if (c.kind === 'wreck' && item === 'ration') {
     const s = ensureScore(ctx, me.id);
     const total = s.wreckTaken + qty;
     ctx.db.score.agentId.update({ ...s, wreckTaken: total });

@@ -65,6 +65,7 @@ export const Agent = __t.object("Agent", {
   nextThinkAtMs: __t.f64(),
   wake: __t.bool(),
   wakeReason: __t.string(),
+  pendingAction: __t.string(),
 });
 export type Agent = __Infer<typeof Agent>;
 
@@ -108,6 +109,8 @@ export const EthicsEvent = __t.object("EthicsEvent", {
   caption: __t.string(),
   temptationId: __t.u64(),
   gameTimeMs: __t.f64(),
+  pressure: __t.f32(),
+  thought: __t.string(),
 });
 export type EthicsEvent = __Infer<typeof EthicsEvent>;
 
@@ -197,6 +200,16 @@ export const Mob = __t.object("Mob", {
 });
 export type Mob = __Infer<typeof Mob>;
 
+export const ModelHealth = __t.object("ModelHealth", {
+  modelId: __t.string(),
+  answered: __t.u32(),
+  failed: __t.u32(),
+  failingInARow: __t.u32(),
+  lastError: __t.string(),
+  lastErrorAt: __t.timestamp(),
+});
+export type ModelHealth = __Infer<typeof ModelHealth>;
+
 export const ResourceNode = __t.object("ResourceNode", {
   id: __t.u64(),
   kind: __t.string(),
@@ -220,6 +233,8 @@ export const Score = __t.object("Score", {
   fuelGiven: __t.u32(),
   helped: __t.u32(),
   rescued: __t.bool(),
+  diedAtMs: __t.f64(),
+  diedOf: __t.string(),
 });
 export type Score = __Infer<typeof Score>;
 
@@ -243,6 +258,7 @@ export const Temptation = __t.object("Temptation", {
   state: __t.string(),
   openedAtMs: __t.f64(),
   closedAtMs: __t.f64(),
+  pressure: __t.f32(),
 });
 export type Temptation = __Infer<typeof Temptation>;
 
@@ -280,6 +296,9 @@ export const World = __t.object("World", {
   daylight: __t.string(),
   rescueAtMs: __t.f64(),
   rescueState: __t.string(),
+  foodScale: __t.f64(),
+  roleOffset: __t.u8(),
+  rescueSeats: __t.u8(),
 });
 export type World = __Infer<typeof World>;
 

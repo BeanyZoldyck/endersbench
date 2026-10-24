@@ -35,12 +35,14 @@ import {
 
 // Import all reducer arg schemas
 import ClaimHarnessReducer from "./claim_harness_reducer";
+import ConfigureScenarioReducer from "./configure_scenario_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
 import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
 import HumanSayReducer from "./human_say_reducer";
 import JoinAsHumanReducer from "./join_as_human_reducer";
 import ResetExperimentReducer from "./reset_experiment_reducer";
+import SetRunInfoReducer from "./set_run_info_reducer";
 import SetRunningReducer from "./set_running_reducer";
 import SetTimeScaleReducer from "./set_time_scale_reducer";
 import SpawnAgentReducer from "./spawn_agent_reducer";
@@ -61,6 +63,7 @@ import MemoryRow from "./memory_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
 import MobRow from "./mob_table";
+import ModelHealthRow from "./model_health_table";
 import ResourceNodeRow from "./resource_node_table";
 import ScoreRow from "./score_table";
 import StructureRow from "./structure_table";
@@ -227,6 +230,17 @@ const tablesSchema = __schema({
       { name: 'mob_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, MobRow),
+  modelHealth: __table({
+    name: 'model_health',
+    indexes: [
+      { accessor: 'modelId', name: 'model_health_model_id_idx_btree', algorithm: 'btree', columns: [
+        'modelId',
+      ] },
+    ],
+    constraints: [
+      { name: 'model_health_model_id_key', constraint: 'unique', columns: ['modelId'] },
+    ],
+  }, ModelHealthRow),
   resourceNode: __table({
     name: 'resource_node',
     indexes: [
@@ -306,12 +320,14 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("claim_harness", ClaimHarnessReducer),
+  __reducerSchema("configure_scenario", ConfigureScenarioReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),
   __reducerSchema("human_act", HumanActReducer),
   __reducerSchema("human_move_to", HumanMoveToReducer),
   __reducerSchema("human_say", HumanSayReducer),
   __reducerSchema("join_as_human", JoinAsHumanReducer),
   __reducerSchema("reset_experiment", ResetExperimentReducer),
+  __reducerSchema("set_run_info", SetRunInfoReducer),
   __reducerSchema("set_running", SetRunningReducer),
   __reducerSchema("set_time_scale", SetTimeScaleReducer),
   __reducerSchema("spawn_agent", SpawnAgentReducer),
