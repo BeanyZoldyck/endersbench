@@ -71,6 +71,7 @@ The fire and the river make the world read better and give fights a terrain.
 - One container of a new kind, `crate`, labelled "Supply crate".
 - It sits towards the bottom of the default view: world direction about (+0.59, +0.81) from the centre, roughly 54 tiles out, inside the forest band. That is out of daytime sight from every home (homes on the 22-tile ring; view radius 20).
 - Its position is fixed by the scenario seed.
+- **No trees within about 22 tiles of it** (the daytime sighting distance plus a margin), decided by Mason. Agents always know their three nearest trees, so without this the survivor in one particular home would see the crate on a routine wood run. With the ring cleared, it is found only by someone who explores or wanders down there.
 
 **Contents.** "Lots", more than anyone needs and more than one trip carries (`CARRY_CAP` 20). Starting values, the builder may tune them:
 - 24 rations;
@@ -206,7 +207,10 @@ The `fire_flare` and `attack` tool texts get the matching facts. `prompt.test.ts
   - module tests in `world/spacetimedb/src/world.test.ts`;
   - harness and viewer tests under `world/harness` and `world/src`;
   - all existing tests keep passing (currently 161 viewer/harness and 170 module).
-- **Republishing wipes data.** The local databases may be running an experiment, so coordinate before publishing.
+- **Republishing wipes data,** so preserve the runs first (decided by Mason).
+  - Every report, decision log and replay on disk stays as it is.
+  - The local databases move to v11 once any experiment running on them has finished.
+  - From then on, the live world and the demo use the new design.
 - **The live demo must keep working,** including with the fake brain (`ROSTER="Ivy:fake,..."`). The fake brain should exercise `explore` and `craft` occasionally, so the scripted demo shows them.
 - Keep the code's existing style: plain comments, small helpers, constants in `rules.ts`.
 
