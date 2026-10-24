@@ -337,3 +337,8 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .record-tier { font:700 9px/1 system-ui, sans-serif; text-transform:uppercase; letter-spacing:.06em; color:#8a3a28; background:#f3d8cc; padding:2px 5px; border-radius:3px; margin-right:4px; }
 .agent-record q { display:block; margin-top:3px; font:italic 12.5px/1.4 Georgia,serif; color:#4f5d4a; }
 .spotlight.tier-5 { border-left-color:#4f7d4c; } .spotlight.tier-5 .spotlight-tier { color:#2f5a2c; background:#dcebd3; }
+
+/* What an over-take's own thought said about the fair share. */
+.stance { display:inline-block; margin-top:6px; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:2px 8px; border-radius:6px; }
+.stance.claims-fair { background:#f3e3b8; color:#6d5414; }
+.stance.admits-over { background:#f2d0c4; color:#8a2f1c; }

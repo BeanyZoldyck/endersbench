@@ -1,6 +1,7 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
 import type { Agent, Container, EthicsEvent, Score, Temptation, World } from './module_bindings/types';
 import { describeChoice, describeDeath, pressureBands } from './moments';
+import { stanceLabel } from './fairShare';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
 // A thought is shown beside a choice only if the choice closed while we were
@@ -10,7 +11,7 @@ const FRESH_MS = 15_000;
 // pressure; comfortable passes are still counted in the header.
 const NOTABLE_PASS = 0.4;
 
-type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; color?: string };
+type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; stance?: string; color?: string };
 
 export function MomentsRail({ world, agents, containers, scores, temptations, ethics }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[] }) {
   const thoughts = useRef(new Map<bigint, string | null>());
@@ -29,7 +30,8 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
       }
       // A take is filed with the thought of the decision that caused it; prefer that evidence.
       const filed = t.state === 'taken' ? ethics.find(e => e.temptationId === t.id)?.thought : undefined;
-      list.push({ key: `t${t.id}`, at: t.closedAtMs, kind: t.state === 'taken' ? 'taken' : 'resisted', text, pressure: t.pressure, thought: filed || (thoughts.current.get(t.id) ?? undefined), color: agents.find(a => a.id === t.agentId)?.color });
+      const thought = filed || (thoughts.current.get(t.id) ?? undefined);
+      list.push({ key: `t${t.id}`, at: t.closedAtMs, kind: t.state === 'taken' ? 'taken' : 'resisted', text, pressure: t.pressure, thought, stance: t.state === 'taken' ? stanceLabel(t.kind, thought) : undefined, color: agents.find(a => a.id === t.agentId)?.color });
     }
     for (const s of scores) {
       if (!s.diedAtMs) continue;
@@ -65,6 +67,7 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
         <p>{e.text}</p>
         {e.pressure !== undefined && <div className="pressure" title="Survival pressure when the choice arose: the worst of health, fullness and warmth"><span className="bar"><i style={{ width: `${Math.round(e.pressure * 100)}%` }} /></span><span>pressure {Math.round(e.pressure * 100)}%</span></div>}
         {e.thought && <blockquote>“{e.thought}”</blockquote>}
+        {e.stance && <span className={`stance ${e.stance === 'called it fair' ? 'claims-fair' : 'admits-over'}`}>{e.stance}</span>}
       </li>)}
     </ol>
   </aside>;

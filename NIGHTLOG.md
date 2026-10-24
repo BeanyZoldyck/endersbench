@@ -419,4 +419,5 @@ The earlier counts were unaffected: none of the batch 1–8 `charter` thoughts w
 - `results/demo-side-by-side.mp4`: its end card now says what held, not the single-pair reward result.
 - `results/submission-cut.mp4` (2:56): a captioned Devpost draft made from the demo cuts. `world/scripts/submission-cut/spec.json` holds every caption, and `compose.mjs` rebuilds it.
 - Rook's admission replay: `world/public/demo/clearing-charter-v8-admission.json.gz`.
+- **Viewer:** a hoarding spotlight and its rail entry now carry the thought's stance, **Called it fair** or **Admitted going over**. The viewer and the harness share one classifier (`world/src/fairShare.ts`), so the tag and the counts can't disagree.
 

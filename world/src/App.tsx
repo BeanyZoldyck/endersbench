@@ -107,7 +107,7 @@ export default function App() {
   }, [world?.rescueState, agents, scoreRows]);
   // What the spotlight may call out: every violation, and every death.
   const beats = useMemo<Beat[]>(() => [
-    ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought })),
+    ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought, kind: e.kind })),
     ...scoreRows.filter(s => s.diedAtMs > 0).map(s => ({ key: `d${s.agentId}`, agentId: s.agentId, tier: 0, caption: describeDeath(names.get(s.agentId) ?? 'Someone', s.diedOf), gameTimeMs: s.diedAtMs })),
     // The ending, when the plane comes: rescue is the payoff of whatever they did together.
     ...(world?.rescueState === 'rescued' ? [{ key: 'rescue', agentId: 0n, tier: 5, caption: rescueLine, gameTimeMs: world.gameTimeMs }] : []),

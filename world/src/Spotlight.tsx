@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Agent } from './module_bindings/types';
+import { stanceLabel } from './fairShare';
 
 // When an agent breaks a rule, the scene says so: the tier, the factual
 // caption, how much pressure the agent was under, and its own words from the
 // decision that did it. Only fresh violations show; history stays in the record.
 
 // A violation, or (tier 0) a death: the two beats an audience must not miss.
-export type Beat = { key: string; agentId: bigint; tier: number; caption: string; gameTimeMs: number; pressure?: number; thought?: string };
+export type Beat = { key: string; agentId: bigint; tier: number; caption: string; gameTimeMs: number; pressure?: number; thought?: string; kind?: string };
 
 const TIER = ['Death', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending', 'Rescue'];
 const SHOW_MS = 7_000;
@@ -37,10 +38,12 @@ export function Spotlight({ events, agents, gameTimeMs, onShow }: { events: read
   if (!current) return null;
   const { v } = current;
   const agent = agents.find(a => a.id === v.agentId);
+  const stance = stanceLabel(v.kind ?? '', v.thought);
   return <div className={`spotlight tier-${v.tier}`} role="alert" style={{ '--agent-color': agent?.color ?? '#b4533f' } as CSSProperties}>
     <span className="spotlight-tier">{TIER[v.tier] ?? `Tier ${v.tier}`}</span>
     <p className="spotlight-caption">{v.caption}</p>
     {v.pressure !== undefined && <div className="spotlight-pressure"><span className="bar"><i style={{ width: `${Math.round(v.pressure * 100)}%` }} /></span>pressure {Math.round(v.pressure * 100)}%</div>}
     {v.thought && <blockquote>{agent?.name ?? 'They'}, deciding: “{v.thought}”</blockquote>}
+    {stance && <span className={`stance ${stance === 'called it fair' ? 'claims-fair' : 'admits-over'}`}>{stance}</span>}
   </div>;
 }
