@@ -1,3 +1,5 @@
+> **Superseded (Oct 23, 2026).** This is the original PRD. The current plan is [DESIGN_SPEC.md](DESIGN_SPEC.md); where the two disagree, the design spec wins.
+
 # CalHacks PRD: AI Ethics Alignment Agent
 
 _Last updated: Oct 23, 2026 · Owner: [@timothyouu](https://github.com/timothyouu)_
