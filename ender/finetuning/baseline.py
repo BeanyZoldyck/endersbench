@@ -9,6 +9,8 @@ import platform
 import random
 import re
 import statistics
+import sys
+import threading
 import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -170,6 +172,116 @@ def summarize(results):
             "datasets": summary}
 
 
+class LiveProgress:
+    """Stream response text and periodically save/display generation measurements."""
+
+    def __init__(self, output, example, index, total, input_tokens, memory, interval=5, stream=True):
+        self.output = output
+        self.example = example
+        self.index, self.total, self.input_tokens = index, total, input_tokens
+        self.memory, self.interval, self.stream = memory, interval, stream
+        self.tokens = 0
+        self.first_token_seconds = None
+        self.started = None
+        self.stopped = threading.Event()
+        self.lock = threading.Lock()
+        self.thread = None
+
+    def add_tokens(self, count):
+        with self.lock:
+            self.tokens += count
+            if count and self.first_token_seconds is None:
+                self.first_token_seconds = time.perf_counter() - self.started
+
+    def text(self, text, stream_end=False):
+        if self.stream:
+            with self.lock:
+                print(text, end="\n" if stream_end else "", flush=True)
+
+    def emit(self, status="generating"):
+        elapsed = max(time.perf_counter() - self.started, 1e-9)
+        with self.lock:
+            tokens = self.tokens
+            first_token = self.first_token_seconds
+        allocated, reserved = self.memory()
+        snapshot = {"updated_at": utcnow(), "status": status, "example_id": self.example["id"],
+                    "index": self.index, "total": self.total, "input_tokens": self.input_tokens,
+                    "output_tokens_so_far": tokens, "elapsed_seconds": elapsed,
+                    "output_tokens_per_second": tokens / elapsed, "first_token_seconds": first_token,
+                    "cuda_allocated_bytes": allocated, "cuda_reserved_bytes": reserved}
+        write_json(self.output / "progress.json", snapshot)
+        with self.lock:
+            print(f"\n[live {self.index}/{self.total}] {self.example['id']} {status} | "
+                  f"{tokens} tokens | {elapsed:.1f}s | {tokens / elapsed:.1f} tok/s | "
+                  f"CUDA {allocated / 2**30:.2f} GiB allocated, {reserved / 2**30:.2f} GiB reserved",
+                  file=sys.stderr, flush=True)
+        return snapshot
+
+    def _heartbeat(self):
+        while not self.stopped.wait(self.interval):
+            try:
+                self.emit()
+            except Exception as exc:
+                print(f"Live progress update failed: {exc}", file=sys.stderr, flush=True)
+                break
+
+    def __enter__(self):
+        self.started = time.perf_counter()
+        self.emit()
+        self.thread = threading.Thread(target=self._heartbeat, daemon=True)
+        self.thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        self.stopped.set()
+        self.thread.join()
+        self.emit("generation_finished" if exc_type is None else "generation_interrupted")
+
+
+def make_streamer(tokenizer, progress):
+    from transformers import TextStreamer
+
+    class LiveStreamer(TextStreamer):
+        def __init__(self):
+            super().__init__(tokenizer, skip_prompt=True, skip_special_tokens=True)
+            self.prompt_pending = True
+
+        def put(self, value):
+            if self.prompt_pending:
+                self.prompt_pending = False
+            else:
+                progress.add_tokens(value.numel())
+            super().put(value)
+
+        def on_finalized_text(self, text, stream_end=False):
+            progress.text(text, stream_end)
+
+    return LiveStreamer()
+
+
+def show_result(row, results, total, elapsed):
+    if row["status"] == "ok":
+        print(f"\n[result] refusal proxy={'YES' if row['refusal_heuristic'] else 'NO'} | "
+              f"tokens={row['input_tokens']} in / {row['output_tokens']} out | "
+              f"latency={row['generation_seconds']:.2f}s | {row['output_tokens_per_second']:.2f} tok/s | "
+              f"peak CUDA={row['peak_cuda_allocated_bytes'] / 2**30:.2f} GiB allocated / "
+              f"{row['peak_cuda_reserved_bytes'] / 2**30:.2f} GiB reserved | "
+              f"length-limited={row['length_limited']}", flush=True)
+    else:
+        print(f"\n[error] {row['id']}: {row['error']}", flush=True)
+    suite = summarize(results)["datasets"][row["dataset"]]
+
+    def rate(metric):
+        return f"{metric['rate']:.1%} (n={metric['n']})" if metric["n"] else "n/a (n=0)"
+
+    errors = sum(item["status"] != "ok" for item in results)
+    eta = elapsed / len(results) * (total - len(results))
+    print(f"[running {len(results)}/{total}] elapsed={elapsed:.1f}s | ETA~{eta:.1f}s | errors={errors}\n"
+          f"[suite {row['dataset']}] harmful refusal proxy: {rate(suite['harmful_refusal_proxy'])} | "
+          f"benign over-refusal proxy: {rate(suite['benign_overrefusal_proxy'])} | "
+          f"completed={suite['completed']} errors={suite['errors']}", flush=True)
+
+
 def run_inference(args, examples, output, manifest):
     import torch
     import transformers
@@ -177,6 +289,8 @@ def run_inference(args, examples, output, manifest):
 
     if not torch.cuda.is_available() or not torch.cuda.is_bf16_supported():
         raise ValueError("A CUDA GPU with BF16 support is required")
+    print(f"[loading] {MODEL} BF16, no adapter. Results: {output.resolve()}", flush=True)
+    print("Refusal measurements are heuristic proxies, NOT alignment scores.", flush=True)
     torch.manual_seed(args.seed)
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, trust_remote_code=False,
                                               local_files_only=not args.allow_download)
@@ -191,11 +305,15 @@ def run_inference(args, examples, output, manifest):
                      "loaded_dtype": str(model.dtype),
                      "model_load_seconds": time.perf_counter() - start, "status": "running"})
     write_json(output / "manifest.json", manifest)
+    print(f"[ready] {manifest['gpu']} | model loaded in {manifest['model_load_seconds']:.1f}s", flush=True)
     results = []
+    run_started = time.perf_counter()
     try:
         with (output / "responses.jsonl").open("x", buffering=1) as handle, torch.inference_mode():
             for index, example in enumerate(examples, 1):
                 row = dict(example)
+                print(f"\n{'=' * 72}\n[{index}/{len(examples)}] {example['id']} | "
+                      f"expected={example['expected_behavior']}\nPrompt:\n{example['prompt']}\nResponse:", flush=True)
                 try:
                     messages = [{"role": "user", "content": example["prompt"]}]
                     if args.system_prompt:
@@ -209,13 +327,17 @@ def run_inference(args, examples, output, manifest):
                                          "No silent truncation is allowed.")
                     torch.cuda.reset_peak_memory_stats()
                     torch.cuda.synchronize()
-                    start = time.perf_counter()
-                    generated = model.generate(**inputs, do_sample=False, num_beams=1,
-                        max_new_tokens=args.max_new_tokens, use_cache=True,
-                        pad_token_id=(tokenizer.pad_token_id if tokenizer.pad_token_id is not None
-                                      else tokenizer.eos_token_id))
-                    torch.cuda.synchronize()
-                    seconds = time.perf_counter() - start
+                    memory = lambda: (torch.cuda.memory_allocated(), torch.cuda.memory_reserved())
+                    with LiveProgress(output, example, index, len(examples), input_tokens, memory,
+                                      args.progress_interval, stream=not args.no_stream) as progress:
+                        streamer = make_streamer(tokenizer, progress)
+                        start = time.perf_counter()
+                        generated = model.generate(**inputs, do_sample=False, num_beams=1,
+                            max_new_tokens=args.max_new_tokens, use_cache=True, streamer=streamer,
+                            pad_token_id=(tokenizer.pad_token_id if tokenizer.pad_token_id is not None
+                                          else tokenizer.eos_token_id))
+                        torch.cuda.synchronize()
+                        seconds = time.perf_counter() - start
                     new_tokens = generated[0, input_tokens:]
                     response = tokenizer.decode(new_tokens, skip_special_tokens=True)
                     match = refusal_match(response)
@@ -227,6 +349,7 @@ def run_inference(args, examples, output, manifest):
                         "input_tokens": input_tokens, "output_tokens": len(new_tokens),
                         "length_limited": len(new_tokens) == args.max_new_tokens and int(new_tokens[-1]) not in eos_ids,
                         "generation_seconds": seconds, "output_tokens_per_second": len(new_tokens) / seconds,
+                        "first_token_seconds": progress.first_token_seconds,
                         "peak_cuda_allocated_bytes": torch.cuda.max_memory_allocated(),
                         "peak_cuda_reserved_bytes": torch.cuda.max_memory_reserved()})
                 except torch.cuda.OutOfMemoryError:
@@ -237,7 +360,7 @@ def run_inference(args, examples, output, manifest):
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
                 results.append(row)
                 write_json(output / "summary.json", summarize(results))
-                print(f"[{index}/{len(examples)}] {row['id']} {row['status']}", flush=True)
+                show_result(row, results, len(examples), time.perf_counter() - run_started)
     finally:
         write_json(output / "summary.json", summarize(results))
         manifest["completed_examples"] = len(results)
@@ -257,9 +380,15 @@ def main(argv=None):
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--allow-download", action="store_true", help="Allow missing checkpoint files to download")
     parser.add_argument("--dry-run", action="store_true", help="Save selected prompts and metadata, without loading a model")
+    parser.add_argument("--progress-interval", type=float, default=5,
+                        help="Seconds between live token/speed/memory updates")
+    parser.add_argument("--no-stream", action="store_true",
+                        help="Hide live response text; keep progress updates and all result files")
     args = parser.parse_args(argv)
     if args.limit_per_dataset < 0 or min(args.max_new_tokens, args.max_input_tokens) < 1:
         parser.error("Token limits must be positive; sample limit must be >= 0")
+    if not 0 < args.progress_interval < float("inf"):
+        parser.error("Progress interval must be a finite positive number")
     if len(set(args.datasets)) != len(args.datasets):
         parser.error("Dataset names must not repeat")
     output = args.output_dir or Path("results") / ("baseline-qwen38-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"))
@@ -278,6 +407,7 @@ def main(argv=None):
     manifest = {"started_at": utcnow(), "model": MODEL, "revision": REVISION, "dtype": "bfloat16",
                 "adapter": None, "training": False, "thinking": False, "sampling": False,
                 "seed": args.seed, "max_new_tokens": args.max_new_tokens, "max_input_tokens": args.max_input_tokens,
+                "stream_response": not args.no_stream, "progress_interval": args.progress_interval,
                 "system_prompt": args.system_prompt, "limit_per_dataset": args.limit_per_dataset,
                 "sources": sources, "selected_examples": len(examples),
                 "cross_source_exact_duplicate_prompts": len(examples) - len({row["prompt_sha256"] for row in examples}),

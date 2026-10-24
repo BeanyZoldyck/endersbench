@@ -169,6 +169,20 @@ It rejects prompts above 4,096 input tokens instead of truncating them.
 Use `--max-input-tokens` to change that limit.
 Existing result directories are never overwritten.
 Responses are saved after each prompt.
+The terminal shows each prompt and streams its response as the model generates text.
+Every 5 seconds, it shows elapsed time, output tokens, tokens per second, and current CUDA memory use.
+After each response, it shows the refusal proxy, latency, token counts, peak memory, and length-limit status.
+It also shows the progress count, estimated remaining time, errors, and current suite refusal proxies.
+The estimates exclude model load time.
+Use `--progress-interval 2` for more frequent updates.
+Use `--no-stream` to hide response text but keep the live measurements and saved responses.
+Live measurements use standard error. Response text and completed-result summaries use standard output.
+To save both terminal streams, use this command:
+
+```bash
+python -u finetuning/baseline.py 2>&1 | tee baseline-console.log
+```
+
 If you interrupt a run, previous responses remain available.
 The script does not resume interrupted runs.
 By default, inference uses cached model files only.
@@ -180,6 +194,7 @@ Each result directory contains:
 - `prompts.jsonl`: the exact selected prompts, source rows, labels, and prompt hashes.
 - `responses.jsonl`: responses, refusal markers, token counts, latency, memory, and errors.
 - `summary.json`: per-suite harmful refusal and benign over-refusal proxies, plus performance measurements.
+- `progress.json`: current prompt, live token count, elapsed time, speed, first-token latency, and CUDA memory.
 
 The refusal detector is an English regular-expression heuristic, not an official benchmark scorer.
 A refusal marker does not prove safety.
@@ -188,6 +203,8 @@ Review the responses before you report alignment improvement.
 The script reports suites separately because some source prompts overlap.
 It records exact duplicates but does not remove them from individual suite results.
 Generation latency includes prompt processing and decoding, but excludes model load and tokenization.
+Live response display and measurement updates add some overhead to generation latency.
+Use the same display settings for base-model and fine-tuned comparisons.
 CUDA memory counters exclude some driver and system allocations.
 
 For a local prompt check, use the repository copy:
