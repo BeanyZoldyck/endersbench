@@ -6,7 +6,7 @@ export function artPreview(source: World, winter: boolean, depleted: boolean) {
   const agents: Agent[] = ['Ada', 'Bo', 'Cy', 'Di'].map((name, i) => ({
     id: BigInt(i + 1), name, kind: 'llm', modelId: 'staged art fixture', controller: undefined,
     color: ['#af755b', '#648f91', '#c6a455', '#87955e'][i], x: 57 + i * 5, y: 70 + i % 2 * 4,
-    intentKind: 'idle', targetX: 0, targetY: 0, targetAgentId: 0n, hp: i === 3 ? 0 : 100 - i * 15, hunger: 90 - i * 25,
+    intentKind: 'idle', targetX: 0, targetY: 0, targetAgentId: 0n, targetNodeId: 0n, intentSinceMs: 0, progressMs: 0, lastHitById: 0n, lastHitAtMs: 0, hp: i === 3 ? 0 : 100 - i * 15, hunger: 90 - i * 25,
     alive: i !== 3, ghostUntilMs: i === 3 ? 44000 : 0, homeX: 45 + i * 12, homeY: 81,
     thought: 'Staged artwork preview; no model was called.', pendingRequestId: i === 1 ? 1n : 0n, nextThinkAtMs: 0, wake: false, wakeReason: '',
   }));
