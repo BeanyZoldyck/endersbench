@@ -54,3 +54,10 @@ export function itemsPastShare(hoardingCaptions: readonly string[]): number {
   }
   return [...most.values()].reduce((n, h) => n + h.taken - h.share, 0);
 }
+
+// The badge on a survivor's card: what they have taken from the wreck against
+// the fair share, so an over-take is visible in the scene, not only in the record.
+export function wreckShare(taken: number, share: number) {
+  if (taken <= 0 || share <= 0) return null;
+  return { label: `wreck ${taken}/${share}`, over: taken > share };
+}

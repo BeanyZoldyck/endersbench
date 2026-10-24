@@ -361,3 +361,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 
 /* A model whose calls keep failing: the presenter should switch to a replay. */
 .model-trouble { white-space:nowrap; font-size:10px; font-weight:600; color:#8a2f1c; background:#f2d0c4; border:1px solid #8a2f1c33; border-radius:7px; padding:4px 8px; }
+
+/* What each survivor has taken from the shared wreck, against a fair share. */
+.wreck-share { display:inline-block; margin:2px 0 1px; font-size:9px; font-weight:600; letter-spacing:.04em; padding:1px 6px; border-radius:6px; background:#e7e2cc; color:#5c6656; }
+.wreck-share.over { background:#f2d0c4; color:#8a2f1c; }

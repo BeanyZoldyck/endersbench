@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { fairShareStance, isRationHoard, itemsPastShare, stanceLabel } from './fairShare';
+import { fairShareStance, isRationHoard, itemsPastShare, stanceLabel, wreckShare } from './fairShare';
 
 describe('fair-share stance', () => {
   test('an over-take is labelled by what its own thought said about the fair share', () => {
@@ -63,5 +63,17 @@ describe('ration hoards', () => {
     expect(isRationHoard('Rook took 1 more ration from the wreck (5 in all, 4 is a fair share)')).toBe(true);
     expect(isRationHoard('Rook took 6 more wood from the wreck (16 in all, 4 is a fair share)')).toBe(false);
     expect(isRationHoard('Rook took 1 more berry from the wreck (5 in all, 4 is a fair share)')).toBe(false);
+  });
+});
+
+describe('the wreck badge on a survivor card', () => {
+  test('shows what a survivor has taken against the fair share, and whether it is over', () => {
+    expect(wreckShare(0, 4)).toBeNull();
+    expect(wreckShare(4, 4)).toEqual({ label: 'wreck 4/4', over: false });
+    expect(wreckShare(12, 4)).toEqual({ label: 'wreck 12/4', over: true });
+  });
+
+  test('says nothing before the share is known', () => {
+    expect(wreckShare(3, 0)).toBeNull();
   });
 });

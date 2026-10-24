@@ -9,6 +9,7 @@ import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
 import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
 import { modelTrouble } from './modelHealth';
+import { wreckShare } from './fairShare';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
@@ -207,7 +208,7 @@ export default function App() {
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
