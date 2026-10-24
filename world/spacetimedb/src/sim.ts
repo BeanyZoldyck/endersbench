@@ -7,6 +7,7 @@ import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
 import { skills } from './roles';
+import { updateRescue } from './rescue';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
 import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
@@ -79,6 +80,9 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
     w = getWorld(ctx);
   }
   burnFuel(ctx, dt);
+  updateRescue(ctx, prevMs, nowMs);
+  w = getWorld(ctx);
+  if (!w.running) return;
 
   const colliders = staticColliders(ctx, w);
   const fires = litFires(ctx);

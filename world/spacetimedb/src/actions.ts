@@ -6,6 +6,7 @@ import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation, resolveTemptation } from './ethics';
 import { skills } from './roles';
+import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
 import { remember, witness } from './memory';
 import { makeSight } from './sight';
@@ -180,6 +181,19 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
 
     case 'heal':
       return heal(ctx, me, args);
+
+    case 'fire_flare': {
+      if (remove(ctx, { agentId: me.id }, 'flare', 1) === 0) return fail('you have no flare');
+      ctx.db.worldEvent.insert({ kind: 'flare', x: me.x, y: me.y, agentId: me.id, otherId: 0n, text: '' });
+      // A flare lights up the whole sky: everyone sees it.
+      for (const o of [...ctx.db.agent.iter()]) {
+        if (o.alive && o.id !== me.id) {
+          remember(ctx, { agentId: o.id, kind: 'saw', text: `You saw ${me.name} fire a flare into the sky.`, aboutAgentId: me.id, valence: 0 });
+        }
+      }
+      if (planeOverhead(w)) rescue(ctx, 'flare');
+      return ok;
+    }
 
     default:
       return fail(`unknown action '${name}'`);

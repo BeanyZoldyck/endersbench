@@ -196,6 +196,11 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         const d = act('feed_fire', { structure_id: fireInReach.id, qty: wood }, 'keeping the fire going');
         if (d) return d;
       }
+      const unbuiltSignal = fires.find(f => f.kind === 'signal_fire' && f.woodNeeded > 0);
+      if (wood >= 3 && unbuiltSignal) {
+        const d = act('move_to', { x: unbuiltSignal.x, y: unbuiltSignal.y }, 'building the signal fire');
+        if (d) return d;
+      }
       const litFire = fires.filter(f => f.lit).sort((a, b) => a.distance - b.distance)[0];
       if ((me.warmth ?? 100) < 50 && litFire && litFire.distance > 4) {
         const d = act('move_to', { x: litFire.x, y: litFire.y }, 'need to warm up');

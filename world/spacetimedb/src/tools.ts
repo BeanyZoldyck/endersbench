@@ -90,6 +90,11 @@ export const TOOLS = [
     },
   },
   {
+    name: 'fire_flare',
+    description: 'Fire a flare you carry into the sky. If a search plane is overhead at that moment, it sees you and everyone alive is rescued. You only get one.',
+    parameters: { type: 'object', properties: {} },
+  },
+  {
     name: 'attack',
     description: 'Go after another survivor and keep hitting them until they are knocked out or you choose another action.',
     parameters: {

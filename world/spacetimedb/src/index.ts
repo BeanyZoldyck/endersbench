@@ -3,7 +3,6 @@
 // scenario.ts (the plane-crash clearing).
 
 import { t, SenderError } from 'spacetimedb/server';
-import { ScheduleAt } from 'spacetimedb';
 import spacetimedb, { brainTimer, tickTimer } from './schema';
 import { TOOLS } from './tools';
 import type { Agent, Ctx } from './ctx';
@@ -14,6 +13,7 @@ import { observe } from './observe';
 import { noticeLosses } from './memory';
 import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
+import { startTimers, stopTimers } from './timers';
 import {
   DAY_LENGTH_MS,
   DAY_OFFSET_MS,
@@ -28,8 +28,6 @@ import {
 
 export { default } from './schema';
 
-const TICK_MICROS = 50_000n;
-const BRAIN_MICROS = 250_000n;
 const MAX_TICK_MS = 250; // cap one tick's step so a pause doesn't teleport anyone
 const COLORS = ['#c8553d', '#2e86ab', '#e0a030', '#6a994e', '#9b5de5', '#3bb273', '#d1495b', '#00798c'];
 
@@ -45,14 +43,6 @@ function requireWorkerOrAdmin(ctx: Ctx) {
   if (!isWorker(ctx) && !isAdmin(ctx)) throw new SenderError('not authorised');
 }
 
-function startTimers(ctx: Ctx) {
-  if (ctx.db.tickTimer.count() === 0n) {
-    ctx.db.tickTimer.insert({ scheduledId: 0n, scheduledAt: ScheduleAt.interval(TICK_MICROS) });
-  }
-  if (ctx.db.brainTimer.count() === 0n) {
-    ctx.db.brainTimer.insert({ scheduledId: 0n, scheduledAt: ScheduleAt.interval(BRAIN_MICROS) });
-  }
-}
 
 // The tool catalog and physics contract. Refreshed whenever a harness
 // connects, so a hot-published module's new actions reach the models.
@@ -304,8 +294,7 @@ export const setRunning = spacetimedb.reducer({ running: t.bool() }, (ctx, { run
     startTimers(ctx);
     return;
   }
-  for (const timer of [...ctx.db.tickTimer.iter()]) ctx.db.tickTimer.scheduledId.delete(timer.scheduledId);
-  for (const timer of [...ctx.db.brainTimer.iter()]) ctx.db.brainTimer.scheduledId.delete(timer.scheduledId);
+  stopTimers(ctx);
 });
 
 export const joinAsHuman = spacetimedb.reducer({ name: t.string() }, (ctx, { name }) => {

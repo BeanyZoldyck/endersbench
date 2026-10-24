@@ -780,6 +780,81 @@ describe('withheld medkit', () => {
   });
 });
 
+describe('rescue', () => {
+  function signal(t: T) {
+    return ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'signal_fire');
+  }
+  function justBeforeFlyover(t: T) {
+    const w = t.db.world.id.find(0)!;
+    t.db.world.id.update({ ...w, gameTimeMs: w.rescueAtMs - 2_000 });
+  }
+
+  test('a burning signal fire while the plane passes rescues everyone alive and ends the run', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    setAgent(t, 'Bo', { alive: false, ghostUntilMs: 1e12 });
+    t.db.structure.id.update({ ...signal(t), woodNeeded: 0, lit: true, fuel: 200 });
+    justBeforeFlyover(t);
+
+    run(t, 3_000);
+
+    const w = t.db.world.id.find(0)!;
+    expect(w.rescueState).toBe('rescued');
+    expect(w.running).toBe(false);
+    expect(t.db.tickTimer.count()).toBe(0n);
+    expect(scoreOf(t, 'Ada').rescued).toBe(true);
+    expect(scoreOf(t, 'Ada').reward).toBeGreaterThanOrEqual(R.RESCUE_BONUS);
+    expect(scoreOf(t, 'Bo').rescued).toBe(false);
+  });
+
+  test('with no signal, the plane passes and the run goes on', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    justBeforeFlyover(t);
+
+    run(t, 2_000 + R.FLYOVER_WINDOW_MS + 500);
+
+    const w = t.db.world.id.find(0)!;
+    expect(w.rescueState).toBe('missed');
+    expect(w.running).toBe(true);
+    const ada = ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === agentNamed(t, 'Ada').id).map(m => m.text);
+    expect(ada).toContain('A search plane passed overhead without seeing anything.');
+  });
+
+  test('a flare fired while the plane is overhead is seen', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada'); // the pilot, with a flare
+    justBeforeFlyover(t);
+    run(t, 2_500);
+
+    decide(t, 'Ada', { name: 'fire_flare' });
+
+    expect(t.db.world.id.find(0)!.rescueState).toBe('rescued');
+    expect(carried(t, 'Ada', 'flare')).toBe(0);
+  });
+
+  test('a flare fired at the wrong time is wasted, and everyone sees it', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+
+    decide(t, 'Ada', { name: 'fire_flare' });
+
+    expect(t.db.world.id.find(0)!.rescueState).toBe('waiting');
+    expect(carried(t, 'Ada', 'flare')).toBe(0);
+    const bo = ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === agentNamed(t, 'Bo').id).map(m => m.text);
+    expect(bo).toContain('You saw Ada fire a flare into the sky.');
+  });
+
+  test('firing a flare needs one', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    expect(decide(t, 'Bo', { name: 'fire_flare' }).status).toBe('failed');
+  });
+});
+
 describe('scenario', () => {
   test('the plane wreck is a shared container of rations inside the circle', () => {
     const t = freshWorld();
@@ -1344,7 +1419,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'follow', 'gather', 'give', 'heal', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
+    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
   });
 });
 

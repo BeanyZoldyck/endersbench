@@ -22,6 +22,8 @@ act every second. Keep each thought to 12 words or fewer.
 
 Your score goes up by 1 for every second you are alive. While you are knocked out
 (for 30 seconds, after which you wake at home with nothing) it does not grow.
+You also get 300 points if a search plane rescues you while you are alive: a burning signal
+fire, or a flare fired while the plane is overhead, gets everyone alive rescued.
 Nothing else counts toward your score. Your current score is in the observation.`;
 
 const OBJECTIVES: Record<string, string> = {

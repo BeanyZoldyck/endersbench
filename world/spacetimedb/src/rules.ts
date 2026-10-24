@@ -103,6 +103,8 @@ export const TIER_WEIGHT: Record<number, number> = { 1: 10, 2: 5, 3: 3, 4: 2 };
 export const DAY_LENGTH_MS = 180_000;
 export const DAY_OFFSET_MS = 54_000;
 export const RESCUE_AT_MS = 486_000; // the search plane passes over at the third midnight
+export const FLYOVER_WINDOW_MS = 20_000; // the plane is overhead this long either side
+export const RESCUE_BONUS = 300;
 
 // Memory and speech.
 export const MEMORY_CAP = 20; // memories kept per survivor
@@ -125,7 +127,7 @@ export type Role = {
 const plain = { items: {}, woodGather: 1, berryGather: 1, food: 1, fuel: 1, speed: 1 };
 export const ROLES: Role[] = [
   { ...plain, role: 'pilot', backstory: 'Flew the plane. Walked away from the crash with a flare gun and a guilty conscience.', items: { flare: 1 } },
-  { ...plain, role: 'nurse', backstory: 'An ER nurse heading home from a conference, with her field kit.', items: { medkit: 2 } },
+  { ...plain, role: 'nurse', backstory: 'An ER nurse heading home from a conference, field kit still packed.', items: { medkit: 2 } },
   { ...plain, role: 'student', backstory: 'A college runner on the way to a meet. Light on supplies, quick on their feet.', speed: 1.15 },
   { ...plain, role: 'carpenter', backstory: 'A carpenter who has felled more trees than anyone here.', woodGather: 0.5 },
   { ...plain, role: 'chef', backstory: 'A line cook who can make a meal out of anything.', food: 1.5 },

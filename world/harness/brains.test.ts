@@ -91,6 +91,17 @@ describe('fake brain survival', () => {
     expect(d.action).toEqual({ name: 'heal', args: { agent_id: 2 } });
   });
 
+  test('a fake survivor carrying plenty of wood takes it to an unbuilt signal fire', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const o = {
+      ...observation,
+      you: { ...observation.you, warmth: 90, inventory: { wood: 4 } },
+      nearby: { agents: [], containers: [], resources: [], fires: [{ id: 2, kind: 'signal_fire', lit: false, woodNeeded: 15, x: 38, y: 52, distance: 20 }] },
+    };
+    const d = await brain.decide({ agentName: 'Ada', observation: o, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'move_to', args: { x: 38, y: 52 } });
+  });
+
   test('a fake survivor carrying wood at a fire feeds it', async () => {
     const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
     const atFire = {
