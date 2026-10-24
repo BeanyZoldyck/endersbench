@@ -1,5 +1,6 @@
 import { boundaryFog } from './boundaryFog';
 import { terrainHeight } from './terrain';
+import { clearOfCrateView } from './framing';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -58,11 +59,14 @@ export function Environment({ world, nodes, containers, items, agents, physics, 
         crowns.push({ position: [x + Math.cos(angle) * 1.5, y + h * (0.9 + c * 0.1), z + Math.sin(angle) * 1.5], scale: decorative ? [3.6 + noise(seed + c), 3.2 + noise(seed + c + 6), 3.5] : [2.25, 2.15, 2.2], color: winter ? ['#72877e', '#8c9b8d', '#a5ae9e'][c] : decorative ? ['#334d40', '#47604a', '#61714f'][c] : ['#6c7e4d', '#8a955d', '#a2a269'][c], rotation: angle });
       }
     };
-    // The complete canopy footprint stays OUTSIDE the playable circle.
+    // The complete canopy footprint stays OUTSIDE the playable circle. Trees
+    // that would hide the supply crate from the default camera stand aside.
+    const crate = physics.crate ? (([x, z]) => ({ x, z }))(toScene(world, physics.crate.x, physics.crate.y)) : undefined;
     for (let i = 0; i < 220; i++) {
       const a = i * 2.399963;
       const r = world.radius + 9 + noise(i + 10) * 52;
-      tree(Math.cos(a) * r, Math.sin(a) * r, i + 800, true, false);
+      const p = clearOfCrateView({ x: Math.cos(a) * r, z: Math.sin(a) * r }, crate, world.radius);
+      tree(p.x, p.z, i + 800, true, false);
     }
     for (const n of nodes) {
       const [x, z] = toScene(world, n.x, n.y);

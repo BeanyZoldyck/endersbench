@@ -86,7 +86,7 @@ export const BUSH_REGROW_MS = 60_000; // every bush regains a berry this often, 
 export const WINTER_AT_MS = 240_000;
 
 // The supply crate, far out where nobody lives.
-export const CRATE_DISTANCE = 62; // tiles from the centre: past the ring of trees, before the far forest, towards the bottom of the default view
+export const CRATE_DISTANCE = 62; // tiles from the centre: past the ring of trees, before the far forest
 export const CRATE_CLEAR_RADIUS = 4; // no standing tree within this of the crate; the ring of trees stays whole in front of it
 export const CRATE_RATIONS = 24;
 export const CRATE_MEDKITS = 4;

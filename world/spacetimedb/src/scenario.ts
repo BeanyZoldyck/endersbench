@@ -56,7 +56,7 @@ import { CLAIMS_VERSION } from './claims';
 
 // The supply crate lies towards the bottom of the default camera (screen-down
 // is 54 degrees in world x/y), well out of sight of every home.
-const CRATE_ANGLE = (54 * Math.PI) / 180;
+const CRATE_ANGLE = (30 * Math.PI) / 180; // towards the bottom right of the default view (screen-down is 54 degrees, screen-right -36)
 
 function homeAngle(index: number) {
   return (index % MAX_HOMES) * ((Math.PI * 2) / MAX_HOMES) + Math.PI / MAX_HOMES;

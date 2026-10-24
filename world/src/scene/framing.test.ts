@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FOV, VIEW, baseDistance, defaultFrame, establishingTarget } from './framing';
+import { CRATE_SIDE_SLACK, CRATE_SIGHTLINE, FOV, VIEW, baseDistance, clearOfCrateView, defaultFrame, establishingTarget } from './framing';
 
-// The module puts the crate 62 tiles from the centre, straight down the default
-// view: world (+0.59, +0.81) from the centre, which is the scene's x/z too.
-const crate = { x: 62 * 0.5878, z: 62 * 0.809 };
+// The module puts the crate 62 tiles from the centre at 30 degrees, towards the
+// bottom right of the default view: world (+0.87, +0.5), which is the scene's x/z too.
+const crate = { x: 62 * Math.cos(Math.PI / 6), z: 62 * Math.sin(Math.PI / 6) };
 const ASPECTS = [1.5, 1.78, 1.91, 2.2];
 const down = new THREE.Vector3(VIEW.x, 0, VIEW.z).normalize();
 
@@ -75,6 +75,16 @@ describe('establishing target', () => {
       expect(across(t)).toBeCloseTo(c);
     }
   });
+  it('follows the cast sideways only as far as keeps the crate in frame', () => {
+    const frame = defaultFrame(1.78, crate);
+    const crateAcross = across(crate);
+    const near = at(-10, crateAcross + CRATE_SIDE_SLACK - 2);
+    expect(across(establishingTarget(near, frame.shift, crate))).toBeCloseTo(across(near));
+    const far = at(-10, crateAcross + CRATE_SIDE_SLACK + 15);
+    expect(across(establishingTarget(far, frame.shift, crate))).toBeCloseTo(crateAcross + CRATE_SIDE_SLACK);
+    const farOther = at(-10, crateAcross - CRATE_SIDE_SLACK - 15);
+    expect(across(establishingTarget(farOther, frame.shift, crate))).toBeCloseTo(crateAcross - CRATE_SIDE_SLACK);
+  });
   it('follows a cast that has wandered south of it', () => {
     const frame = defaultFrame(1.78, crate);
     const south = at(frame.shift + 9, 4);
@@ -84,11 +94,47 @@ describe('establishing target', () => {
     for (const aspect of ASPECTS) {
       const frame = defaultFrame(aspect, crate);
       for (const a of [-40, -20, 0, 10, 30]) for (const c of [-20, 0, 20]) {
-        const t = establishingTarget(at(a, c), frame.shift);
+        const t = establishingTarget(at(a, c), frame.shift, crate);
         const corner = new THREE.Vector3(crate.x, 0, crate.z).addScaledVector(down, 2.2 + 3);
         const s = ndc(frame, aspect, corner, t);
         expect(s.y, `aspect ${aspect} cast ${a},${c}`).toBeGreaterThan(-0.97);
         expect(Math.abs(s.x), `aspect ${aspect} cast ${a},${c} x`).toBeLessThan(1);
+      }
+    }
+  });
+});
+
+describe('clearOfCrateView', () => {
+  const right = new THREE.Vector3(down.z, 0, -down.x); // screen-right along the ground
+  const at = (along: number, side: number) => ({ x: crate.x + down.x * along + right.x * side, z: crate.z + down.z * along + right.z * side });
+  const offsets = (p: { x: number; z: number }) => {
+    const dx = p.x - crate.x, dz = p.z - crate.z;
+    return { along: dx * down.x + dz * down.z, side: dx * right.x + dz * right.z };
+  };
+
+  it('moves a far tree out of the line between the crate and the camera, to the side it was on', () => {
+    for (const side of [-6, -1, 0, 3, 7]) {
+      const moved = offsets(clearOfCrateView(at(25, side), crate, 64));
+      expect(Math.abs(moved.side)).toBeGreaterThanOrEqual(CRATE_SIGHTLINE);
+      expect(moved.along).toBeCloseTo(25, 5);
+      if (side !== 0) expect(Math.sign(moved.side)).toBe(Math.sign(side));
+    }
+  });
+
+  it('leaves trees beside the sightline, behind the crate, or with no crate where they are', () => {
+    for (const p of [at(25, CRATE_SIGHTLINE + 1), at(-10, 0), at(30, -(CRATE_SIGHTLINE + 4))]) {
+      expect(clearOfCrateView(p, crate, 64)).toEqual(p);
+    }
+    expect(clearOfCrateView(at(25, 0), undefined, 64)).toEqual(at(25, 0));
+  });
+
+  it('never moves a far tree into the playable circle', () => {
+    for (let side = -7.5; side <= 7.5; side += 0.5) {
+      for (const along of [2, 8, 15, 30, 60]) {
+        const p = at(along, side);
+        if (Math.hypot(p.x, p.z) < 64 + 9) continue;
+        const moved = clearOfCrateView(p, crate, 64);
+        expect(Math.hypot(moved.x, moved.z)).toBeGreaterThanOrEqual(64 + 9 - 1e-9);
       }
     }
   });

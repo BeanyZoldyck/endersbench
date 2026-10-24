@@ -116,7 +116,7 @@ function CameraRig({ world, agents, containers, physics, mode, selectedId, spotl
         const wreck = containers.find(c => c.kind === 'wreck');
         const x = agents.length ? agents.reduce((n, a) => n + a.x, 0) / agents.length : wreck?.x ?? world.width / 2;
         const y = agents.length ? agents.reduce((n, a) => n + a.y, 0) / agents.length : wreck?.y ?? world.height / 2;
-        const settle = establishingTarget({ x: x - world.width / 2, z: y - world.height / 2 }, frame.shift);
+        const settle = establishingTarget({ x: x - world.width / 2, z: y - world.height / 2 }, frame.shift, crateX === undefined || crateZ === undefined ? undefined : { x: crateX, z: crateZ });
         target.current.set(settle.x, 0, settle.z);
         shot.current.at = now; shot.current.priority = 0;
       }

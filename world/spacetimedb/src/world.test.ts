@@ -2409,12 +2409,12 @@ describe('rules v11 geometry', () => {
     expect(SCENARIO.version).toBe(11);
   });
 
-  test('the crate sits towards the bottom of the default view, 62 tiles out, past the ring of trees', () => {
+  test('the crate sits towards the bottom right of the default view, 62 tiles out, past the ring of trees', () => {
     const t = freshWorld();
     const [x, y] = cratePosition(worldOf(t));
     expect(R.CRATE_DISTANCE).toBe(62);
-    expect(Math.abs(x - 64 - 62 * 0.59)).toBeLessThan(0.5);
-    expect(Math.abs(y - 64 - 62 * 0.81)).toBeLessThan(0.5);
+    expect(Math.abs(x - 64 - 62 * Math.cos(Math.PI / 6))).toBeLessThan(0.5);
+    expect(Math.abs(y - 64 - 62 * Math.sin(Math.PI / 6))).toBeLessThan(0.5);
     // Beyond the outermost trees, and inside the map.
     expect(R.CRATE_DISTANCE).toBeGreaterThan(R.MAP_RADIUS - 3);
     expect(R.CRATE_DISTANCE + R.CRATE_RADIUS).toBeLessThan(R.MAP_RADIUS);

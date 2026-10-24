@@ -12,6 +12,8 @@ export const MIN_DISTANCE = 18, MAX_DISTANCE = 260;
 
 // Screen-down along the ground.
 const DOWN = new THREE.Vector3(VIEW.x, 0, VIEW.z).normalize();
+// Screen-right along the ground.
+const ACROSS = new THREE.Vector3(DOWN.z, 0, -DOWN.x);
 // Frame about 88 x 60 tiles around the target; perspective adds the far side for free.
 export function baseDistance(aspect: number) {
   const half = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
@@ -62,8 +64,34 @@ export function defaultFrame(aspect: number, crate?: { x: number; z: number }) {
 // ground), so a cast that has wandered north does not pull the crate out of the
 // bottom of the view. Sideways it stays on the cast; a cast further south is
 // followed. With no crate (no shift) it is just the cast.
-export function establishingTarget(cast: { x: number; z: number }, shift: number) {
+//
+// The crate sits off to one side of the view, so sideways the target follows the
+// cast only while the crate stays within CRATE_SIDE_SLACK tiles of it.
+export const CRATE_SIDE_SLACK = 26;
+export function establishingTarget(cast: { x: number; z: number }, shift: number, crate?: { x: number; z: number }) {
   if (shift <= 0) return { x: cast.x, z: cast.z };
   const short = shift - (cast.x * DOWN.x + cast.z * DOWN.z);
-  return short > 0 ? { x: cast.x + DOWN.x * short, z: cast.z + DOWN.z * short } : { x: cast.x, z: cast.z };
+  const t = short > 0 ? { x: cast.x + DOWN.x * short, z: cast.z + DOWN.z * short } : { x: cast.x, z: cast.z };
+  if (!crate) return t;
+  const across = (t.x - crate.x) * ACROSS.x + (t.z - crate.z) * ACROSS.z;
+  const over = Math.abs(across) - CRATE_SIDE_SLACK;
+  return over > 0 ? { x: t.x - ACROSS.x * Math.sign(across) * over, z: t.z - ACROSS.z * Math.sign(across) * over } : t;
+}
+
+// The far forest makes way for the crate. A decorative tree standing between
+// the crate and the camera (anywhere outward along the view's ground direction,
+// within CRATE_SIGHTLINE tiles of the line) is slid sideways out of that strip,
+// to the side it stood on, and never into the playable circle (its canopy stays
+// beyond radius + 9). Every other tree stays where it is.
+export const CRATE_SIGHTLINE = 8;
+export function clearOfCrateView(p: { x: number; z: number }, crate: { x: number; z: number } | undefined, radius: number) {
+  if (!crate) return p;
+  const dx = p.x - crate.x, dz = p.z - crate.z;
+  const along = dx * DOWN.x + dz * DOWN.z, across = dx * ACROSS.x + dz * ACROSS.z;
+  if (along <= 0 || Math.abs(across) >= CRATE_SIGHTLINE) return p;
+  // Mirror it across the strip's nearer edge: |across| in [0, S) lands in (S, 2S].
+  const step = (across < 0 ? -1 : 1) * 2 * (CRATE_SIGHTLINE - Math.abs(across));
+  const moved = { x: p.x + ACROSS.x * step, z: p.z + ACROSS.z * step };
+  const r = Math.hypot(moved.x, moved.z), floor = radius + 9;
+  return r >= floor ? moved : { x: (moved.x / r) * floor, z: (moved.z / r) * floor };
 }
