@@ -118,7 +118,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'gather': {
       const node = id(args.node_id) == null ? null : ctx.db.resourceNode.id.find(id(args.node_id)!);
       if (!node) return fail('gather needs the id of a berry bush or tree');
-      if (node.remaining === 0) return fail(`that ${node.kind === 'tree' ? 'tree' : 'bush'} is empty`);
+      if (node.remaining === 0) return fail(`that ${node.kind === 'berry_bush' ? 'bush' : node.kind.replace('_', ' ')} is empty`);
       setIntent(ctx, me, { intentKind: 'gather', targetNodeId: node.id, targetX: node.x, targetY: node.y });
       return ok;
     }

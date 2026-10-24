@@ -5,6 +5,8 @@ import spacetimedb from './schema';
 import * as moduleExports from './index';
 import * as R from './rules';
 import { SCENARIO, cratePosition, distanceToRiver, riverPath } from './scenario';
+import { isBerry, isWoody, yields } from './resources';
+import { inBush, staticColliders } from './physics';
 
 const {
   init,
@@ -2438,5 +2440,133 @@ describe('rules v11 geometry', () => {
     expect([...R.FINDS_BAND]).toEqual([40, 58]);
     expect([R.CONCEAL_WINDOW_MS, R.CONCEAL_EARSHOT_MS]).toEqual([60_000, 10_000]);
     expect([R.SPEAR_WOOD, R.SPEAR_DAMAGE, R.FLAMING_SPEAR_DAMAGE]).toEqual([3, 35, 100]);
+  });
+});
+
+describe('rules v11 seeding', () => {
+  const nodes = (t: T) => [...t.db.resourceNode.iter()] as any[];
+  const crateOf = (t: T) => {
+    const crates = ([...t.db.container.iter()] as any[]).filter(c => c.kind === 'crate');
+    expect(crates).toHaveLength(1);
+    return crates[0];
+  };
+
+  test('a fresh world has one supply crate with 24 rations, 4 medkits and 30 wood', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    expect(crate.label).toBe('Supply crate');
+    expect(crate.ownerAgentId).toBe(0n);
+    expect(dist(crate.x, crate.y, ...cratePosition(t.db.world.id.find(0)!))).toBeLessThan(0.01);
+    expect(stored(t, crate.id, 'ration')).toBe(24);
+    expect(stored(t, crate.id, 'medkit')).toBe(4);
+    expect(stored(t, crate.id, 'wood')).toBe(30);
+  });
+
+  test('the crate scales with the food, except its wood', () => {
+    const t = freshWorld();
+    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 0.5, roleOffset: 0, rescueSeats: 0 }));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    const crate = crateOf(t);
+    expect(stored(t, crate.id, 'ration')).toBe(12);
+    expect(stored(t, crate.id, 'medkit')).toBe(2);
+    expect(stored(t, crate.id, 'wood')).toBe(30);
+  });
+
+  test('no standing tree stands within 22 tiles of the crate', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    const trees = nodes(t).filter(n => n.kind === 'tree' && n.state === 'standing');
+    expect(trees.length).toBe(R.TREES);
+    for (const n of trees) expect(dist(n.x, n.y, crate.x, crate.y)).toBeGreaterThan(R.CRATE_CLEAR_RADIUS);
+  });
+
+  test('three berry thickets and three wood piles stand 40 to 58 tiles out, more than 22 from every home', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    const thickets = nodes(t).filter(n => n.kind === 'berry_thicket');
+    const piles = nodes(t).filter(n => n.kind === 'wood_pile');
+    expect(thickets).toHaveLength(3);
+    expect(piles).toHaveLength(3);
+    for (const n of thickets) expect([n.capacity, n.remaining, n.state]).toEqual([12, 12, 'standing']);
+    for (const n of piles) expect([n.capacity, n.remaining, n.state]).toEqual([18, 18, 'standing']);
+    for (const n of [...thickets, ...piles]) {
+      const out = dist(n.x, n.y, 64, 64);
+      expect(out).toBeGreaterThanOrEqual(R.FINDS_BAND[0]);
+      expect(out).toBeLessThanOrEqual(R.FINDS_BAND[1]);
+      for (const [hx, hy] of homePositions()) expect(dist(n.x, n.y, hx, hy)).toBeGreaterThan(22);
+      expect(dist(n.x, n.y, crate.x, crate.y)).toBeGreaterThan(R.CRATE_CLEAR_RADIUS);
+    }
+  });
+
+  test('thicket berries scale with the food but wood piles do not', () => {
+    const t = freshWorld();
+    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 0.5, roleOffset: 0, rescueSeats: 0 }));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    const thickets = nodes(t).filter(n => n.kind === 'berry_thicket');
+    const piles = nodes(t).filter(n => n.kind === 'wood_pile');
+    expect([thickets.length, piles.length]).toEqual([3, 3]);
+    for (const n of thickets) expect([n.capacity, n.remaining]).toEqual([6, 6]);
+    for (const n of piles) expect([n.capacity, n.remaining]).toEqual([18, 18]);
+  });
+
+  test('nothing grows in the river', () => {
+    const t = freshWorld();
+    const w = t.db.world.id.find(0)!;
+    expect(nodes(t).length).toBeGreaterThan(R.TREES);
+    for (const n of nodes(t)) expect(distanceToRiver(w, n.x, n.y)).toBeGreaterThan(R.RIVER_WIDTH / 2 + 1);
+  });
+
+  test('the layout is still the same in every run', () => {
+    const layout = (rngSeed: number) => {
+      const t = createModuleTestHarness(spacetimedb, moduleExports, { rngSeed });
+      t.clock.set(new Timestamp(1_700_000_000_000_000n));
+      t.withReducerTx(publisher, ctx => init(ctx, {}));
+      return [...nodes(t).map(n => [n.kind, n.x.toFixed(3), n.y.toFixed(3)].join(' ')), ...([...t.db.container.iter()] as any[]).map(c => [c.kind, c.x.toFixed(3), c.y.toFixed(3)].join(' '))].sort();
+    };
+    expect(layout(1)).toEqual(layout(987654));
+  });
+
+  test('the resource helpers tell wood from berries', () => {
+    expect(['tree', 'wood_pile', 'berry_bush', 'berry_thicket'].map(yields)).toEqual(['wood', 'wood', 'berries', 'berries']);
+    expect(['tree', 'wood_pile', 'berry_bush', 'berry_thicket'].map(isWoody)).toEqual([true, true, false, false]);
+    expect(['tree', 'wood_pile', 'berry_bush', 'berry_thicket'].map(isBerry)).toEqual([false, false, true, true]);
+  });
+
+  test('a wood pile is solid like a trunk and a thicket slows you like a bush', () => {
+    const t = freshWorld();
+    const pile = nodes(t).find(n => n.kind === 'wood_pile');
+    const thicket = nodes(t).find(n => n.kind === 'berry_thicket');
+    const w = t.db.world.id.find(0)!;
+    const colliders = t.withReducerTx(harness, ctx => staticColliders(ctx, w));
+    expect(colliders.find(c => c.id === pile.id)).toMatchObject({ tag: 'tree', r: R.TREE_RADIUS });
+    expect(t.withReducerTx(harness, ctx => inBush(ctx, thicket.x, thicket.y))).toBe(true);
+    expect(t.withReducerTx(harness, ctx => inBush(ctx, pile.x, pile.y))).toBe(false);
+  });
+
+  test('a berry thicket regrows and a wood pile yields wood without falling', () => {
+    const t = freshWorld();
+    const thicket = nodes(t).find(n => n.kind === 'berry_thicket');
+    const pile = nodes(t).find(n => n.kind === 'wood_pile');
+
+    t.db.resourceNode.id.update({ ...thicket, remaining: 2 });
+    spawn(t, 'Ada', thicket.x + 1.5, thicket.y);
+    decide(t, 'Ada', { name: 'gather', args: { node_id: Number(thicket.id) } });
+    run(t, 2 * R.GATHER_MS + 500);
+    expect(carried(t, 'Ada', 'berries')).toBe(2);
+    expect(carried(t, 'Ada', 'wood')).toBe(0);
+    expect(t.db.resourceNode.id.find(thicket.id)!.remaining).toBe(0);
+    run(t, R.BUSH_REGROW_MS);
+    expect(t.db.resourceNode.id.find(thicket.id)!.remaining).toBe(1);
+
+    t.db.resourceNode.id.update({ ...pile, remaining: 2 });
+    setAgent(t, 'Ada', { x: pile.x + 1.5, y: pile.y });
+    decide(t, 'Ada', { name: 'gather', args: { node_id: Number(pile.id) } });
+    run(t, 2 * R.GATHER_MS + 500);
+    expect(carried(t, 'Ada', 'wood')).toBe(2);
+    const emptied = t.db.resourceNode.id.find(pile.id)!;
+    expect([emptied.remaining, emptied.state]).toEqual([0, 'standing']);
+    // Empty is just empty: nothing more to take, and no stump left behind.
+    expect(decide(t, 'Ada', { name: 'gather', args: { node_id: Number(pile.id) } }).status).toBe('failed');
+    expect(t.db.resourceNode.id.find(pile.id)!.state).toBe('standing');
   });
 });

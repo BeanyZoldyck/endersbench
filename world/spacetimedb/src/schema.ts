@@ -146,13 +146,15 @@ export const meta = table(
   { key: t.string().primaryKey(), value: t.string() }
 );
 
-// Berry bushes (food) and trees (wood). Bushes stop regrowing in winter.
-// Trees are solid; a chopped-out tree becomes a stump; a storm can fell one.
+// Berry bushes and thickets (food) and trees and wood piles (wood). Berries
+// stop regrowing in winter. Trees and wood piles are solid; a chopped-out tree
+// becomes a stump and a storm can fell one, but a wood pile, when empty, is
+// just empty.
 export const resourceNode = table(
   { name: 'resource_node', public: true },
   {
     id: t.u64().primaryKey().autoInc(),
-    kind: t.string(), // 'berry_bush' | 'tree'
+    kind: t.string(), // 'berry_bush' | 'berry_thicket' | 'tree' | 'wood_pile'
     x: t.f32(),
     y: t.f32(),
     remaining: t.u32(),
@@ -163,12 +165,13 @@ export const resourceNode = table(
 );
 
 // Anything that holds items in the world: a survivor's chest (owned), the
-// plane wreck (shared cargo, fair-share rule) or a knocked-out agent's drop.
+// plane wreck (shared cargo, fair-share rule), the supply crate (shared, far
+// out, found by exploring) or a knocked-out agent's drop.
 export const container = table(
   { name: 'container', public: true },
   {
     id: t.u64().primaryKey().autoInc(),
-    kind: t.string(), // 'chest' | 'wreck' | 'drop'
+    kind: t.string(), // 'chest' | 'wreck' | 'crate' | 'drop'
     x: t.f32(),
     y: t.f32(),
     ownerAgentId: t.u64(), // 0 = shared

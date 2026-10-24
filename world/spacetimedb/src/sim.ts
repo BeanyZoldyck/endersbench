@@ -7,6 +7,7 @@ import { applyAction, reachFor } from './actions';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
+import { isBerry, isWoody, yields } from './resources';
 import { skills } from './roles';
 import { updateRescue } from './rescue';
 import { hitWolf, spawnWolves, stepWolves, stormActive, unpin, updateHazards, wolvesLeave } from './threats';
@@ -74,7 +75,7 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
   }
   if (w.phase === 'autumn' && crossed(prevMs, nowMs, BUSH_REGROW_MS)) {
     for (const n of [...ctx.db.resourceNode.iter()]) {
-      if (n.kind === 'berry_bush' && n.remaining < n.capacity) ctx.db.resourceNode.id.update({ ...n, remaining: n.remaining + 1 });
+      if (isBerry(n.kind) && n.remaining < n.capacity) ctx.db.resourceNode.id.update({ ...n, remaining: n.remaining + 1 });
     }
   }
 
@@ -386,7 +387,7 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
       const node = ctx.db.resourceNode.id.find(a.targetNodeId)!;
       if (distance(a.x, a.y, node.x, node.y) > REACH) return;
       const role = skills(a.role);
-      const needed = GATHER_MS * (node.kind === 'tree' ? role.woodGather : role.berryGather);
+      const needed = GATHER_MS * (isWoody(node.kind) ? role.woodGather : role.berryGather);
       let progress = a.progressMs + dt;
       if (progress < needed) {
         ctx.db.agent.id.update({ ...a, progressMs: progress });
@@ -395,9 +396,9 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
       progress -= needed;
       if (totalCarried(ctx, a.id) >= CARRY_CAP) return goIdle(ctx, a, 'hands_full');
       const left = node.remaining - 1;
-      // A tree chopped down to nothing leaves a stump.
+      // A tree chopped down to nothing leaves a stump; a wood pile is just empty.
       ctx.db.resourceNode.id.update({ ...node, remaining: left, state: node.kind === 'tree' && left === 0 ? 'stump' : node.state });
-      const got = node.kind === 'tree' ? 'wood' : 'berries';
+      const got = yields(node.kind);
       add(ctx, { agentId: a.id }, got, 1);
       ctx.db.worldEvent.insert({ kind: 'gathered', x: a.x, y: a.y, agentId: a.id, otherId: node.id, text: got });
       if (left === 0) return goIdle(ctx, a, 'node_empty');

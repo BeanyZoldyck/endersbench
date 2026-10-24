@@ -1,9 +1,11 @@
-// Pseudo-physics: bodies are circles with velocity; trees, chests, fires and
-// the wreck are solid; bushes slow you down. Movement is intent-driven
-// velocity plus a decaying knockback impulse, resolved against colliders.
+// Pseudo-physics: bodies are circles with velocity; trees, wood piles, chests,
+// fires and the wreck are solid; bushes and thickets slow you down. Movement
+// is intent-driven velocity plus a decaying knockback impulse, resolved
+// against colliders.
 
 import type { Ctx, World } from './ctx';
 import { centre, distance } from './ctx';
+import { isBerry, isWoody } from './resources';
 import { wreckFuselage } from './scenario';
 import {
   AGENT_RADIUS,
@@ -45,7 +47,7 @@ export function staticColliders(ctx: Ctx, w: World): Collider[] {
     out.push({ tag, id, x1: x, y1: y, x2: x, y2: y, r, burns });
 
   for (const n of ctx.db.resourceNode.iter()) {
-    if (n.kind !== 'tree') continue;
+    if (!isWoody(n.kind)) continue;
     if (n.state === 'stump') circle('tree', n.id, n.x, n.y, STUMP_RADIUS);
     else if (n.state === 'fallen') {
       out.push({
@@ -71,7 +73,7 @@ export function staticColliders(ctx: Ctx, w: World): Collider[] {
 
 export function inBush(ctx: Ctx, x: number, y: number) {
   for (const n of ctx.db.resourceNode.iter()) {
-    if (n.kind === 'berry_bush' && distance(x, y, n.x, n.y) < BUSH_RADIUS + AGENT_RADIUS * 0.5) return true;
+    if (isBerry(n.kind) && distance(x, y, n.x, n.y) < BUSH_RADIUS + AGENT_RADIUS * 0.5) return true;
   }
   return false;
 }

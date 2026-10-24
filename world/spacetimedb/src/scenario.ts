@@ -8,7 +8,18 @@ import { add } from './items';
 import { roleFor } from './roles';
 import {
   AGENT_RADIUS,
+  CRATE_CLEAR_RADIUS,
   CRATE_DISTANCE,
+  CRATE_MEDKITS,
+  CRATE_RATIONS,
+  CRATE_WOOD,
+  FINDS_BAND,
+  RIVER_WIDTH,
+  THICKETS,
+  THICKET_CAPACITY,
+  VIEW_RADIUS,
+  WOOD_PILES,
+  WOOD_PILE_CAPACITY,
   BUSH_RADIUS,
   CAMPFIRE_MAX_FUEL,
   CAMPFIRE_START_FUEL,
@@ -208,6 +219,14 @@ export function seedWorld(ctx: Ctx) {
   const wreck = ctx.db.container.insert({ id: 0n, kind: 'wreck', x: wx, y: wy, ownerAgentId: 0n, label: 'Plane wreck' });
   add(ctx, { containerId: wreck.id }, 'ration', scaled(w, WRECK_RATIONS));
 
+  // The supply crate, far from every home. The food and medkits scale with the
+  // rest of the food; the wood does not.
+  const [kx, ky] = cratePosition(w);
+  const crate = ctx.db.container.insert({ id: 0n, kind: 'crate', x: kx, y: ky, ownerAgentId: 0n, label: 'Supply crate' });
+  add(ctx, { containerId: crate.id }, 'ration', scaled(w, CRATE_RATIONS));
+  add(ctx, { containerId: crate.id }, 'medkit', scaled(w, CRATE_MEDKITS));
+  add(ctx, { containerId: crate.id }, 'wood', CRATE_WOOD);
+
   const [sx, sy] = signalFirePosition(w);
   ctx.db.structure.insert({
     id: 0n,
@@ -232,13 +251,17 @@ export function seedWorld(ctx: Ctx) {
     [wx, wy, 3],
     [cx, cy, 5],
     [sx, sy, 5],
+    [kx, ky, 3],
   ];
   const f = wreckFuselage(w);
   for (let x = f.x1; x <= f.x2; x += 1) placed.push([x, f.y1, f.radius + 2.5]);
   for (let i = 0; i < MAX_HOMES; i++) {
     placed.push([cx + Math.cos(homeAngle(i)) * HOME_RING, cy + Math.sin(homeAngle(i)) * HOME_RING, 3]);
   }
-  const free = (x: number, y: number, gap: number) => placed.every(([px, py, r]) => distance(px, py, x, y) >= Math.max(gap, r));
+  // Nothing grows in the river or on its banks.
+  const clearOfRiver = (x: number, y: number) => distanceToRiver(w, x, y) > RIVER_WIDTH / 2 + 1;
+  const free = (x: number, y: number, gap: number) =>
+    clearOfRiver(x, y) && placed.every(([px, py, r]) => distance(px, py, x, y) >= Math.max(gap, r));
 
   // Berry bushes in small clusters between the homes and the forest.
   let bushes = 0;
@@ -257,18 +280,41 @@ export function seedWorld(ctx: Ctx) {
     }
   }
 
-  // Trees stand in a band along the forest edge, leaving the open ground clear.
+  // Trees stand in a band along the forest edge, leaving the open ground clear
+  // and the ground around the crate bare, so the crate can be seen from a way off.
   let trees = 0;
   for (let attempt = 0; trees < TREES && attempt < TREES * 20; attempt++) {
     const angle = random() * Math.PI * 2;
     const r = TREE_RING_INNER + Math.sqrt(random()) * (MAP_RADIUS - 3 - TREE_RING_INNER);
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;
-    if (!free(x, y, 3)) continue;
+    if (!free(x, y, 3) || distance(x, y, kx, ky) < CRATE_CLEAR_RADIUS) continue;
     placed.push([x, y, 0]);
     ctx.db.resourceNode.insert({ id: 0n, kind: 'tree', x, y, remaining: TREE_CAPACITY, capacity: TREE_CAPACITY, state: 'standing', angle: 0 });
     trees++;
   }
+
+  // Finds for explorers: big berry thickets and wood piles in the outer band,
+  // beyond daytime sight of every home and out of the crate's clearing. They
+  // are placed last, so the bushes and trees keep the positions they always had.
+  const [bandInner, bandOuter] = FINDS_BAND;
+  const homes = Array.from({ length: MAX_HOMES }, (_, i) => [cx + Math.cos(homeAngle(i)) * HOME_RING, cy + Math.sin(homeAngle(i)) * HOME_RING]);
+  const place = (kind: string, count: number, capacity: number) => {
+    let made = 0;
+    for (let attempt = 0; made < count && attempt < 400; attempt++) {
+      const angle = random() * Math.PI * 2;
+      const r = bandInner + random() * (bandOuter - bandInner);
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (!free(x, y, 3) || distance(x, y, kx, ky) < CRATE_CLEAR_RADIUS) continue;
+      if (homes.some(([hx, hy]) => distance(x, y, hx, hy) < VIEW_RADIUS + 2)) continue;
+      placed.push([x, y, 0]);
+      ctx.db.resourceNode.insert({ id: 0n, kind, x, y, remaining: capacity, capacity, state: 'standing', angle: 0 });
+      made++;
+    }
+  };
+  place('berry_thicket', THICKETS, scaled(w, THICKET_CAPACITY));
+  place('wood_pile', WOOD_PILES, WOOD_PILE_CAPACITY);
 }
 
 // Gives a new survivor the next home on the ring and a chest with a little food.
