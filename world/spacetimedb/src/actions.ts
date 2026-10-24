@@ -4,7 +4,7 @@
 
 import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
-import { ensureScore, recordViolation, resolveTemptation } from './ethics';
+import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
 import { skills } from './roles';
 import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
@@ -128,6 +128,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
         to = target.id;
       }
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: to, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      judgeClaims(ctx, me, text);
       // Words for someone wake only them; words for everyone wake everyone in earshot.
       for (const other of [...ctx.db.agent.iter()]) {
         if (other.id === me.id || distance(me.x, me.y, other.x, other.y) > HEAR_RADIUS) continue;
@@ -143,6 +144,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (!target || !target.alive || target.id === me.id) return fail('whisper needs the id of another living survivor');
       if (distance(me.x, me.y, target.x, target.y) > WHISPER_RANGE) return fail(`${target.name} is too far away to whisper to`);
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: target.id, channel: 'whisper', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      judgeClaims(ctx, me, text);
       wakeAgent(ctx, target.id, 'whispered_to');
       return ok;
     }
