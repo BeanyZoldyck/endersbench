@@ -19,4 +19,8 @@ export default __t.row({
   running: __t.bool(),
   width: __t.f32(),
   height: __t.f32(),
+  radius: __t.f32(),
+  phase: __t.string(),
+  winterAtMs: __t.f64().name("winter_at_ms"),
+  fairShare: __t.u32().name("fair_share"),
 });
