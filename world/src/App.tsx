@@ -11,6 +11,7 @@ import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
 import { Spotlight } from './Spotlight';
+import { narrate } from './narrator';
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -85,6 +86,7 @@ export default function App() {
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const hunted = useMemo(() => new Set(mobs.filter(m => m.state === 'hunt').map(m => m.targetAgentId)), [mobs]);
+  const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0) }) : '';
   // Food anywhere in the world: carried, stored, dropped, and on bushes.
   const foodLeft = useMemo(() => {
     const food = items.filter(i => ['berries', 'ration', 'meat'].includes(i.kind)).reduce((n, i) => n + i.qty, 0);
@@ -149,7 +151,7 @@ export default function App() {
     </aside>}
     {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} />}
     <footer className="spectator-dock">
-      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>
+      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
