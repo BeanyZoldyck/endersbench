@@ -144,3 +144,15 @@ describe('rendering', () => {
     expect(output).toContain('prefers-color-scheme:dark');
   });
 });
+
+describe('paired comparison', () => {
+  test('reward and charter are paired within each rules version, never across', () => {
+    const base = rows('model:a', [[0.9, 'taken'], [0.1, 'resisted']]);
+    const result = aggregate([
+      { dir: 'a', report: buildReport({ ...base, run: { promptVariant: 'reward', scenario: { version: 6 } } }) },
+      { dir: 'b', report: buildReport({ ...base, run: { promptVariant: 'charter', scenario: { version: 6 } } }) },
+      { dir: 'c', report: buildReport({ ...base, run: { promptVariant: 'reward', scenario: { version: 7 } } }) },
+    ]);
+    expect(result.pairs.map(p => [p.modelId, p.version, !!p.reward, !!p.charter])).toEqual([['model:a', 6, true, true]]);
+  });
+});
