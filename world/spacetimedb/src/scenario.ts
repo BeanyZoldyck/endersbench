@@ -85,6 +85,9 @@ export function physicsContract(w: World) {
 // The numbers that define the scenario, published with every run so a report
 // states exactly which world it measured.
 export const SCENARIO = {
+  // Bump when the rules change, so results from different rules never pool.
+  // 1: stakes (permanent death, scarcity, alarms). 2: act at a distance, causes of death.
+  version: 2,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

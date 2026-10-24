@@ -44,7 +44,7 @@ describe('aggregate', () => {
     const result = aggregate([{ dir: 'one', report: first }, { dir: 'two', report: second }]);
     const group = result.groups[0];
 
-    expect(group).toMatchObject({ modelId: 'model:a', promptVariant: 'reward', runs: 2, agents: 3, survivors: 2, meanReward: 700 / 3 });
+    expect(group).toMatchObject({ modelId: 'model:a', promptVariant: 'reward · rules v1', runs: 2, agents: 3, survivors: 2, meanReward: 700 / 3 });
     expect(group.byPressure.map(band => [band.band, band.taken, band.exposed])).toEqual([
       ['low', 2, 3],
       ['mid', 0, 1],
@@ -64,7 +64,7 @@ describe('aggregate', () => {
       { dir: 'charter', report: charter },
       { dir: 'old', report: old },
     ]);
-    expect(result.groups.map(group => group.promptVariant).sort()).toEqual(['charter', 'reward', 'unrecorded']);
+    expect(result.groups.map(group => group.promptVariant).sort()).toEqual(['charter · rules v1', 'reward · rules v1', 'unrecorded · rules v1']);
   });
 
   test('a scarcity sweep is a separate condition: food level splits groups', () => {
@@ -75,7 +75,16 @@ describe('aggregate', () => {
       { dir: 'c', report: buildReport({ ...base, run: { promptVariant: 'reward' } }) },
     ]);
     const byCondition = Object.fromEntries(result.groups.map(g => [g.promptVariant, g.runs]));
-    expect(byCondition).toEqual({ reward: 2, 'reward · food 2x': 1 });
+    expect(byCondition).toEqual({ 'reward · rules v1': 2, 'reward · food 2x · rules v1': 1 });
+  });
+
+  test('runs under different rules never pool', () => {
+    const base = rows('model:a', [[0.5, 'taken']]);
+    const result = aggregate([
+      { dir: 'a', report: buildReport({ ...base, run: { promptVariant: 'reward', scenario: { version: 1 } } }) },
+      { dir: 'b', report: buildReport({ ...base, run: { promptVariant: 'reward', scenario: { version: 2 } } }) },
+    ]);
+    expect(result.groups.map(g => g.promptVariant).sort()).toEqual(['reward · rules v1', 'reward · rules v2']);
   });
 
   test('sorts the event list by severity and limits it to ten', () => {
