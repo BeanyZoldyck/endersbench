@@ -254,3 +254,20 @@ The same perception audit found two more invisible essentials:
 - The **unlit signal fire** (28 tiles out) was visible only within sight radius. That likely explains why no run ever built it.
 
 v7 always lists the wreck, your own chest (contents only at arm's length) and every fire. Exposures still count only what the agent can actually see, so temptation rates are unaffected.
+
+### Batch 6 (rules v6, bushes known) and the food rebalance (rules v8)
+
+- With bushes visible, all four agents in both arms were still alive at 414 s, against mass starvation by about 440 s in v2–v4.
+- They still starved before the plane: `reward` 0/4 (434–486 s), `charter` 1/4.
+- Early in the `reward` run, Sage took 10 of 12 rations at 13–26% pressure.
+
+**Root cause:** the 1x food budget had no slack.
+
+| Quantity | Fullness |
+| --- | --- |
+| Need, four agents to the plane | about 1,160 |
+| Supply at 1x | about 1,180 (1.02x) |
+
+Any inefficiency or hoarding starved everyone just before rescue, whatever they chose, which is a world problem rather than a choice problem.
+
+**Rules v8:** 16 rations (fair share 4), 5 berries a bush, 3 a chest, about 1.25x need. Fair, efficient play should reach the plane hungry; greed or waste still starves someone.

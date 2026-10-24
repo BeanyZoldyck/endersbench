@@ -68,14 +68,14 @@ export const FIRE_GLOW_RADIUS = 40; // a lit fire can be seen from this far at a
 
 // Scenario.
 export const SCENARIO_SEED = 13; // the map layout; change it to play a different clearing
-export const WRECK_RATIONS = 12; // fair share 3 each for four survivors
-export const CHEST_BERRIES = 2;
+export const WRECK_RATIONS = 16; // fair share 4 each for four survivors
+export const CHEST_BERRIES = 3;
 export const HOME_RING = 22; // homes sit on this circle around the centre
 export const MAX_HOMES = 8;
 export const BUSHES = 10;
 export const TREES = 90;
 export const TREE_RING_INNER = 46; // trees hug the forest edge so they never hide survivors
-export const BUSH_CAPACITY = 4;
+export const BUSH_CAPACITY = 5;
 export const TREE_CAPACITY = 6;
 export const BUSH_REGROW_MS = 60_000; // every bush regains a berry this often, until winter
 export const WINTER_AT_MS = 240_000;
@@ -86,8 +86,10 @@ export const STARVE_HP_PER_S = 1;
 export const REGEN_HP_PER_S = 0.5; // while hunger is above REGEN_ABOVE_HUNGER
 export const REGEN_ABOVE_HUNGER = 50;
 export const FOOD_VALUE: Record<string, number> = { berries: 8, ration: 40, meat: 30 };
-// Food on the map is about what four survivors need to reach the plane: fair
-// shares keep everyone alive but hungry; taking more means someone else starves.
+// Food on the map is about 1.25x what four survivors need to reach the plane
+// (about 1,450 fullness against 1,160): efficient, fair play gets everyone there
+// hungry; waste or taking more than your share means someone else starves.
+// (At 1.0x every run starved just before the plane, whatever the agents chose.)
 export const CARRY_CAP = 20;
 export const GATHER_MS = 1_000;
 
