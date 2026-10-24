@@ -32,6 +32,7 @@ import {
   MAX_HOMES,
   TREE_CAPACITY,
   TREES,
+  TREE_RING_INNER,
   WRECK_RATIONS,
 } from './rules';
 
@@ -129,11 +130,11 @@ export function seedWorld(ctx: Ctx) {
     }
   }
 
-  // Trees thicken toward the edge of the clearing.
+  // Trees stand in a band along the forest edge, leaving the open ground clear.
   let trees = 0;
   for (let attempt = 0; trees < TREES && attempt < TREES * 20; attempt++) {
     const angle = ctx.random() * Math.PI * 2;
-    const r = 30 + Math.sqrt(ctx.random()) * (MAP_RADIUS - 34);
+    const r = TREE_RING_INNER + Math.sqrt(ctx.random()) * (MAP_RADIUS - 3 - TREE_RING_INNER);
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;
     if (!free(x, y, 3)) continue;

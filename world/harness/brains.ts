@@ -27,6 +27,11 @@ export interface Brain {
   decide(input: DecideInput): Promise<Decision>;
 }
 
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 type FetchImpl = typeof fetch;
 
 const MAX_OUTPUT_TOKENS = 200;
@@ -266,6 +271,64 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
   };
 }
 
+// Codex CLI: a model reached through a Codex login rather than an API key.
+// One `codex exec` per decision, held to a JSON schema; read-only sandbox,
+// empty working directory and no saved session, so it can only answer.
+export type CodexRun = (call: { prompt: string; model: string; codexHome?: string; schema: any; effort: string }) => Promise<string>;
+
+const CODEX_TIMEOUT_MS = 60_000;
+
+const runCodexCli: CodexRun = async ({ prompt, model, codexHome, schema, effort }) => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'endersbench-codex-'));
+  try {
+    const schemaFile = path.join(dir, 'schema.json'), out = path.join(dir, 'reply.json');
+    await writeFile(schemaFile, JSON.stringify(schema));
+    const args = ['exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '-C', dir, '-m', model,
+      '-c', `model_reasoning_effort=${effort}`, '--output-schema', schemaFile, '-o', out, '-'];
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('codex', args, { env: codexHome ? { ...process.env, CODEX_HOME: codexHome } : process.env, stdio: ['pipe', 'ignore', 'pipe'] });
+      let stderr = '';
+      child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-2000); });
+      const timer = setTimeout(() => child.kill('SIGTERM'), CODEX_TIMEOUT_MS);
+      child.on('error', err => { clearTimeout(timer); reject(err); });
+      child.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`codex exec exited ${code}: ${stderr.trim().slice(-300)}`)); });
+      child.stdin.end(prompt);
+    });
+    return await readFile(out, 'utf-8');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+};
+
+export function codexBrain(opts: { model: string; codexHome?: string; effort?: string; run?: CodexRun }): Brain {
+  const run = opts.run ?? runCodexCli;
+  return {
+    provider: 'codex',
+    async decide(input) {
+      const names = input.tools.map(t => t.name);
+      const schema = {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: names },
+          args_json: { type: 'string', description: "The chosen tool's arguments as a JSON object, encoded as a string." },
+          thought: { type: 'string', description: 'Why, in 12 words or fewer.' },
+        },
+        required: ['action', 'args_json', 'thought'],
+        additionalProperties: false,
+      };
+      const catalog = input.tools.map(t => JSON.stringify({ name: t.name, description: t.description, parameters: t.parameters })).join('\n');
+      const prompt = `${input.system}\n\nTools (choose exactly one):\n${catalog}\n\n${userMessage(input)}\n\n` +
+        'Reply only with the JSON object: action is the tool name, args_json its arguments as a JSON string. Do not run commands or read files.';
+      const reply = JSON.parse(await run({ prompt, model: opts.model, codexHome: opts.codexHome, schema, effort: opts.effort ?? 'low' }));
+      if (!names.includes(reply.action)) throw new Error(`codex chose '${reply.action}', which is not an offered action`);
+      let args: unknown;
+      try { args = JSON.parse(reply.args_json); } catch { args = null; }
+      if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error(`codex args are not a JSON object: ${String(reply.args_json).slice(0, 80)}`);
+      return { action: { name: reply.action, args: args as Record<string, unknown> }, thought: typeof reply.thought === 'string' ? reply.thought : '' };
+    },
+  };
+}
+
 const OPENAI_COMPATIBLE: Record<string, { baseUrl: (env: Env) => string | undefined; key: (env: Env) => string | undefined; needs: string }> = {
   openai: { baseUrl: () => 'https://api.openai.com/v1', key: env => env.OPENAI_API_KEY, needs: 'OPENAI_API_KEY' },
   openrouter: { baseUrl: () => 'https://openrouter.ai/api/v1', key: env => env.OPENROUTER_API_KEY, needs: 'OPENROUTER_API_KEY' },
@@ -276,7 +339,8 @@ const OPENAI_COMPATIBLE: Record<string, { baseUrl: (env: Env) => string | undefi
 type Env = Record<string, string | undefined>;
 
 // modelId is "fake" or "provider:model", e.g. "ender:qwen3.8-27b",
-// "anthropic:claude-haiku-4-5", "openrouter:google/gemini-2.5-flash".
+// "anthropic:claude-haiku-4-5", "openrouter:google/gemini-2.5-flash",
+// "codex:gpt-6-luna" (set CODEX_HOME to pick the Codex login, e.g. ~/.codex-mdl).
 export function brainFor(modelId: string, env: Env): Brain {
   if (modelId === 'fake' || modelId.startsWith('fake:')) {
     const [lo, hi] = (env.FAKE_LATENCY_MS ?? '600-2500').split('-').map(Number);
@@ -285,6 +349,7 @@ export function brainFor(modelId: string, env: Env): Brain {
   const sep = modelId.indexOf(':');
   const provider = sep < 0 ? modelId : modelId.slice(0, sep);
   const model = sep < 0 ? '' : modelId.slice(sep + 1);
+  if (provider === 'codex') return codexBrain({ model, codexHome: env.CODEX_HOME, effort: env.CODEX_EFFORT });
   if (provider === 'anthropic') {
     if (!env.ANTHROPIC_API_KEY) throw new Error('anthropic models need ANTHROPIC_API_KEY');
     return anthropicBrain({ apiKey: env.ANTHROPIC_API_KEY, model });

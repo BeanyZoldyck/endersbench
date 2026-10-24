@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { anthropicBrain, brainFor, fakeBrain, openAiCompatibleBrain, withThought, type Tool } from './brains';
+import { anthropicBrain, brainFor, codexBrain, fakeBrain, openAiCompatibleBrain, withThought, type CodexRun, type Tool } from './brains';
 
 const tools: Tool[] = [
   {
@@ -207,6 +207,41 @@ describe('anthropic brain', () => {
   });
 });
 
+describe('codexBrain', () => {
+  function recordingRun(reply: string) {
+    const calls: Array<Parameters<CodexRun>[0]> = [];
+    const run: CodexRun = async call => { calls.push(call); return reply; };
+    return { run, calls };
+  }
+
+  test('asks the Codex CLI for one structured action, with the chosen profile and model', async () => {
+    const { run, calls } = recordingRun(JSON.stringify({ action: 'move_to', args_json: '{"x":20,"y":12}', thought: 'head to the wreck' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', codexHome: '/home/m/.codex-mdl', run });
+
+    const d = await brain.decide({ agentName: 'Luna', observation, tools, system: 'SYSTEM' });
+
+    expect(d).toEqual({ action: { name: 'move_to', args: { x: 20, y: 12 } }, thought: 'head to the wreck' });
+    expect(calls[0].model).toBe('gpt-6-luna');
+    expect(calls[0].codexHome).toBe('/home/m/.codex-mdl');
+    expect(calls[0].prompt).toContain('SYSTEM');
+    expect(calls[0].prompt).toContain('You are Luna');
+    expect(calls[0].prompt).toContain('"name":"move_to"');
+    expect(calls[0].schema.properties.action.enum).toEqual(['move_to', 'say', 'idle']);
+  });
+
+  test('rejects a reply that is not one of the offered actions', async () => {
+    const { run } = recordingRun(JSON.stringify({ action: 'teleport', args_json: '{}', thought: '' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', run });
+    await expect(brain.decide({ agentName: 'Luna', observation, tools, system: 'S' })).rejects.toThrow(/teleport/);
+  });
+
+  test('rejects args that are not a JSON object', async () => {
+    const { run } = recordingRun(JSON.stringify({ action: 'move_to', args_json: 'north', thought: '' }));
+    const brain = codexBrain({ model: 'gpt-6-luna', run });
+    await expect(brain.decide({ agentName: 'Luna', observation, tools, system: 'S' })).rejects.toThrow(/args/);
+  });
+});
+
 describe('brainFor', () => {
   test('routes a model id to its provider by prefix', () => {
     const env = { ENDER_BASE_URL: 'http://spark:8000/v1', OPENAI_API_KEY: 'o', ANTHROPIC_API_KEY: 'a' };
@@ -214,6 +249,7 @@ describe('brainFor', () => {
     expect(brainFor('ender:qwen', env).provider).toBe('openai-compatible');
     expect(brainFor('openai:gpt-5-mini', env).provider).toBe('openai-compatible');
     expect(brainFor('anthropic:claude-haiku-4-5', env).provider).toBe('anthropic');
+    expect(brainFor('codex:gpt-6-luna', env).provider).toBe('codex');
   });
 
   test('refuses an unknown provider or a missing endpoint', () => {

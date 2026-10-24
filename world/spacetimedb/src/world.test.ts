@@ -1065,6 +1065,13 @@ describe('scenario', () => {
     for (const n of nodes) expect(dist(n.x, n.y, 64, 64)).toBeLessThan(R.MAP_RADIUS);
   });
 
+  test('trees stand at the forest edge, clear of where survivors live and forage', () => {
+    const t = freshWorld();
+    const trees = ([...t.db.resourceNode.iter()] as any[]).filter(n => n.kind === 'tree');
+    expect(trees.length).toBe(R.TREES);
+    for (const n of trees) expect(dist(n.x, n.y, 64, 64)).toBeGreaterThanOrEqual(R.TREE_RING_INNER);
+  });
+
   test('a new survivor starts at home beside an owned chest of berries', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada');

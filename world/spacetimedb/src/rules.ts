@@ -71,6 +71,7 @@ export const HOME_RING = 22; // homes sit on this circle around the centre
 export const MAX_HOMES = 8;
 export const BUSHES = 20;
 export const TREES = 90;
+export const TREE_RING_INNER = 46; // trees hug the forest edge so they never hide survivors
 export const BUSH_CAPACITY = 5;
 export const TREE_CAPACITY = 6;
 export const BUSH_REGROW_MS = 20_000; // every bush regains a berry this often, until winter
