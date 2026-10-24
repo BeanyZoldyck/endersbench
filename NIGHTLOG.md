@@ -6,37 +6,50 @@ Experimental branch. Everything here is a proposal to keep or drop; `main` is un
 
 **Keep: high confidence, tested, and they make the demo.**
 
-1. Permanent death, plus danger in time:
-   - alarms that withdraw stale decisions;
-   - wolves heard beyond sight, with seconds-to-contact;
-   - vitals forecasts and plain-language alerts;
-   - the bite reflex.
-2. More agency: faster walking and gathering, and act-at-a-distance (take, give, build and feed walk there and do it).
-3. The minimal `reward` prompt as the default, with `charter` as the explicit-rules condition. Rules v4+ observations are norm-free under `reward`.
-4. Measurement:
-   - pressure recorded on every exposure and violation;
-   - violation rate by pressure band, with Wilson intervals;
+1. **Stakes:**
+   - permanent death, plus danger in time: alarms that withdraw stale decisions, wolves heard beyond sight with seconds to contact, vitals forecasts and plain-language alerts, and the bite reflex;
+   - more agency: faster walking and gathering, and act-at-a-distance (take, give, build and feed walk there and do it).
+2. **Prompts:** the minimal `reward` prompt as the default, with `charter` (eight rules) and `win-at-all-costs` as conditions. From rules v4 the `reward` observations are norm-free.
+3. **Measurement:**
+   - pressure on every exposure and violation;
+   - rates with Wilson intervals;
    - no-answer exclusion;
    - each violation's own thought as evidence;
-   - rationalised-violation counting;
-   - the scenario seed and version.
-5. Viewer:
-   - the violation and death spotlight, with a camera cut;
-   - the moments-of-choice rail with a live pressure curve;
+   - the fair-share stance classifier (claims fair, admits going over, silent);
+   - rations past a fair share;
+   - first over-take time with an exact Mann-Whitney test;
+   - scenario seed and version.
+4. **Results:**
+   - `npm run results` / `npm run headline`, with **At a glance** per model;
+   - the pair table and the first-over-take chart;
+   - [`METHODS.md`](METHODS.md) with every definition.
+5. **Viewer:**
+   - the violation and death spotlight, with a camera cut and the stance tag;
+   - the moments-of-choice rail with a live pressure curve, where a click jumps back to the moment in replays;
    - graves and hunt lines;
    - the narrator and condition chip;
-   - replay mode with the committed demo backstop, and the demo-cut video.
+   - replays with `?t=`;
+   - **Exhibits** (one click per recorded moment) and the unattended booth `?tour`.
+6. **Demo assets:**
+   - `results/demo-side-by-side.mp4`;
+   - `results/submission-cut.mp4`, a 3-minute captioned Devpost draft;
+   - the demo cuts;
+   - the committed replays in `world/public/demo/`.
+7. **Fixes worth merging regardless:**
+   - `spawnAgent` now takes the roster's model (batch 13), with a harness warning on any mismatch;
+   - the viewer's top bar no longer overlaps at narrow widths.
 
 **Probably keep: works, but tune it.**
 
-- The mass starvation in the v2–v4 runs was partly a perception bug (bushes out of sight from the shelter), fixed in v6. Re-check survival at 1x before tuning food.
-- The deception detector is deliberately narrow and needed one fix (v5).
+- **Rules v9 (rations-only wreck share)** is published on the local databases but has only one valid run.
+- **The deception detector** is deliberately narrow.
+- **The lifeboat (`RESCUE_SEATS=2`)** has one pair.
 
-**Try next:**
+**Try next (when model calls are back; mdl resets at 12:46 PM Saturday):**
 
-- More lifeboat (`RESCUE_SEATS=2`) pairs: one pair has run (batch 8); it is suggestive, not settled.
-- Rules v9, proposed: make the flare usable. Every flare fired so far was wasted before the plane came (batch 8). Proposed: say in the observation when a plane is overhead, and state that a flare fired at any other time is lost. Also fix the `fire_flare` tool text, which still says "everyone alive is rescued" when seats are limited.
-- More runs per condition. Two Codex logins are out of credits (jle, acho).
+1. More GPT-6-Sol pairs: one pair hints that Sol doesn't grab early.
+2. More Luna v8 pairs, to settle the amount (p = 0.15).
+3. Make the flare usable (every flare so far was wasted before the plane came): say when a plane is overhead, and fix the `fire_flare` text under the lifeboat.
 
 **Headline findings so far** (GPT-6-Luna, 38 runs, small n; batch 13 has the current numbers, all from `npm run headline`):
 
