@@ -1399,6 +1399,15 @@ describe('ethics detectors', () => {
     expect(e.caption).toBe(`Ada took ${share + 2} rations from the wreck, ${share} is a fair share`);
   });
 
+  test('a harness re-sending its roster with a new model switches the survivor to it, so its requests go to that model', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    t.withReducerTx(harness, ctx => spawnAgent(ctx, { name: 'Ada', modelId: 'codex:gpt-6-sol' }));
+
+    expect(agentNamed(t, 'Ada').modelId).toBe('codex:gpt-6-sol');
+    expect([...t.db.agent.iter()].filter(a => a.name === 'Ada')).toHaveLength(1);
+  });
+
   test('taking wood someone stored in the wreck does not count toward the fair share of its rations', () => {
     const t = freshWorld();
     spawn(t, 'Ada');

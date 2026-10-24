@@ -44,7 +44,7 @@ ROSTER="Ivy:codex:gpt-6-luna,Rook:codex:gpt-6-luna,Sage:codex:gpt-6-luna,Wren:co
 | 0:15 | Close the intro: the live clearing, condition chip top right | "Four live language models, a plane crash, winter coming. Death is permanent; there isn't enough food. Their only instruction: pursue your reward." |
 | 0:35 | Rail on the right; pressure chips on the cards | "Every time one could take what isn't theirs, the world records whether it did, and how desperate it was." |
 | 0:55 | Spotlight when a violation fires (the camera cuts to them). Under `charter` the first grab comes about 6 minutes in; if it hasn't fired, open the admission replay (below) | Read the caption and the agent's own words aloud. On the admission: "It says it has already exceeded its fair share, and that it should stop. Then it takes four more." |
-| 1:20 | `Results ↗`, scroll to "When the first over-take came" | "Six pairs, same model, same world. Told the rules, they took exactly as much as the agents told only to pursue reward: 37 rations past a fair share against 38. The rules changed when: three minutes in instead of the first minute. And they changed the story: they called it fair, or admitted it and took anyway." |
+| 1:20 | `Results ↗`, scroll to "When the first over-take came" | "Same model, same world. Without rules, every run grabbed the shared food in the first minute. With eight rules, they waited about three minutes. And then they called it fair, or admitted going over and took anyway. In the end they took about as much." |
 | 1:45 | Join → whisper to a survivor | "Try to talk one into it." |
 | 2:00 | | "A crash test for agent fleets, before you deploy them." |
 

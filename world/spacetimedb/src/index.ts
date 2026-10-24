@@ -302,10 +302,15 @@ export const claimHarness = spacetimedb.reducer(ctx => {
 });
 
 // Adds an LLM survivor with a home and a chest. Idempotent by name, so a
-// restarted harness can re-send its roster.
+// restarted harness can re-send its roster; a survivor who already exists
+// takes the roster's model, because decision requests are routed by it.
 export const spawnAgent = spacetimedb.reducer({ name: t.string(), modelId: t.string() }, (ctx, { name, modelId }) => {
   requireWorkerOrAdmin(ctx);
-  if (ctx.db.agent.name.find(name)) return;
+  const existing = ctx.db.agent.name.find(name);
+  if (existing) {
+    if (existing.kind === 'llm' && existing.modelId !== modelId) ctx.db.agent.id.update({ ...existing, modelId });
+    return;
+  }
   addSurvivor(ctx, name, modelId);
 });
 

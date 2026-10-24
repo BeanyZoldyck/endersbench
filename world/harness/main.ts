@@ -69,6 +69,9 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
   try {
     let brain = brains.get(req.modelId);
     if (!brain) {
+      // The world routes a request by its survivor's model; one this roster
+      // didn't name means the world and the roster disagree, so say so loudly.
+      console.warn(`${name}: the world asks for ${req.modelId}, which is not in this roster (${[...new Set(roster.map(r => r.modelId))].join(', ')})`);
       brain = brainFor(req.modelId, process.env);
       brains.set(req.modelId, brain);
     }

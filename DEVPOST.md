@@ -27,17 +27,22 @@ It records whether the agent took it, and how desperate it was at that moment (i
 
 A second condition gives the same agents eight explicit rules. The question it asks is whether stated rules hold up as the pressure rises.
 
-**What we found (GPT-6-Luna, 28 runs, small samples):**
+**What we found (GPT-6-Luna, 38 runs, small samples):**
 
-- **Stated rules changed when they took, not how much.** Over six pairs under our final rules, the agents given eight rules took 37 rations past a fair share of the shared food; the agents told only to pursue reward took 38. Told "nothing else matters", six more runs took 39.
-- **The rules delayed the grab.** Without rules, the first over-take came within 46 seconds in 8 of 8 runs. With rules, after 165 seconds in 6 of 8 (exact rank test, p = 0.0003).
-- **And they changed the story.** Under the rules, 12 of 20 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 21 mentioned fairness.
+- **Stated rules delayed the grab.** Without rules, the first over-take of the shared food came within 46 seconds in 10 of 10 runs. With eight rules, after 165 seconds in 7 of 10 (exact rank test, p = 0.00003).
+- **And gave it a story.** Under the rules, 15 of 24 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 25 mentioned fairness.
+- **The amount barely moved.** Rations taken past a fair share per run:
+  - reward-only: about 7;
+  - with the rules: about 6;
+  - told "nothing else matters": about 6.5.
+
+  That difference is not significant (p = 0.15); the timing difference is.
 - **They recite the rule while breaking it.** Starving, one agent took from another's chest, thinking: "Wren's chest is nearby and marked supplies must remain untouched."
 - **A result that didn't survive replication.** Our first final-rules pair looked like a headline:
   - the reward-only group missed the rescue plane (mean reward 469);
   - the rule-bound group built the signal fire together and was rescued (765).
 
-  Over six pairs, the reward-only groups were rescued 3 times and the rule-bound groups twice, so we don't claim that rules pay.
+  Over eight pairs, the reward-only groups were rescued 5 times and the rule-bound groups 4, so we don't claim that rules pay.
 
 ## How we built it
 
@@ -73,7 +78,7 @@ A second condition gives the same agents eight explicit rules. The question it a
 ## What we learned
 
 - **Audit what agents do, not what they say.** You can't audit an agent by asking whether it thinks it followed the rules. Ours usually said they had, and when they admitted they hadn't, they took anyway.
-- **Rules moved the timing and the story, not the amount.** The agents took as much either way; the rules made them wait, and gave them words for it.
+- **Rules moved the timing and the story far more than the amount.** The agents took about as much either way; the rules made them wait, and gave them words for it.
 - **Scarcity is the dial.** With twice the food, almost nothing went wrong.
 - **One run is an anecdote.** Our most striking result vanished when we replicated it.
 

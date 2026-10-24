@@ -257,8 +257,8 @@ export function mannWhitney(a: number[], b: number[]) {
 // The findings in a few lines, computed here so the page, `npm run headline`
 // and the docs quote one source. Timing and stances pool rules v4 and later
 // (from v4 the reward prompt is norm-free); amounts and rescues are for the
-// rules version with the most runs. Food sweeps are left out.
-type GlanceRow = { model: string; prompt: string; firstTake?: string; stance?: { fair: number; over: number; of: number }; items?: number[]; rescued?: string; survivors?: string; other?: number };
+// model's rules version with the most runs. Food sweeps are left out.
+type GlanceRow = { model: string; prompt: string; version: number; firstTake?: string; stance?: { fair: number; over: number; of: number }; items?: number[]; rescued?: string; survivors?: string; other?: number };
 // One row per model and prompt: models are never pooled with each other.
 function glance(results: AggregatedResults) {
   const parse = (g: AggregatedGroup) => ({ model: g.modelId, prompt: g.promptVariant.split(' · ')[0], version: Number(g.promptVariant.match(/rules v(\d+)$/)?.[1] ?? 1), swept: g.promptVariant.includes(' · food ') });
@@ -266,11 +266,13 @@ function glance(results: AggregatedResults) {
   if (!groups.length) return null;
   const rank = (p: string) => ({ reward: 0, charter: 1 } as Record<string, number>)[p] ?? 2;
   const models = [...new Set(groups.map(x => x.model))].sort();
-  // Amounts are for the rules version with the most runs (the newer on a tie),
-  // so one run under new rules doesn't replace the summary.
-  const runsAt = new Map<number, number>();
-  for (const x of groups) runsAt.set(x.version, (runsAt.get(x.version) ?? 0) + x.g.runs);
-  const latest = [...runsAt].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  // Each model's amounts are for its rules version with the most runs (the newer
+  // on a tie), so one run under new rules doesn't replace the summary.
+  const versionFor = (model: string) => {
+    const runsAt = new Map<number, number>();
+    for (const x of groups.filter(x => x.model === model)) runsAt.set(x.version, (runsAt.get(x.version) ?? 0) + x.g.runs);
+    return [...runsAt].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  };
   const of = (model: string, prompt: string, keep: (version: number) => boolean) => groups.filter(x => x.model === model && x.prompt === prompt && keep(x.version)).map(x => x.g);
   const sum = (xs: number[]) => xs.reduce((n, x) => n + x, 0);
   // A run that never over-took counts as later than any that did.
@@ -279,11 +281,13 @@ function glance(results: AggregatedResults) {
   const rows: GlanceRow[] = models.flatMap(model => [...new Set(groups.filter(x => x.model === model).map(x => x.prompt))]
     .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
     .map(prompt => {
-      const early = of(model, prompt, v => v >= 4), now = of(model, prompt, v => v === latest);
+      const version = versionFor(model);
+      const early = of(model, prompt, v => v >= 4), now = of(model, prompt, v => v === version);
       const takes = firstTakes(early), hoards = sum(early.map(g => g.rationalised.hoarding));
       return {
         model,
         prompt,
+        version,
         firstTake: takes.length ? `${range(takes)} (${takes.length} run${takes.length === 1 ? '' : 's'})` : undefined,
         stance: hoards ? { fair: sum(early.map(g => g.rationalised.claimedFair)), over: sum(early.map(g => g.rationalised.admittedOver)), of: hoards } : undefined,
         ...(now.length ? {
@@ -300,13 +304,13 @@ function glance(results: AggregatedResults) {
     const p = mannWhitney(reward, charter).p;
     return [{ model, p: p >= 0.01 ? p.toFixed(2) : p.toPrecision(1) }];
   });
-  return { latest, rows, tests };
+  return { rows, tests };
 }
 
 // The findings in a few lines, computed here so the page, `npm run headline`
 // and the docs quote one source. Timing and stances pool rules v4 and later
 // (from v4 the reward prompt is norm-free); amounts and rescues are for the
-// rules version with the most runs. Food sweeps are left out.
+// model's rules version with the most runs. Food sweeps are left out.
 export function atAGlance(results: AggregatedResults): string[] {
   const g = glance(results);
   if (!g) return [];
@@ -317,8 +321,8 @@ export function atAGlance(results: AggregatedResults): string[] {
   if (timing.length) lines.push(`First over-take of the wreck, rules v4 and later: ${[...timing, ...tests].join('; ')}`);
   const stances = g.rows.filter(r => r.stance).map(r => `${who(r)}: ${r.stance!.fair} of ${r.stance!.of} hoards called fair, ${r.stance!.over} admitted going over`);
   if (stances.length) lines.push(`What each hoard's own thought said, rules v4 and later: ${stances.join('; ')}`);
-  const amounts = g.rows.filter(r => r.items).map(r => `${who(r)}: ${r.items!.reduce((n, x) => n + x, 0)} rations past a fair share (${r.items!.join(', ')}) · rescued ${r.rescued} · survivors ${r.survivors} · other violations ${r.other}`);
-  if (amounts.length) lines.push(`Under rules v${g.latest}, every condition: ${amounts.join('; ')}`);
+  const amounts = g.rows.filter(r => r.items).map(r => `${who(r)} (rules v${r.version}): ${r.items!.reduce((n, x) => n + x, 0)} rations past a fair share (${r.items!.join(', ')}) · rescued ${r.rescued} · survivors ${r.survivors} · other violations ${r.other}`);
+  if (amounts.length) lines.push(`Under each model's most-run rules, every condition: ${amounts.join('; ')}`);
   return lines;
 }
 
@@ -326,8 +330,8 @@ function glanceTable(results: AggregatedResults) {
   const g = glance(results);
   if (!g) return '';
   const cell = (value: string | number | undefined) => `<td>${value === undefined ? '—' : html(String(value))}</td>`;
-  return `<section><h2>At a glance</h2><div class="table-wrap"><table><thead><tr><th>Model</th><th>Prompt</th><th>First over-take of the wreck (v4+)</th><th>Hoards called fair · admitted over (v4+)</th><th>Rations past a fair share (v${g.latest})</th><th>Rescued (v${g.latest})</th><th>Survivors (v${g.latest})</th><th>Other violations (v${g.latest})</th></tr></thead><tbody>${g.rows.map(r =>
-    `<tr>${cell(r.model)}${cell(r.prompt)}${cell(r.firstTake)}${cell(r.stance ? `${r.stance.fair} of ${r.stance.of} · ${r.stance.over}` : undefined)}${cell(r.items ? `${r.items.reduce((n, x) => n + x, 0)} (${r.items.join(', ')})` : undefined)}${cell(r.rescued)}${cell(r.survivors)}${cell(r.other)}</tr>`).join('')}</tbody></table></div>${g.tests.length ? `<p class="muted">First over-take, reward against charter, exact Mann-Whitney: ${g.tests.map(t => `${html(t.model)} p = ${t.p}`).join('; ')}. A run that never over-took counts as the latest. Timing and stances pool rules v4 and later, when the reward prompt became norm-free.</p>` : ''}</section>`;
+  return `<section><h2>At a glance</h2><div class="table-wrap"><table><thead><tr><th>Model</th><th>Prompt</th><th>First over-take of the wreck (v4+)</th><th>Hoards called fair · admitted over (v4+)</th><th>Rules for the rest</th><th>Rations past a fair share</th><th>Rescued</th><th>Survivors</th><th>Other violations</th></tr></thead><tbody>${g.rows.map(r =>
+    `<tr>${cell(r.model)}${cell(r.prompt)}${cell(r.firstTake)}${cell(r.stance ? `${r.stance.fair} of ${r.stance.of} · ${r.stance.over}` : undefined)}${cell(`v${r.version}`)}${cell(r.items ? `${r.items.reduce((n, x) => n + x, 0)} (${r.items.join(', ')})` : undefined)}${cell(r.rescued)}${cell(r.survivors)}${cell(r.other)}</tr>`).join('')}</tbody></table></div>${g.tests.length ? `<p class="muted">First over-take, reward against charter, exact Mann-Whitney: ${g.tests.map(t => `${html(t.model)} p = ${t.p}`).join('; ')}. A run that never over-took counts as the latest. Timing and stances pool rules v4 and later, when the reward prompt became norm-free.</p>` : ''}</section>`;
 }
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;

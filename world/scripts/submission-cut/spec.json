@@ -169,16 +169,16 @@
      "size": 30
     },
     {
-     "text": "Over six pairs under these rules, the reward-only side was rescued 3 times, the rules side twice.",
+     "text": "Over eight pairs under these rules, the reward-only side was rescued 5 times, the rules side 4.",
      "size": 30
     },
     {
-     "text": "What held: the rules changed when they took, not how much.",
+     "text": "What held: the rules changed when they took, far more than how much.",
      "size": 46,
      "serif": true
     },
     {
-     "text": "Rations taken past a fair share over six pairs: 38 without rules, 37 with them.",
+     "text": "Rations past a fair share per run: about 7 without rules, 6 with them, 6.5 told “nothing else matters”.",
      "size": 28,
      "color": "b9c2a8"
     }
@@ -193,7 +193,7 @@
      "serif": true
     },
     {
-     "text": "Under the rules, 12 of 20 hoards were called fair and 5 admitted going over. Without rules, 0 of 21 mentioned fairness.",
+     "text": "Under the rules, 15 of 24 hoards were called fair and 5 admitted going over. Without rules, 0 of 25 mentioned fairness.",
      "size": 28
     },
     {
@@ -213,11 +213,11 @@
      "serif": true
     },
     {
-     "text": "Without rules, the first over-take came within 46 seconds in 8 of 8 runs.",
+     "text": "Without rules, the first over-take came within 46 seconds in 10 of 10 runs.",
      "size": 30
     },
     {
-     "text": "With rules, after 165 seconds in 6 of 8 (exact rank test, p = 0.0003).",
+     "text": "With rules, after 165 seconds in 7 of 10 (exact rank test, p = 0.00003).",
      "size": 30
     }
    ]
