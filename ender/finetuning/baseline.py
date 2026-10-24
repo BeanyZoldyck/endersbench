@@ -4,6 +4,7 @@
 import argparse
 import csv
 import hashlib
+import importlib.util
 import json
 import platform
 import random
@@ -63,6 +64,20 @@ def default_data_root():
     return local if local.is_dir() else remote
 
 
+def check_dependencies(datasets, dry_run=False):
+    required = [] if dry_run else ["torch", "transformers", "accelerate"]
+    if "strongreject" in datasets:
+        required.append("pyarrow")
+    missing = [name for name in required if importlib.util.find_spec(name) is None]
+    if missing:
+        raise ValueError(
+            f"Interpreter {sys.executable} is missing: {', '.join(missing)}. "
+            "Environment setup is incomplete; do not start inference yet. "
+            "Install dependencies in THIS interpreter, not .download-venv. "
+            "See finetuning/requirements-baseline.txt. CUDA PyTorch must finish installing first."
+        )
+
+
 def load_source(root, name):
     relative, kind, expectation = SOURCES[name]
     path = root / relative
@@ -70,7 +85,8 @@ def load_source(root, name):
         try:
             import pyarrow.parquet as pq
         except ImportError as exc:
-            raise ValueError("StrongREJECT needs pyarrow. Install it or omit --datasets strongreject.") from exc
+            raise ValueError(f"StrongREJECT needs pyarrow in {sys.executable}. "
+                             f"Run: {sys.executable} -m pip install pyarrow") from exc
         records = pq.read_table(path).to_pylist()
     elif kind == "sorry":
         records = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
@@ -391,6 +407,7 @@ def main(argv=None):
         parser.error("Progress interval must be a finite positive number")
     if len(set(args.datasets)) != len(args.datasets):
         parser.error("Dataset names must not repeat")
+    check_dependencies(args.datasets, args.dry_run)
     output = args.output_dir or Path("results") / ("baseline-qwen38-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"))
     examples, sources = [], {}
     for name in args.datasets:

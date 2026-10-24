@@ -94,13 +94,33 @@ class BaselineTests(unittest.TestCase):
     def test_failures_update_manifest(self):
         self.csv("advbench", [{"goal": "Prompt", "target": "Do not use"}])
         output = self.root / "results"
-        with patch.object(baseline, "run_inference", side_effect=ValueError("No GPU")), \
+        with patch.object(baseline, "check_dependencies"), \
+                patch.object(baseline, "run_inference", side_effect=ValueError("No GPU")), \
                 contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(ValueError, "No GPU"):
             baseline.main(["--data-root", str(self.root), "--datasets", "advbench",
                            "--output-dir", str(output)])
         manifest = json.loads((output / "manifest.json").read_text())
         self.assertEqual(manifest["status"], "failed")
         self.assertIn("finished_at", manifest)
+
+    def test_dependency_check_reports_all_missing_in_current_interpreter(self):
+        with patch.object(baseline.importlib.util, "find_spec", return_value=None):
+            with self.assertRaises(ValueError) as caught:
+                baseline.check_dependencies(["strongreject"])
+        for text in (baseline.sys.executable, "torch", "transformers", "accelerate", "pyarrow"):
+            self.assertIn(text, str(caught.exception))
+
+    def test_dry_run_does_not_require_inference_dependencies(self):
+        with patch.object(baseline.importlib.util, "find_spec", return_value=None) as lookup:
+            baseline.check_dependencies(["advbench"], dry_run=True)
+            lookup.assert_not_called()
+
+    def test_dependency_failure_does_not_create_result_directory(self):
+        output = self.root / "results"
+        with patch.object(baseline, "check_dependencies", side_effect=ValueError("Incomplete environment")):
+            with self.assertRaisesRegex(ValueError, "Incomplete environment"):
+                baseline.main(["--output-dir", str(output)])
+        self.assertFalse(output.exists())
 
     def test_live_progress_saves_tokens_and_memory(self):
         output = self.root / "live"

@@ -25,6 +25,13 @@ The remote environment contains CUDA 13 PyTorch and a separate Python virtual en
 `llamafactory-commit.txt` records the source revision.
 `requirements-spark.lock.txt` records the installed packages after a successful installation.
 
+The current NVIDIA cuSPARSELt wheel declares the platform tag `manylinux2014_sbsa`.
+`pip check` does not recognize this tag on the Spark and returns an error.
+The installed wheel metadata remains unchanged.
+BF16 CUDA matrix multiplication, SDPA backward, and baseline imports pass in `.venv`.
+These checks do not establish full-model compatibility or test sparse cuSPARSELt operations.
+The remote `environment-validation.json` records these results and the dependency-check error.
+
 ## Data requirements
 
 The existing collection is at `ender/datasets/refusal/`, not `ender/dataset/`.
@@ -58,6 +65,33 @@ Keep financial scenarios simulated.
 Do not use real account credentials or personal financial data.
 
 ## Environment check
+
+To see setup progress on the Spark, use the monitor:
+
+```bash
+cd ~/endersbench-finetune
+python3 finetuning/status.py
+```
+
+The monitor uses the system Python. It does not need PyTorch to start.
+It checks packages in `.venv`, not `.download-venv`.
+It shows active jobs, recent installation output, and complete checkpoint shards.
+Partial shards are not counted as complete downloads.
+It refreshes every 5 seconds.
+It prints `READY` only after package imports, a CUDA BF16 operation, and checkpoint cache checks pass.
+It then rings the terminal bell and exits.
+These checks do not test full-model inference.
+Use `--once` for a single status report.
+Use Ctrl+C to stop the monitor without stopping installation or downloads.
+
+To see the full installation log, use this command:
+
+```bash
+tail -f ~/endersbench-finetune/setup-install.log
+```
+
+The installation log is a mirror of the current OpenCode setup job.
+The mirror depends on that OpenCode SSH connection.
 
 1. Connect to the Spark.
 
@@ -135,7 +169,15 @@ OR-Bench 80k is available with `--datasets or-bench-80k`.
 SORRY-Bench variants and duplicate HarmBench files are not included.
 
 The checkpoint download and Python package installation must finish before inference.
-StrongREJECT also needs `pyarrow`, which the environment gets through `datasets`.
+StrongREJECT needs `pyarrow` in `.venv`, the same environment that runs inference.
+Packages in `.download-venv` are not available to `.venv`.
+The script checks all required package names before it reads datasets or creates result files.
+After CUDA PyTorch installation finishes, install the explicit baseline dependencies with this command:
+
+```bash
+.venv/bin/python -m pip install -r finetuning/requirements-baseline.txt
+```
+
 A dry run does not need PyTorch or model weights.
 
 1. Open `~/endersbench-finetune` on the Spark.
