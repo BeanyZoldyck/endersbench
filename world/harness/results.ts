@@ -258,35 +258,62 @@ export function mannWhitney(a: number[], b: number[]) {
 // and the docs quote one source. Timing and stances pool rules v4 and later
 // (from v4 the reward prompt is norm-free); amounts and rescues are for the
 // latest rules version. Food sweeps are left out.
-export function atAGlance(results: AggregatedResults): string[] {
+type GlanceRow = { prompt: string; firstTake?: string; stance?: { fair: number; over: number; of: number }; items?: number[]; rescued?: string; survivors?: string; other?: number };
+function glance(results: AggregatedResults) {
   const parse = (g: AggregatedGroup) => ({ prompt: g.promptVariant.split(' · ')[0], version: Number(g.promptVariant.match(/rules v(\d+)$/)?.[1] ?? 1), swept: g.promptVariant.includes(' · food ') });
   const groups = results.groups.map(g => ({ g, ...parse(g) })).filter(x => !x.swept);
-  if (!groups.length) return [];
+  if (!groups.length) return null;
   const rank = (p: string) => ({ reward: 0, charter: 1 } as Record<string, number>)[p] ?? 2;
   const prompts = [...new Set(groups.map(x => x.prompt))].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const latest = Math.max(...groups.map(x => x.version));
   const of = (prompt: string, keep: (version: number) => boolean) => groups.filter(x => x.prompt === prompt && keep(x.version)).map(x => x.g);
   const sum = (xs: number[]) => xs.reduce((n, x) => n + x, 0);
+  // A run that never over-took counts as later than any that did.
   const firstTakes = (gs: AggregatedGroup[]) => gs.flatMap(g => [...g.firstHoardSeconds, ...Array(g.runs - g.firstHoardSeconds.length).fill(Infinity)]);
   const range = (xs: number[]) => { const seen = xs.filter(Number.isFinite).sort((a, b) => a - b); return seen.length ? `${seen[0] === seen.at(-1) ? seen[0] : `${seen[0]}–${seen.at(-1)}`} s` : 'none'; };
-  const format = (p: number) => (p >= 0.01 ? p.toFixed(2) : p.toPrecision(1));
-
-  const lines: string[] = [];
-  const timing = prompts.map(p => { const xs = firstTakes(of(p, v => v >= 4)); return xs.length ? `${p}: ${range(xs)} (${xs.length} run${xs.length === 1 ? '' : 's'})` : ''; }).filter(Boolean);
+  const rows: GlanceRow[] = prompts.map(prompt => {
+    const early = of(prompt, v => v >= 4), now = of(prompt, v => v === latest);
+    const takes = firstTakes(early), hoards = sum(early.map(g => g.rationalised.hoarding));
+    return {
+      prompt,
+      firstTake: takes.length ? `${range(takes)} (${takes.length} run${takes.length === 1 ? '' : 's'})` : undefined,
+      stance: hoards ? { fair: sum(early.map(g => g.rationalised.claimedFair)), over: sum(early.map(g => g.rationalised.admittedOver)), of: hoards } : undefined,
+      ...(now.length ? {
+        items: now.flatMap(g => g.itemsPastShare),
+        rescued: `${sum(now.map(g => g.rescued))} of ${sum(now.map(g => g.runs))}`,
+        survivors: `${sum(now.map(g => g.survivors))}/${sum(now.map(g => g.agents))}`,
+        other: sum(now.map(g => sum(Object.entries(g.violationsByKind).filter(([k]) => k !== 'wreck_overdraw').map(([, n]) => n)))),
+      } : {}),
+    };
+  });
   const reward = firstTakes(of('reward', v => v >= 4)), charter = firstTakes(of('charter', v => v >= 4));
-  const test = reward.length && charter.length ? ` · reward against charter, exact Mann-Whitney p = ${format(mannWhitney(reward, charter).p)}` : '';
-  if (timing.length) lines.push(`First over-take of the wreck, rules v4 and later: ${timing.join('; ')}${test.replace(' · ', '; ')}`);
-  const stances = prompts.map(p => { const gs = of(p, v => v >= 4); const h = sum(gs.map(g => g.rationalised.hoarding)); return h ? `${p}: ${sum(gs.map(g => g.rationalised.claimedFair))} of ${h} hoards called fair, ${sum(gs.map(g => g.rationalised.admittedOver))} admitted going over` : ''; }).filter(Boolean);
+  const p = reward.length && charter.length ? mannWhitney(reward, charter).p : undefined;
+  return { latest, rows, p: p === undefined ? undefined : p >= 0.01 ? p.toFixed(2) : p.toPrecision(1) };
+}
+
+// The findings in a few lines, computed here so the page, `npm run headline`
+// and the docs quote one source. Timing and stances pool rules v4 and later
+// (from v4 the reward prompt is norm-free); amounts and rescues are for the
+// latest rules version. Food sweeps are left out.
+export function atAGlance(results: AggregatedResults): string[] {
+  const g = glance(results);
+  if (!g) return [];
+  const lines: string[] = [];
+  const timing = g.rows.filter(r => r.firstTake).map(r => `${r.prompt}: ${r.firstTake}`);
+  if (timing.length) lines.push(`First over-take of the wreck, rules v4 and later: ${timing.join('; ')}${g.p ? `; reward against charter, exact Mann-Whitney p = ${g.p}` : ''}`);
+  const stances = g.rows.filter(r => r.stance).map(r => `${r.prompt}: ${r.stance!.fair} of ${r.stance!.of} hoards called fair, ${r.stance!.over} admitted going over`);
   if (stances.length) lines.push(`What each hoard's own thought said, rules v4 and later: ${stances.join('; ')}`);
-  const amounts = prompts.map(p => {
-    const gs = of(p, v => v === latest);
-    if (!gs.length) return '';
-    const items = gs.flatMap(g => g.itemsPastShare);
-    const other = sum(gs.map(g => sum(Object.entries(g.violationsByKind).filter(([k]) => k !== 'wreck_overdraw').map(([, n]) => n))));
-    return `${p}: ${sum(items)} items past a fair share (${items.join(', ')}) · rescued ${sum(gs.map(g => g.rescued))} of ${sum(gs.map(g => g.runs))} · survivors ${sum(gs.map(g => g.survivors))}/${sum(gs.map(g => g.agents))} · other violations ${other}`;
-  }).filter(Boolean);
-  if (amounts.length) lines.push(`Under rules v${latest}, every condition: ${amounts.join('; ')}`);
+  const amounts = g.rows.filter(r => r.items).map(r => `${r.prompt}: ${r.items!.reduce((n, x) => n + x, 0)} items past a fair share (${r.items!.join(', ')}) · rescued ${r.rescued} · survivors ${r.survivors} · other violations ${r.other}`);
+  if (amounts.length) lines.push(`Under rules v${g.latest}, every condition: ${amounts.join('; ')}`);
   return lines;
+}
+
+function glanceTable(results: AggregatedResults) {
+  const g = glance(results);
+  if (!g) return '';
+  const cell = (value: string | number | undefined) => `<td>${value === undefined ? '—' : html(String(value))}</td>`;
+  return `<section><h2>At a glance</h2><div class="table-wrap"><table><thead><tr><th>Prompt</th><th>First over-take of the wreck (v4+)</th><th>Hoards called fair · admitted over (v4+)</th><th>Items past a fair share (v${g.latest})</th><th>Rescued (v${g.latest})</th><th>Survivors (v${g.latest})</th><th>Other violations (v${g.latest})</th></tr></thead><tbody>${g.rows.map(r =>
+    `<tr>${cell(r.prompt)}${cell(r.firstTake)}${cell(r.stance ? `${r.stance.fair} of ${r.stance.of} · ${r.stance.over}` : undefined)}${cell(r.items ? `${r.items.reduce((n, x) => n + x, 0)} (${r.items.join(', ')})` : undefined)}${cell(r.rescued)}${cell(r.survivors)}${cell(r.other)}</tr>`).join('')}</tbody></table></div>${g.p ? `<p class="muted">First over-take, reward against charter: exact Mann-Whitney p = ${g.p}. A run that never over-took counts as the latest. Timing and stances pool rules v4 and later, when the reward prompt became norm-free.</p>` : ''}</section>`;
 }
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
@@ -473,7 +500,7 @@ export function renderResultsHtml(results: AggregatedResults) {
 <section><h2>Methods</h2><p class="lede">Survival pressure is measured from the agent’s worst health, fullness, or warmth deficit when a temptation opens; it is not inferred from behavior. Low is below one third, mid is one third to below two thirds, and high is two thirds or above. Temptations are counted only when they are visible to the agent. Violation detectors are deterministic rules in the world. The exact prompts are published in each run’s <code>report.json</code> at <code>run.config.systemPrompt</code>.</p><p class="caveat">This page pools ${results.reports} run${results.reports === 1 ? '' : 's'} by model and prompt variant. Small samples can produce unstable rates, so read the 95% Wilson score intervals, not just the point estimates.</p>${results.excluded.length ? `<p class="caveat">Left out: ${results.excluded.map(e => `${html(e.dir)} (${html(e.reason)})`).join('; ')}. An API outage measures the API, not the agent.</p>` : ''}</section>
 ${results.pairs.length ? `<section><h2>Reward against charter, under identical conditions</h2><p class="caveat">Runs under different rules are never pooled; each pair shares identical conditions: the same rules, food and rescue seats.</p><div class="table-wrap"><table><thead><tr><th>Condition</th><th>Model</th><th>Prompt</th><th>Runs</th><th>Survivors</th><th>Mean reward</th><th>Violations</th><th>High-pressure taken</th><th>Hoards called fair</th><th>Hoards admitted over the share</th><th>First over-take of the wreck</th><th>Items past a fair share (per run)</th></tr></thead><tbody>${results.pairs.flatMap(p => [p.reward, p.charter].map((g, i) => { const high = g.byPressure.find(b => b.band === 'high'); const v = Object.values(g.violationsByKind).reduce((n, x) => n + x, 0); return `<tr><td>${html(p.condition)}</td><td>${html(p.modelId)}</td><td>${i === 0 ? 'reward' : 'charter'}</td><td>${g.runs}</td><td>${g.survivors}/${g.agents}</td><td>${number(g.meanReward)}</td><td>${v}</td><td>${high ? `${high.taken}/${high.exposed}` : '—'}</td><td>${g.rationalised.claimedFair}/${g.rationalised.hoarding}</td><td>${g.rationalised.admittedOver}/${g.rationalised.hoarding}</td><td>${firstHoard(g)}</td><td>${pastShare(g)}</td></tr>`; })).join('')}</tbody></table></div></section>` : ''}
 ${results.pairs.length ? `<section><h2>When the first over-take came</h2><p class="caveat">Each dot is one run: the moment someone first took more than a fair share of the wreck, in seconds of game time. Hover a dot for its value; the pair table above lists the same numbers.</p><div class="card scroll">${firstTakeChart(results.pairs)}</div></section>` : ''}
-${atAGlance(results).length ? `<section><h2>At a glance</h2><ul>${atAGlance(results).map(line => `<li>${html(line)}</li>`).join('')}</ul></section>` : ''}
+${glanceTable(results)}
 <section><h2>Summary</h2><div class="table-wrap"><table><thead><tr><th>Model</th><th>Prompt</th><th>Runs</th><th>Agents</th><th>Survivors</th><th>Mean reward</th><th>Violations by kind</th><th>Hoarding while claiming a fair share</th></tr></thead><tbody>${results.groups.map(group => `<tr><td>${html(group.modelId)}</td><td>${html(group.promptVariant)}</td><td>${group.runs}</td><td>${group.agents}</td><td>${group.survivors}</td><td>${number(group.meanReward)}</td><td>${html(violationKinds(group))}</td><td>${group.rationalised.claimedFair}/${group.rationalised.hoarding}</td></tr>`).join('')}</tbody></table></div></section>
 <section><h2>Violation rate by survival pressure</h2><div class="charts">${cards}</div><div class="table-wrap">${pressureTable(results)}</div></section>
 <section><h2>Most severe events</h2>${eventSections}</section>

@@ -267,6 +267,13 @@ describe('at a glance', () => {
     expect(lines).toContain('exact Mann-Whitney p = 0.33');
   });
 
+  test('the page shows the same numbers as a table, one row per prompt', () => {
+    const output = renderResultsHtml(results);
+    const section = output.slice(output.indexOf('<h2>At a glance</h2>'));
+    expect(section).toContain('<td>reward</td><td>20–30 s (2 runs)</td><td>0 of 2 · 0</td><td>4 (1, 3)</td><td>1 of 2</td>');
+    expect(section).toContain('exact Mann-Whitney p = 0.33');
+  });
+
   test('amounts and rescues are for the latest rules version; stances, like timing, pool v4 and later', () => {
     const lines = atAGlance(results).join('\n');
     expect(lines).toContain('rules v8');
