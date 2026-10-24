@@ -127,3 +127,28 @@ describe('replay boundaries', () => {
     expect(journey({ type: 'replay', command: 'play', count: 0 }).playing).toBe(false);
   });
 });
+
+
+describe('saved benchmark launch', () => {
+  it('global setup navigation exits single-agent preview mode', () => {
+    expect(journey({ type: 'select-draft-mode', mode: 'single' }, { type: 'navigate', screen: 'setup' })).toMatchObject({ screen: 'setup', draftMode: 'swarm' });
+  });
+  it('starts the matching model from setup without a briefing detour', () => {
+    const result = journey({ type: 'navigate', screen: 'setup' }, { type: 'start-benchmark', runId: 'clearing-charter-v8-admission' });
+    expect(result).toMatchObject({ screen: 'monitor', draftModel: 'ChatGPT', replayTimeMs: 0, playing: true, selectedAgentId: null });
+  });
+  it.each(['Ender', 'Claude', 'Grok'] as const)('does not play GPT recordings as %s', model => {
+    const setup = journey({ type: 'navigate', screen: 'setup' }, { type: 'select-draft-model', model });
+    expect(transitionStudio(setup, { type: 'start-benchmark', runId: 'clearing-charter-v8-admission' })).toBe(setup);
+  });
+  it('rejects unknown runs and single-agent launch', () => {
+    const setup = initialStudioState('?studio=setup');
+    expect(transitionStudio(setup, { type: 'start-benchmark', runId: 'missing' })).toBe(setup);
+    const single = transitionStudio(setup, { type: 'select-draft-mode', mode: 'single' });
+    expect(transitionStudio(single, { type: 'start-benchmark', runId: 'clearing-charter-v8-admission' })).toBe(single);
+  });
+  it('next benchmark resets the old agent, event and time', () => {
+    const result = journey({ type: 'select-agent', agentId: '4' }, { type: 'navigate', screen: 'outcome', timeMs: 999000 }, { type: 'start-benchmark', runId: 'clearing-charter-v8-rescued' });
+    expect(result).toMatchObject({ screen: 'monitor', runId: 'clearing-charter-v8-rescued', selectedAgentId: null, eventIndex: 0, replayTimeMs: 0, playing: true });
+  });
+});

@@ -4,15 +4,8 @@ import { stateAt, type RecordedTables } from '../useReplay';
 import type { Agent, EthicsEvent, Message, Score } from '../module_bindings/types';
 import type { StudioState } from './model';
 
-export const RUNS = [
-  { id: 'clearing-charter-v8-admission', label: 'Fair-share admission', condition: 'Charter', start: 145_597 },
-  { id: 'clearing-charter-v8-rescued', label: 'The rescue', condition: 'Charter', start: 920_000 },
-  { id: 'clearing-charter-v8-lifeboat', label: 'Charter · two seats', condition: 'Charter', start: 915_000 },
-  { id: 'clearing-reward-v8', label: 'Reward-only run', condition: 'Reward-only', start: 12_000 },
-  { id: 'clearing-reward-v8-lifeboat', label: 'Reward-only · two seats', condition: 'Reward-only', start: 915_000 },
-  { id: 'clearing-charter-v6', label: 'Charter v6 run', condition: 'Charter', start: 728_000 },
-  { id: 'clearing-reward-v2', label: 'Reward-only v2 run', condition: 'Reward-only', start: 0 },
-] as const;
+import { RUNS } from './catalog';
+export { RUNS } from './catalog';
 export type RunId = typeof RUNS[number]['id'];
 export const DEFAULT_RUN = RUNS[0].id;
 export const runInfo = (id: string) => RUNS.find(run => run.id === id) ?? RUNS[0];
