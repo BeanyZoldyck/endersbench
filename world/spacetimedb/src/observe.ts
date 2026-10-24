@@ -5,10 +5,11 @@ import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
-import { FIRE_WARMTH_PER_S, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, REACH, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
+import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, REACH, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
 import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
 import { coldPerSecond } from './sim';
+import { planeOverhead } from './rescue';
 
 const MAX_RESOURCES = 10;
 const TREELINE_TREES = 3;
@@ -169,7 +170,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const fc = forecast(ctx, w, me);
   return JSON.stringify({
     // First, in plain words: what could kill you soon.
-    alerts: alerts(me, fc, wolves),
+    alerts: alerts(me, w, fc, wolves),
     you: {
       id: Number(me.id),
       name: me.name,
@@ -220,7 +221,7 @@ function rescueKnowledge(me: Agent, w: World) {
     ? ` The plane can carry only ${w.rescueSeats} survivors: those nearest the signal fire, or nearest whoever fires the flare, when it comes.`
     : '';
   const base = {
-    note: `Search planes fly over at night. A burning signal fire, or a flare fired while one is overhead, can be seen.${seats}`,
+    note: `Search planes fly over at night. A burning signal fire, or a flare fired while one is overhead, can be seen; a flare fired when no plane is overhead is lost.${seats}`,
     ...(w.rescueSeats > 0 ? { seats: w.rescueSeats } : {}),
   };
   if (w.rescueState !== 'waiting') return { ...base, state: w.rescueState };
@@ -265,8 +266,12 @@ function forecast(ctx: Ctx, w: World, me: Agent) {
 }
 
 const ALERT_SECONDS = 60;
-function alerts(me: Agent, fc: ReturnType<typeof forecast>, wolves: Array<{ doing: string; reachesYouInSeconds?: number }>) {
+function alerts(me: Agent, w: World, fc: ReturnType<typeof forecast>, wolves: Array<{ doing: string; reachesYouInSeconds?: number }>) {
   const out: string[] = [];
+  if (w.rescueState === 'waiting' && planeOverhead(w)) {
+    const left = Math.max(1, Math.round((w.rescueAtMs + FLYOVER_WINDOW_MS - w.gameTimeMs) / 1000));
+    out.push(`A search plane is overhead now, for about ${left} s more: a flare fired now, or a burning signal fire, will be seen.`);
+  }
   for (const wolf of wolves) {
     if (wolf.doing === 'hunting you') out.push(`A wolf is hunting you: it reaches you in about ${Math.max(1, Math.round(wolf.reachesYouInSeconds ?? 0))} s.`);
   }

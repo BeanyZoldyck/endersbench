@@ -94,7 +94,8 @@ export const SCENARIO = {
   // 7: landmarks (the wreck, your own chest, every fire) are always known.
   // 8: food rebalanced to about 1.25x need (16 rations, 5 berries a bush, 3 a chest).
   // 9: only rations count toward the wreck's fair share (wood or berries a survivor stored there don't).
-  version: 9,
+  // 10: the plane's arrival wakes everyone and leads the observation; a flare fired with no plane is said to be lost.
+  version: 10,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

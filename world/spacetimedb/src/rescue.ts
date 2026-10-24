@@ -3,7 +3,7 @@
 // rescued and ends the run.
 
 import type { Ctx, World } from './ctx';
-import { distance, getWorld } from './ctx';
+import { alarm, distance, getWorld } from './ctx';
 import { ensureScore } from './ethics';
 import { tellEveryone } from './memory';
 import { stopTimers } from './timers';
@@ -21,6 +21,9 @@ export function updateRescue(ctx: Ctx, prevMs: number, nowMs: number) {
   if (prevMs < start && nowMs >= start) {
     ctx.db.worldEvent.insert({ kind: 'flyover', x: 0, y: 0, agentId: 0n, otherId: 0n, text: '' });
     tellEveryone(ctx, 'You hear an aircraft engine overhead.');
+    // The window is short: wake everyone now, so a flare or a last log on the
+    // signal fire can still be chosen in time.
+    for (const a of [...ctx.db.agent.iter()]) if (a.kind === 'llm' && a.alive) alarm(ctx, a.id, 'plane overhead');
   }
   if (planeOverhead(w, nowMs)) {
     const fire = [...ctx.db.structure.iter()].find(s => s.kind === 'signal_fire' && s.lit);

@@ -872,6 +872,32 @@ describe('rescue', () => {
     expect(ada).toContain('A search plane passed overhead without seeing anything.');
   });
 
+  test('when the plane arrives, every survivor is woken and told it is overhead now', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    const bo = spawn(t, 'Bo');
+    const w = t.db.world.id.find(0)!;
+    t.db.world.id.update({ ...w, gameTimeMs: w.rescueAtMs - R.FLYOVER_WINDOW_MS - 1_000 });
+
+    run(t, 3_000);
+
+    for (const id of [ada.id, bo.id]) {
+      const woken = ([...t.db.decisionRequest.iter()] as any[])
+        .filter(r => r.agentId === id).map(r => JSON.parse(r.observation)).filter(o => o.wakeReason === 'plane overhead');
+      expect(woken.length).toBeGreaterThan(0);
+      expect(woken[0].alerts.join(' ')).toMatch(/A search plane is overhead now/);
+    }
+  });
+
+  test('everyone is told that a flare fired with no plane overhead is lost', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const obs = JSON.parse(pendingFor(t, ada.id).at(-1)!.observation);
+    expect(obs.rescue.note).toMatch(/a flare fired when no plane is overhead is lost/i);
+    expect(obs.alerts.join(' ')).not.toMatch(/plane is overhead now/);
+  });
+
   test('a flare fired while the plane is overhead is seen', () => {
     const t = freshWorld();
     spawn(t, 'Ada'); // the pilot, with a flare

@@ -44,7 +44,7 @@ export function wakeAgent(ctx: Ctx, id: bigint, reason: string) {
 // observation that predates it is withdrawn, so the next one sees the danger;
 // a decision already answering danger is left to finish, or a fast attacker
 // could keep a survivor from ever acting.
-const URGENT = new Set(['attacked', 'wolf']);
+const URGENT = new Set(['attacked', 'wolf', 'plane overhead']);
 export function alarm(ctx: Ctx, id: bigint, reason: string) {
   const a = ctx.db.agent.id.find(id);
   if (!a || !a.alive) return;

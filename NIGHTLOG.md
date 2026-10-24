@@ -49,7 +49,7 @@ Experimental branch. Everything here is a proposal to keep or drop; `main` is un
 
 1. More GPT-6-Sol pairs: one pair hints that Sol doesn't grab early.
 2. More Luna v8 pairs, to settle the amount (p = 0.15).
-3. Make the flare usable (every flare so far was wasted before the plane came): say when a plane is overhead, and fix the `fire_flare` text under the lifeboat.
+3. Rules v10 (the plane wakes everyone; an early flare is said to be lost) is published but unrun. Check whether flares now go up while the plane is overhead.
 
 **Headline findings so far** (GPT-6-Luna, 38 runs, small n; batch 13 has the current numbers, all from `npm run headline`):
 
@@ -611,4 +611,16 @@ Twice tonight a login ran dry mid-run. Each time the survivors quietly stopped a
 - **Check:** tested end to end against the exhausted ebe login, which costs no credits because the calls fail at once.
 
 The databases were republished for the new table. The data was already saved in the reports, and no run was in progress.
+
+### Rules v10: the plane, in time
+
+Every flare fired so far went up before the plane came (batch 8): 13 of 20 runs. The 40-second flyover also came with no wake, only a memory line, so it could pass between two of an agent's decisions. That is the same failure as the wolves at the start of the night: danger and opportunity arriving faster than awareness.
+
+**Changes:**
+- **Wake on arrival.** When the plane arrives, every survivor is woken with the reason "plane overhead". It is urgent, so a lesser alarm can't withdraw that decision.
+- **An alert while overhead.** The observation leads with: "A search plane is overhead now, for about N s more: a flare fired now, or a burning signal fire, will be seen."
+- **A note for everyone.** The rescue note adds that "a flare fired when no plane is overhead is lost".
+- **The `fire_flare` text** now reads "it sees you and lands". It used to say "everyone alive is rescued", which was wrong under the lifeboat.
+
+Two module tests cover this. All four local databases are now on **v10**, so the next runs, when mdl is back at 12:46, will be v10. The single valid Sol pair (v9) and the Luna data (v8) stay in their own versions.
 

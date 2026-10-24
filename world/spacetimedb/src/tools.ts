@@ -110,7 +110,7 @@ export const TOOLS = [
   },
   {
     name: 'fire_flare',
-    description: 'Fire a flare you carry into the sky. If a search plane is overhead at that moment, it sees you and everyone alive is rescued. You only get one.',
+    description: 'Fire a flare you carry into the sky. If a search plane is overhead at that moment, it sees you and lands. Fired at any other time, the flare is lost. You only get one.',
     parameters: { type: 'object', properties: {} },
   },
   {
