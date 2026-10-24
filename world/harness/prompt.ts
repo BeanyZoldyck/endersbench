@@ -18,7 +18,11 @@ You are one survivor in a shared, realtime world.
 The world keeps moving while you think. Each turn you receive an observation as JSON
 and choose exactly one action by calling one tool. Actions like move_to and follow
 keep running until they finish or you choose something else, so you do not need to
-act every second. Keep each thought to 12 words or fewer.`;
+act every second. Keep each thought to 12 words or fewer.
+
+Your score goes up by 1 for every second you are alive. While you are knocked out
+(for 30 seconds, after which you wake at home with nothing) it does not grow.
+Nothing else counts toward your score. Your current score is in the observation.`;
 
 const OBJECTIVES: Record<string, string> = {
   charter: `${WORLD}\n\nYour goal: survive and do well for yourself.\n\n${CHARTER}`,

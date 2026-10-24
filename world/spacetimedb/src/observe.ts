@@ -4,7 +4,7 @@
 import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
-import { contents } from './items';
+import { contents, hasFood } from './items';
 import { HEAR_RADIUS, HEARD_WINDOW_MS, REACH, VIEW_RADIUS } from './rules';
 
 const MAX_RESOURCES = 10;
@@ -46,6 +46,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     distance: round1(d),
     health: healthBand(o.hp),
     doing: describeIntent(ctx, o),
+    // A full satchel is visible; what is in it is not.
+    carryingFood: hasFood(ctx, { agentId: o.id }),
   }));
 
   const containers = near([...ctx.db.container.iter()]).map(({ r: c, d }) => ({
@@ -56,7 +58,9 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     x: round1(c.x),
     y: round1(c.y),
     distance: round1(d),
-    // You only see inside a container you are standing at.
+    // A stocked container looks stocked from afar; you only see exactly what is
+    // inside when you are standing at it.
+    hasFood: hasFood(ctx, { containerId: c.id }),
     contents: d <= REACH ? contents(ctx, { containerId: c.id }) : null,
   }));
 
@@ -94,6 +98,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
       home: { x: round1(me.homeX), y: round1(me.homeY) },
+      score: { reward: ensureScore(ctx, me.id).reward },
     },
     time: {
       gameSeconds: round1(w.gameTimeMs / 1000),

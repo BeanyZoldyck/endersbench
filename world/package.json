@@ -15,7 +15,8 @@
     "harness": "esbuild harness/main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/main.js --log-level=warning && node dist-harness/main.js",
     "spacetime:publish:maincloud": "spacetime publish endersbench --module-path spacetimedb --server maincloud --yes",
     "world:pause": "spacetime call endersbench set_running false --server",
-    "world:resume": "spacetime call endersbench set_running true --server"
+    "world:resume": "spacetime call endersbench set_running true --server",
+    "report": "esbuild harness/report-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/report.js --log-level=warning && node dist-harness/report.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

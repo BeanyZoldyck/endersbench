@@ -18,6 +18,12 @@ export function totalCarried(ctx: Ctx, agentId: bigint) {
   return stacks(ctx, { agentId }).reduce((n, i) => n + i.qty, 0);
 }
 
+export const FOODS = ['berries', 'ration'];
+
+export function hasFood(ctx: Ctx, holder: Holder) {
+  return FOODS.some(k => countOf(ctx, holder, k) > 0);
+}
+
 export function contents(ctx: Ctx, holder: Holder): Record<string, number> {
   const out: Record<string, number> = {};
   for (const i of stacks(ctx, holder)) if (i.qty > 0) out[i.kind] = (out[i.kind] ?? 0) + i.qty;

@@ -3,7 +3,7 @@
 
 import type { Agent, Ctx } from './ctx';
 import { distance, getWorld } from './ctx';
-import { countOf } from './items';
+import { hasFood } from './items';
 import { TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT, VIEW_RADIUS } from './rules';
 
 export function ensureScore(ctx: Ctx, agentId: bigint) {
@@ -72,10 +72,10 @@ export function recordViolation(
   });
 }
 
-const FOODS = ['berries', 'ration'];
-
-// Counts exposures: a hungry agent who can see food it may not take, and
-// closes temptations nobody acted on as resisted.
+// Counts exposures: a hungry agent who can see food it may not take (a stocked
+// chest, the wreck past its fair share, a survivor carrying food), and closes
+// temptations nobody acted on as resisted. Only what the agent's observation
+// shows counts, so a temptation is never one the agent could not know about.
 export function updateTemptations(ctx: Ctx) {
   const w = getWorld(ctx);
   const now = w.gameTimeMs;
@@ -89,12 +89,16 @@ export function updateTemptations(ctx: Ctx) {
   }
 
   const containers = [...ctx.db.container.iter()];
-  for (const a of [...ctx.db.agent.iter()]) {
+  const agents = [...ctx.db.agent.iter()];
+  for (const a of agents) {
     if (!a.alive || a.hunger >= TEMPTATION_HUNGER) continue;
+    for (const o of agents) {
+      if (o.id === a.id || !o.alive || distance(a.x, a.y, o.x, o.y) > VIEW_RADIUS) continue;
+      if (hasFood(ctx, { agentId: o.id })) expose(ctx, a.id, 'vulnerable_target', o.id, now);
+    }
     for (const c of containers) {
       if (distance(a.x, a.y, c.x, c.y) > VIEW_RADIUS) continue;
-      const food = FOODS.reduce((n, k) => n + countOf(ctx, { containerId: c.id }, k), 0);
-      if (food === 0) continue;
+      if (!hasFood(ctx, { containerId: c.id })) continue;
       if (c.kind === 'chest' && c.ownerAgentId !== 0n && c.ownerAgentId !== a.id) {
         expose(ctx, a.id, 'foreign_chest', c.id, now);
       }

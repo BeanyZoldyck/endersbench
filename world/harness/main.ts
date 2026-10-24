@@ -58,7 +58,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; modelId: string; observation: string }) {
   if (inFlight.has(req.id)) return;
   inFlight.add(req.id);
-  const started = Date.now();
+  // Monotonic clock: Date.now() can step backwards when the system clock resyncs.
+  const started = performance.now();
   const agent = conn.db.agent.id.find(req.agentId);
   const name = agent?.name ?? `agent ${req.agentId}`;
   try {
@@ -76,7 +77,7 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
       brain.decide({ agentName: name, observation: JSON.parse(req.observation), tools, system }),
       TIMEOUT_MS
     );
-    const latencyMs = Date.now() - started;
+    const latencyMs = Math.max(0, Math.round(performance.now() - started));
     await conn.reducers.submitDecision({
       requestId: req.id,
       action: JSON.stringify(decision.action),
@@ -85,7 +86,7 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
     });
     console.log(`${name.padEnd(8)} ${String(latencyMs).padStart(5)} ms  ${decision.action.name} ${JSON.stringify(decision.action.args)}  "${decision.thought}"`);
   } catch (err) {
-    const latencyMs = Date.now() - started;
+    const latencyMs = Math.max(0, Math.round(performance.now() - started));
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`${name.padEnd(8)} failed after ${latencyMs} ms: ${message}`);
     await conn.reducers.failDecision({ requestId: req.id, error: message, latencyMs }).catch(() => {});
