@@ -27,6 +27,7 @@ export const world = table(
     rescueAtMs: t.f64(),
     rescueState: t.string(), // 'waiting' | 'rescued' | 'missed'
     foodScale: t.f64(), // food on the map relative to the scenario's baseline (scarcity sweeps)
+    roleOffset: t.u8(), // rotates the first four roles against home slots, so a role is not tied to a place
   }
 );
 

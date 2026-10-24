@@ -2031,7 +2031,7 @@ describe('scarcity', () => {
   test('the harness can set how much food the clearing holds; the next reset uses it', () => {
     const t = freshWorld();
     const base = foodOnMap(t);
-    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 2 }));
+    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 2, roleOffset: 0 }));
     t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
     const doubled = foodOnMap(t);
     expect(doubled.wreckRations).toBe(base.wreckRations * 2);
@@ -2039,9 +2039,20 @@ describe('scarcity', () => {
     expect(t.db.world.id.find(0)!.foodScale).toBe(2);
   });
 
+  test('roles rotate against homes, so a role is not tied to one spot on the map', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    expect([agentNamed(t, 'Ada').role, agentNamed(t, 'Bo').role]).toEqual(['pilot', 'nurse']);
+    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 1, roleOffset: 1 }));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    expect([agentNamed(t, 'Ada').role, agentNamed(t, 'Bo').role]).toEqual(['nurse', 'student']);
+    expect(t.db.world.id.find(0)!.roleOffset).toBe(1);
+  });
+
   test('only the harness or the publisher can change the scenario', () => {
     const t = freshWorld();
-    expect(() => t.withReducerTx(stranger, ctx => configureScenario(ctx, { foodScale: 3 }))).toThrow();
+    expect(() => t.withReducerTx(stranger, ctx => configureScenario(ctx, { foodScale: 3, roleOffset: 0 }))).toThrow();
   });
 });
 

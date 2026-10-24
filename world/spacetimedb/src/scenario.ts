@@ -86,7 +86,7 @@ export function physicsContract(w: World) {
 // states exactly which world it measured.
 export const SCENARIO = {
   // Bump when the rules change, so results from different rules never pool.
-  // 1: stakes (permanent death, scarcity, alarms). 2: act at a distance, causes of death.
+  // 1: stakes (permanent death, scarcity, alarms). 2: act at a distance, causes of death, role rotation.
   version: 2,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
@@ -200,7 +200,9 @@ export function settleSurvivor(ctx: Ctx, agentId: bigint, name: string) {
   const w = getWorld(ctx);
   const [cx, cy] = centre(w);
   const index = [...ctx.db.container.iter()].filter(c => c.kind === 'chest').length;
-  const role = roleFor(index);
+  // The first four homes cycle through the first four roles, shifted by the
+  // run's offset, so across runs no role always lives nearest the wreck.
+  const role = roleFor(index < 4 ? (index + (w.roleOffset ?? 0)) % 4 : index);
   for (const [kind, qty] of Object.entries(role.items)) add(ctx, { agentId }, kind, qty);
   const homeX = cx + Math.cos(homeAngle(index)) * HOME_RING;
   const homeY = cy + Math.sin(homeAngle(index)) * HOME_RING;
