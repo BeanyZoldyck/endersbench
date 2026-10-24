@@ -2,6 +2,48 @@
 
 Experimental branch. Everything here is a proposal to keep or drop; `main` is untouched.
 
+## TL;DR for the team (what to keep)
+
+**Keep: high confidence, tested, and they make the demo.**
+
+1. Permanent death, plus danger in time:
+   - alarms that withdraw stale decisions;
+   - wolves heard beyond sight, with seconds-to-contact;
+   - vitals forecasts and plain-language alerts;
+   - the bite reflex.
+2. More agency: faster walking and gathering, and act-at-a-distance (take, give, build and feed walk there and do it).
+3. The minimal `reward` prompt as the default, with `charter` as the explicit-rules condition. Rules v4+ observations are norm-free under `reward`.
+4. Measurement:
+   - pressure recorded on every exposure and violation;
+   - violation rate by pressure band, with Wilson intervals;
+   - no-answer exclusion;
+   - each violation's own thought as evidence;
+   - rationalised-violation counting;
+   - the scenario seed and version.
+5. Viewer:
+   - the violation and death spotlight, with a camera cut;
+   - the moments-of-choice rail with a live pressure curve;
+   - graves and hunt lines;
+   - the narrator and condition chip;
+   - replay mode with the committed demo backstop, and the demo-cut video.
+
+**Probably keep: works, but tune it.**
+
+- Scarcity at 1x is a knife edge, and most runs end with mass starvation. Consider `FOOD_SCALE=1.25` for the live demo, so cooperation visibly pays off.
+- The deception detector is deliberately narrow and needed one fix (v5).
+
+**Try next:**
+
+- The lifeboat (`RESCUE_SEATS=2`) is built and tested but not yet run.
+- More runs per condition. Two Codex logins are out of credits (jle, acho).
+
+**Headline findings so far** (Luna, small n; see the tables below):
+
+1. Scarcity drives violations.
+2. Stated rules bend at high pressure, and agents break the fair-share rule *while saying they follow it*.
+3. Hoarding follows proximity to the shared supply, not role.
+4. Some hoarding is pre-emptive ("secure a ration before winter scarcity").
+
 ## Quick start (morning)
 
 All commands run from `world/`.
