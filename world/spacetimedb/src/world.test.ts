@@ -1876,6 +1876,15 @@ describe('the shelter', () => {
     expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: true });
   });
 
+  test('survivors know where the berry bushes are, even from the shelter at the centre', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, daylight: 'night' });
+    const bushes = obsFor(t, 'Ada').nearby.resources.filter((r: any) => r.kind === 'berry_bush');
+    expect(bushes.length).toBeGreaterThanOrEqual(3);
+    for (const b of bushes) expect(b.remaining).toBeGreaterThan(0);
+  });
+
   test('the treeline is always in view, so wood can be found from the middle of the clearing', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 64, 64);

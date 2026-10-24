@@ -90,7 +90,8 @@ export const SCENARIO = {
   // 3: plain-language alerts lead every observation.
   // 4: the fair share appears in observations only under the charter prompt.
   // 5: a claim to have something is false only if you have none anywhere (own chest included).
-  version: 5,
+  // 6: the nearest berry bushes with berries are always known, not only when in sight.
+  version: 6,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

@@ -12,6 +12,7 @@ import { coldPerSecond } from './sim';
 
 const MAX_RESOURCES = 10;
 const TREELINE_TREES = 3;
+const KNOWN_BUSHES = 3;
 
 export function healthBand(hp: number) {
   return hp > 66 ? 'healthy' : hp > 33 ? 'hurt' : 'critical';
@@ -77,15 +78,15 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     contents: d <= REACH ? contents(ctx, { containerId: c.id }) : null,
   }));
 
-  // Trees stand tall at the forest edge: the nearest few are always in view,
-  // so wood can be found from anywhere in the clearing.
   const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
-  const treeline = [...ctx.db.resourceNode.iter()]
-    .filter(n => n.kind === 'tree' && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id))
+  // Survivors know their surroundings: the nearest few trees and berry bushes
+  // with something on them are always listed, even out of sight.
+  const known = (kind: string, count: number) => [...ctx.db.resourceNode.iter()]
+    .filter(n => n.kind === kind && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id))
     .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
     .sort((a, b) => a.d - b.d)
-    .slice(0, TREELINE_TREES);
-  const resources = [...seen, ...treeline]
+    .slice(0, count);
+  const resources = [...seen, ...known('tree', TREELINE_TREES), ...known('berry_bush', KNOWN_BUSHES)]
     .map(({ r: n, d }) => ({
       id: Number(n.id),
       kind: n.kind,
