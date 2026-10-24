@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 427" role="img" aria-labelledby="title-782ed1f5cd description-782ed1f5cd">
+<title id="title-782ed1f5cd">Observed opening behavior</title>
+<desc id="description-782ed1f5cd">Accepted, rejected and undetermined counts from saved response prefixes. These are not full-response safety scores.</desc>
+<rect width="1200" height="427" rx="18" fill="#111b2d"/>
+<g font-family="system-ui, sans-serif">
+<text x="32" y="43" font-size="26" fill="#f3f6fc" font-weight="700">Observed opening behavior</text>
+<text x="32" y="75" font-size="15" fill="#a9b7cf" >Qwen3.8-27B · 90 saved prefixes · 28 semantic second-pass reviews</text>
+<rect x="32" y="98" width="13" height="13" rx="3" fill="#55d6be"/>
+<text x="55" y="110" font-size="15" fill="#dbe3f1" >Accepted</text>
+<rect x="262" y="98" width="13" height="13" rx="3" fill="#ff8f91"/>
+<text x="285" y="110" font-size="15" fill="#dbe3f1" >Rejected</text>
+<rect x="492" y="98" width="13" height="13" rx="3" fill="#f1c66e"/>
+<text x="515" y="110" font-size="15" fill="#dbe3f1" >Undetermined</text>
+<text x="1010" y="110" font-size="13" fill="#a9b7cf" >A / R / U</text>
+<text x="32" y="153" font-size="15" fill="#dbe3f1" >All saved responses</text>
+<text x="355" y="153" font-size="13" fill="#a9b7cf" >n=90</text>
+<rect x="423.00" y="134" width="80.17" height="27" fill="#55d6be"><title>accepted: 13 (14.4%)</title></rect>
+<text x="463.08" y="153" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">13</text>
+<rect x="503.17" y="134" width="456.33" height="27" fill="#ff8f91"><title>rejected: 74 (82.2%)</title></rect>
+<text x="731.33" y="153" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">74</text>
+<rect x="959.50" y="134" width="18.50" height="27" fill="#f1c66e"><title>undetermined: 3 (3.3%)</title></rect>
+<text x="1010" y="153" font-size="15" fill="#dbe3f1" >13 / 74 / 3</text>
+<text x="32" y="201" font-size="15" fill="#dbe3f1" >Initially undetermined only</text>
+<text x="355" y="201" font-size="13" fill="#a9b7cf" >n=28</text>
+<rect x="423.00" y="182" width="257.68" height="27" fill="#55d6be"><title>accepted: 13 (46.4%)</title></rect>
+<text x="551.84" y="201" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">13</text>
+<rect x="680.68" y="182" width="237.86" height="27" fill="#ff8f91"><title>rejected: 12 (42.9%)</title></rect>
+<text x="799.61" y="201" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">12</text>
+<rect x="918.54" y="182" width="59.46" height="27" fill="#f1c66e"><title>undetermined: 3 (10.7%)</title></rect>
+<text x="948.27" y="201" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">3</text>
+<text x="1010" y="201" font-size="15" fill="#dbe3f1" >13 / 12 / 3</text>
+<text x="32" y="249" font-size="15" fill="#dbe3f1" >Dataset expects an answer</text>
+<text x="355" y="249" font-size="13" fill="#a9b7cf" >n=25</text>
+<rect x="423.00" y="230" width="266.40" height="27" fill="#55d6be"><title>accepted: 12 (48.0%)</title></rect>
+<text x="556.20" y="249" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">12</text>
+<rect x="689.40" y="230" width="266.40" height="27" fill="#ff8f91"><title>rejected: 12 (48.0%)</title></rect>
+<text x="822.60" y="249" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">12</text>
+<rect x="955.80" y="230" width="22.20" height="27" fill="#f1c66e"><title>undetermined: 1 (4.0%)</title></rect>
+<text x="1010" y="249" font-size="15" fill="#dbe3f1" >12 / 12 / 1</text>
+<text x="32" y="297" font-size="15" fill="#dbe3f1" >Dataset expects a refusal</text>
+<text x="355" y="297" font-size="13" fill="#a9b7cf" >n=65</text>
+<rect x="423.00" y="278" width="8.54" height="27" fill="#55d6be"><title>accepted: 1 (1.5%)</title></rect>
+<rect x="431.54" y="278" width="529.38" height="27" fill="#ff8f91"><title>rejected: 62 (95.4%)</title></rect>
+<text x="696.23" y="297" font-size="14" fill="#111b2d" text-anchor="middle" font-weight="700">62</text>
+<rect x="960.92" y="278" width="17.08" height="27" fill="#f1c66e"><title>undetermined: 2 (3.1%)</title></rect>
+<text x="1010" y="297" font-size="15" fill="#dbe3f1" >1 / 62 / 2</text>
+<text x="32" y="380" font-size="14" fill="#a9b7cf" >Opening behavior only · 62 original refusal-marker decisions retained; 28 prefixes re-reviewed.</text>
+<text x="32" y="404" font-size="14" fill="#a9b7cf" >One primary topic per prompt; small, non-representative sample. Accepted ≠ safe or complete.</text>
+</g></svg>

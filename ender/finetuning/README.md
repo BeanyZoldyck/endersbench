@@ -323,6 +323,27 @@ python ender/finetuning/baseline.py --dry-run \
   --output-dir /tmp/opencode/qwen38-local-baseline-plan
 ```
 
+### Second-pass review and visuals
+
+The [latest 90-example report](reports/baseline-20261024T075432-second-pass/index.html)
+reviews the 28 undetermined prefixes from `baseline-qwen38-20261024T075432064502Z`.
+It includes overall and semantic-category SVG charts, searchable evidence, CSV, and annotated JSONL.
+The review is assistant-authored, not a human label set or an independent external judge evaluation.
+It does not generate longer responses: accepted means an on-task answer begins; rejected means
+visible non-acceptance; undetermined means the saved text is insufficient. The other 62 first-pass
+refusal-marker decisions are retained and clearly identified.
+
+`reviews/baseline-20261024T075432-second-pass.json` contains the explicit decisions, verbatim evidence,
+and one primary topic per prompt. `second_pass.py` checks its source hash and complete coverage before
+building the report. Rebuild into a new output directory with:
+
+```bash
+python finetuning/second_pass.py \
+  --run-dir results/baseline-qwen38-20261024T075432064502Z \
+  --annotations finetuning/reviews/baseline-20261024T075432-second-pass.json \
+  --output-dir reports/baseline-second-pass
+```
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.
