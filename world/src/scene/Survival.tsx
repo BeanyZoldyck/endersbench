@@ -29,7 +29,7 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
       flames.current.scale.set(r * (0.55 + Math.sin(t * 9) * 0.035), height * (1 + Math.sin(t * 7) * 0.06), r * 0.55);
       flames.current.rotation.z = Math.sin(t * 5) * 0.05;
     }
-    if (light.current) light.current.intensity = burning ? (signal ? 60 : 24) * fuel * (1 + Math.sin(t * 7) * 0.04) : 0;
+    if (light.current) light.current.intensity = burning ? (signal ? 220 : 120) * (0.5 + fuel * 0.5) * (1 + Math.sin(t * 7) * 0.05 + Math.sin(t * 13) * 0.03) : 0;
     if (smoke.current && burning) {
       for (let i = 0; i < 10; i++) {
         const h = ((t * 0.2 + i / 10) % 1);
@@ -48,7 +48,7 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
         <mesh position={[0, 0.5, 0]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#edaa61" transparent opacity={0.9} /></mesh>
         <mesh position={[0, 0.32, 0.1]} scale={[0.55, 0.6, 0.55]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#f4e3ae" /></mesh>
       </group>
-      <pointLight ref={light} color="#edaa61" position={[0, signal ? 2.5 : 1.2, 0]} distance={signal ? 15 : 9} decay={2} />
+      <pointLight ref={light} color="#f0a35a" position={[0, signal ? 2.5 : 1.4, 0]} distance={signal ? 30 : 20} decay={2} castShadow={!signal} shadow-mapSize={[512, 512]} shadow-bias={-0.002} shadow-camera-near={0.5} />
       {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial {...boundaryFog} color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
     </>}
   </group>;

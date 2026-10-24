@@ -1,4 +1,5 @@
 import { boundaryFog } from './boundaryFog';
+import { terrainHeight } from './terrain';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -46,11 +47,13 @@ export function Environment({ world, nodes, containers, items, agents, physics, 
     const tree = (x: number, z: number, seed: number, decorative: boolean, stump: boolean) => {
       const h = decorative ? 7 + noise(seed) * 7 : 6 + noise(seed) * 3;
       const radius = decorative ? 0.6 : stump ? physics.stumpRadius : physics.treeRadius;
-      trunks.push({ position: [x, stump ? 0.25 : h * 0.35, z], scale: [radius, stump ? 0.5 : h * 0.7, radius], color: '#6b5846' });
+      // Distant trees stand on the hills; sunk a little so no root floats on a slope.
+      const y = decorative ? terrainHeight(x, z, world.radius) - 0.4 : 0;
+      trunks.push({ position: [x, y + (stump ? 0.25 : h * 0.35), z], scale: [radius, stump ? 0.5 : h * 0.7, radius], color: '#6b5846' });
       if (stump) return;
       for (let c = 0; c < 3; c++) {
         const angle = c * 2.1 + noise(seed) * 2;
-        crowns.push({ position: [x + Math.cos(angle) * 1.5, h * (0.9 + c * 0.1), z + Math.sin(angle) * 1.5], scale: decorative ? [3.6 + noise(seed + c), 3.2 + noise(seed + c + 6), 3.5] : [2.25, 2.15, 2.2], color: winter ? ['#72877e', '#8c9b8d', '#a5ae9e'][c] : decorative ? ['#334d40', '#47604a', '#61714f'][c] : ['#6c7e4d', '#8a955d', '#a2a269'][c], rotation: angle });
+        crowns.push({ position: [x + Math.cos(angle) * 1.5, y + h * (0.9 + c * 0.1), z + Math.sin(angle) * 1.5], scale: decorative ? [3.6 + noise(seed + c), 3.2 + noise(seed + c + 6), 3.5] : [2.25, 2.15, 2.2], color: winter ? ['#72877e', '#8c9b8d', '#a5ae9e'][c] : decorative ? ['#334d40', '#47604a', '#61714f'][c] : ['#6c7e4d', '#8a955d', '#a2a269'][c], rotation: angle });
       }
     };
     // The complete canopy footprint stays OUTSIDE the playable circle.
@@ -93,7 +96,7 @@ export function Environment({ world, nodes, containers, items, agents, physics, 
 function Ground({ world, onClickTile }: { world: World; onClickTile: (x: number, y: number) => void }) {
   const winter = world.phase === 'winter';
   const geometry = useMemo(() => {
-    const g = new THREE.PlaneGeometry(world.radius * 6, world.radius * 6, 100, 100);
+    const g = new THREE.PlaneGeometry(world.radius * 6, world.radius * 6, 160, 160);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
     const colors = new Float32Array(pos.count * 3);
@@ -103,12 +106,14 @@ function Ground({ world, onClickTile }: { world: World; onClickTile: (x: number,
     const color = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
+      pos.setY(i, terrainHeight(x, z, world.radius));
       const patch = (Math.sin(x * 0.065 + Math.sin(z * 0.08)) + Math.cos(z * 0.09 - x * 0.035)) * 0.15 + 0.4;
       const edge = THREE.MathUtils.smoothstep(Math.hypot(x, z), world.radius - 7, world.radius + 32);
       color.copy(moss).lerp(grass, patch).lerp(mist, edge);
       colors.set([color.r, color.g, color.b], i * 3);
     }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    g.computeVertexNormals();
     return g;
   }, [world.radius, winter]);
   // Geometry is replaced only on a radius/season change, never on the world tick.
