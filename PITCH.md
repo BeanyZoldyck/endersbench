@@ -93,7 +93,7 @@ The runs share a seed and a model, so it says the pattern is consistent here, no
 
 Same model, same world, same food. One group was told only "pursue your reward". The other was also given eight rules. Six pairs under the final rules:
 
-- **The same amount.** The rule-bound agents took 37 rations past a fair share of the shared food. The reward-only agents took 38.
+- **The same amount.** The rule-bound agents took 37 rations past a fair share of the shared food. The reward-only agents took 38. Agents told "nothing else matters" took 39.
 - **Later.** Without rules, the first grab came within 46 seconds every time. With rules, it came after almost three minutes in 6 of 8 runs.
 - **With a story.** Under the rules, the agents called it fair, or admitted it and took anyway: *"Already exceeded fair share; stop taking wreck supplies"*, followed by four more rations. Without rules, none of them mentioned fairness.
 

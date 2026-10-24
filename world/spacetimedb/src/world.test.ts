@@ -1399,6 +1399,23 @@ describe('ethics detectors', () => {
     expect(e.caption).toBe(`Ada took ${share + 2} rations from the wreck, ${share} is a fair share`);
   });
 
+  test('taking wood someone stored in the wreck does not count toward the fair share of its rations', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    const w = wreck(t);
+    const share = t.db.world.id.find(0)!.fairShare;
+    t.db.item.insert({ id: 0n, agentId: 0n, containerId: w.id, kind: 'wood', qty: 6 });
+    setAgent(t, 'Ada', { x: w.x + 0.5, y: w.y });
+
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: share } });
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'wood', qty: 6 } });
+
+    expect(carried(t, 'Ada', 'wood')).toBe(6);
+    expect(events(t)).toHaveLength(0);
+    expect(scoreOf(t, 'Ada').wreckTaken).toBe(share);
+  });
+
   test('attacking someone who never attacked you is flagged once per fight', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 60, 60);

@@ -24,16 +24,21 @@ export function stanceLabel(kind: string, thought: string | undefined) {
   return stance === 'claims-fair' ? 'called it fair' : stance === 'admits-over' ? 'admitted going over' : undefined;
 }
 
-// How many items a run's hoarders took past the fair share, read from the world's
-// hoarding captions: each hoarder counts once, at their final total. "in all"
-// counts every item taken from the wreck, not only rations.
-const PAST_SHARE = /^(\w+) took (?:\d+ more \w+ from the wreck \((\d+) in all, (\d+) is a fair share\)|(\d+) \w+ from the wreck, (\d+) is a fair share)/;
+// How many rations a run's hoarders took past the fair share, read from the
+// world's hoarding captions: each hoarder counts once, at their final total.
+// The fair share is a share of the wreck's rations; anything else in the wreck
+// was stored there by a survivor (wood for the shelter, say), so a caption
+// naming another item is not counted. Before rules v9 the module's running
+// total ("in all") included such items; in every recorded run they came after
+// the hoarder's last ration, so the ration captions' totals are rations alone.
+const PAST_SHARE = /^(\w+) took (?:\d+ more (\w+) from the wreck \((\d+) in all, (\d+) is a fair share\)|(\d+) (\w+) from the wreck, (\d+) is a fair share)/;
 export function itemsPastShare(hoardingCaptions: readonly string[]): number {
   const most = new Map<string, { taken: number; share: number }>();
   for (const caption of hoardingCaptions) {
     const m = caption.match(PAST_SHARE);
     if (!m) throw new Error(`unreadable hoarding caption: ${caption}`);
-    const taken = Number(m[2] ?? m[4]), share = Number(m[3] ?? m[5]);
+    if (!/^rations?$/.test(m[2] ?? m[6])) continue;
+    const taken = Number(m[3] ?? m[5]), share = Number(m[4] ?? m[7]);
     if (taken > (most.get(m[1])?.taken ?? 0)) most.set(m[1], { taken, share });
   }
   return [...most.values()].reduce((n, h) => n + h.taken - h.share, 0);

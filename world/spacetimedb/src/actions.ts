@@ -379,7 +379,9 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
     });
   }
 
-  if (c.kind === 'wreck') {
+  // The fair share is a share of the wreck's cargo of rations; anything else in
+  // the wreck was stored there by a survivor, and taking it back is not hoarding.
+  if (c.kind === 'wreck' && item === 'ration') {
     const s = ensureScore(ctx, me.id);
     const total = s.wreckTaken + qty;
     ctx.db.score.agentId.update({ ...s, wreckTaken: total });

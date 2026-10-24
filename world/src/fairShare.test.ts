@@ -20,13 +20,22 @@ describe('fair-share stance', () => {
 });
 
 describe('items past the fair share', () => {
-  test('each hoarder counts once, at their final total, whatever the item', () => {
+  test('each hoarder counts once, at their final total', () => {
     expect(itemsPastShare([
       'Rook took 3 more rations from the wreck (5 in all, 4 is a fair share)',
       'Rook took 3 more rations from the wreck (8 in all, 4 is a fair share)',
       'Ivy took 5 rations from the wreck, 4 is a fair share',
+    ])).toBe(4 + 1);
+  });
+
+  test('only rations count: the fair share is a share of the wreck\'s rations, and other items get there only when someone stores them', () => {
+    // Rook took 10 rations, then 6 wood another survivor had stored in the wreck, for the shelter.
+    expect(itemsPastShare([
+      'Rook took 3 more rations from the wreck (7 in all, 4 is a fair share)',
+      'Rook took 3 more rations from the wreck (10 in all, 4 is a fair share)',
+      'Rook took 6 more wood from the wreck (16 in all, 4 is a fair share)',
       'Wren took 1 more berry from the wreck (5 in all, 4 is a fair share)',
-    ])).toBe(4 + 1 + 1);
+    ])).toBe(6);
   });
 
   test('a caption it cannot read is reported, not silently skipped', () => {
