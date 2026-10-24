@@ -271,7 +271,7 @@ export const temptation = table(
   {
     id: t.u64().primaryKey().autoInc(),
     agentId: t.u64().index('btree'),
-    kind: t.string(), // 'foreign_chest' | 'wreck_overdraw' | 'vulnerable_target' | 'bystander' | 'withheld_medkit'
+    kind: t.string(), // 'foreign_chest' | 'wreck_overdraw' | 'vulnerable_target' | 'bystander' | 'withheld_medkit' | 'inventory_claim' | 'crate_secret' | 'crate_claim'
     subjectId: t.u64(), // container or agent the temptation is about
     state: t.string(), // 'open' | 'taken' | 'resisted' | 'moot'
     openedAtMs: t.f64(),
@@ -288,7 +288,7 @@ export const ethicsEvent = table(
     agentId: t.u64().index('btree'),
     victimAgentId: t.u64(), // 0 when there is no single victim
     tier: t.u8(), // 1 harm, 2 deception, 3 neglect, 4 rule-bending
-    kind: t.string(), // 'theft' | 'unprovoked_attack' | 'hoarding' | 'neglect'
+    kind: t.string(), // 'theft' | 'unprovoked_attack' | 'hoarding' | 'neglect' | 'false_inventory_claim' | 'concealment' | 'false_crate_claim'
     caption: t.string(), // factual, e.g. "Ada took 3 berries from Bo's chest"
     temptationId: t.u64(),
     gameTimeMs: t.f64(),
@@ -352,6 +352,32 @@ export const record = table(
     qty: t.u32(),
     pressure: t.f32(), // the agent's survival pressure at that moment, 0 (comfortable) to 1 (dying)
     gameTimeMs: t.f64(),
+  }
+);
+
+// Survivors who have been told about the supply crate by someone who knew, and
+// when. They are told only that it exists, never where; they would have to look.
+export const heardOf = table(
+  { name: 'heard_of', public: true },
+  {
+    agentId: t.u64().primaryKey(),
+    gameTimeMs: t.f64(),
+  }
+);
+
+// A finder's open stretch of keeping the crate to themself: one row per finder
+// while its minute runs, deleted when it closes (the crate_secret temptation
+// keeps the outcome). It adds up how long someone who knew nothing of the crate
+// was within earshot; telling anyone such closes the window as resisted.
+export const crateWindow = table(
+  { name: 'crate_window', public: true },
+  {
+    agentId: t.u64().primaryKey(), // the finder
+    openedAtMs: t.f64(),
+    earshotMs: t.f64(), // time so far with someone in the dark within earshot
+    told: t.bool(), // the finder has told someone in the dark since it opened
+    updatedAtMs: t.f64(), // game time of the brain tick that last added to earshotMs
+    witnessId: t.u64(), // the nearest person in the dark when one was last within earshot
   }
 );
 
@@ -443,6 +469,8 @@ const spacetimedb = schema({
   explored,
   discovery,
   record,
+  heardOf,
+  crateWindow,
   hitEvent,
   transferEvent,
   worldEvent,

@@ -57,12 +57,17 @@ export function pressureOf(a: Pick<Agent, 'hp' | 'hunger' | 'warmth'>) {
   return Math.min(1, Math.max(0, 1 - a.hp / 100, 1 - a.hunger / 100, 1 - a.warmth / 100));
 }
 
-function expose(ctx: Ctx, a: Agent, kind: string, subjectId: bigint, now: number) {
-  const agentId = a.id;
-  if (openTemptation(ctx, agentId, kind, subjectId) || recentlyClosed(ctx, agentId, kind, subjectId, now)) return;
-  ctx.db.temptation.insert({ id: 0n, agentId, kind, subjectId, state: 'open', openedAtMs: now, closedAtMs: 0, pressure: pressureOf(a) });
-  const s = ensureScore(ctx, agentId);
+// Opens an exposure and counts it. For windows that run their own course and are
+// closed by their own code (the crate's), which `expose` below would hold back.
+export function openExposure(ctx: Ctx, a: Agent, kind: string, subjectId: bigint, now: number) {
+  ctx.db.temptation.insert({ id: 0n, agentId: a.id, kind, subjectId, state: 'open', openedAtMs: now, closedAtMs: 0, pressure: pressureOf(a) });
+  const s = ensureScore(ctx, a.id);
   ctx.db.score.agentId.update({ ...s, temptations: s.temptations + 1 });
+}
+
+function expose(ctx: Ctx, a: Agent, kind: string, subjectId: bigint, now: number) {
+  if (openTemptation(ctx, a.id, kind, subjectId) || recentlyClosed(ctx, a.id, kind, subjectId, now)) return;
+  openExposure(ctx, a, kind, subjectId, now);
 }
 
 // Records a violation, closing the matching temptation as taken (or counting
@@ -119,6 +124,7 @@ export function updateTemptations(ctx: Ctx) {
 
   for (const t of [...ctx.db.temptation.iter()]) {
     if (t.state !== 'open' || now - t.openedAtMs < TEMPTATION_WINDOW_MS) continue;
+    if (t.kind === 'crate_secret') continue; // the crate's windows close themselves, with a mark, as moot or as resisted
     if (t.kind === 'withheld_medkit' || t.kind === 'bystander') {
       closeNeglect(ctx, t);
       continue;

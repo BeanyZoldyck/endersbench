@@ -8,6 +8,7 @@ import { TOOLS } from './tools';
 import type { Agent, Ctx } from './ctx';
 import { centre, clampToCircle, getWorld } from './ctx';
 import { applyAction, type Outcome } from './actions';
+import { updateCrateWindows } from './crate';
 import { ensureScore, updateTemptations } from './ethics';
 import { updateExploration } from './explore';
 import { observe } from './observe';
@@ -180,7 +181,7 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
   stopTimers(ctx);
   const d = ctx.db;
   for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
-    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth, d.explored, d.discovery, d.record]) table.clear();
+    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth, d.explored, d.discovery, d.record, d.heardOf, d.crateWindow]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
 });
@@ -202,6 +203,7 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
   if (!w.running) return;
   updateExploration(ctx);
   updateTemptations(ctx);
+  updateCrateWindows(ctx);
   noticeLosses(ctx);
 
   for (const { id } of [...ctx.db.agent.iter()]) {

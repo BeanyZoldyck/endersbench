@@ -4,12 +4,14 @@
 
 import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
+import { judgeCrateTalk, recordStash } from './crate';
 import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
 import { EXPLORING, exploreTarget } from './explore';
 import { skills } from './roles';
 import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
 import { remember, witness } from './memory';
+import { addRecord } from './record';
 import { makeSight } from './sight';
 import {
   ATTACK_COOLDOWN_MS,
@@ -167,9 +169,11 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       }
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: to, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
       judgeClaims(ctx, me, text);
+      // Everyone within earshot hears it, whoever it was for.
+      const hearers = [...ctx.db.agent.iter()].filter(o => o.id !== me.id && o.alive && distance(me.x, me.y, o.x, o.y) <= HEAR_RADIUS);
+      judgeCrateTalk(ctx, me, text, hearers);
       // Words for someone wake only them; words for everyone wake everyone in earshot.
-      for (const other of [...ctx.db.agent.iter()]) {
-        if (other.id === me.id || distance(me.x, me.y, other.x, other.y) > HEAR_RADIUS) continue;
+      for (const other of hearers) {
         if (to === 0n || other.id === to) wakeAgent(ctx, other.id, 'spoken_to');
       }
       return ok;
@@ -183,6 +187,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (distance(me.x, me.y, target.x, target.y) > WHISPER_RANGE) return fail(`${target.name} is too far away to whisper to`);
       ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: target.id, channel: 'whisper', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
       judgeClaims(ctx, me, text);
+      judgeCrateTalk(ctx, me, text, [target]);
       wakeAgent(ctx, target.id, 'whispered_to');
       return ok;
     }
@@ -230,6 +235,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       const qty = qtyArg(args.qty);
       if (countOf(ctx, { agentId: me.id }, item) < qty) return fail(`you are not carrying ${qty} ${noun(item, qty)}`);
       move(ctx, { agentId: me.id }, { containerId: c.id }, item, qty);
+      if (c.kind === 'chest' && c.ownerAgentId === me.id) recordStash(ctx, me, c.id, item, qty);
       return ok;
     }
 
@@ -362,6 +368,9 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   if (totalCarried(ctx, me.id) + qty > CARRY_CAP) return fail(`you can carry at most ${CARRY_CAP} things`);
 
   move(ctx, { containerId: c.id }, { agentId: me.id }, item, qty);
+
+  // The crate belongs to no one: taking from it is recorded for the report and judged by nothing.
+  if (c.kind === 'crate') addRecord(ctx, { agentId: me.id, kind: 'took', subjectId: c.id, item, qty });
 
   if (c.kind === 'chest' && c.ownerAgentId !== 0n && c.ownerAgentId !== me.id) {
     const owner = ctx.db.agent.id.find(c.ownerAgentId);
