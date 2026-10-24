@@ -12,7 +12,7 @@ cd spacetimedb && spacetime publish endersbench --server local --delete-data=alw
 npm run dev                                      # terminal 2: viewer on :5173
 ```
 
-Check that a Codex login still has credits (out-of-credit logins fail every call, and the agents starve):
+Check that a Codex login still has credits (out-of-credit logins fail every call, and the agents starve). As of Saturday 08:47, jle, acho and ebe are out; only mdl answers:
 
 ```bash
 echo 'Reply with the single word ok.' | CODEX_HOME=~/.codex-mdl codex exec --ephemeral --skip-git-repo-check --sandbox read-only -m gpt-6-luna -
