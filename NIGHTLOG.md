@@ -624,3 +624,9 @@ Every flare fired so far went up before the plane came (batch 8): 13 of 20 runs.
 
 Two module tests cover this. All four local databases are now on **v10**, so the next runs, when mdl is back at 12:46, will be v10. The single valid Sol pair (v9) and the Luna data (v8) stay in their own versions.
 
+### For the Ender fine-tune
+
+`npm run dataset` (in `world/`) writes `world/runs/ender-sft.jsonl`: **7,665 examples from 42 runs** (about 40 MB, gitignored). Regenerate it after any new runs.
+
+**A known inconsistency, left alone on purpose.** The shared world description in the prompt says a signal fire or a timely flare "gets everyone alive rescued". Under the lifeboat (`RESCUE_SEATS=2`) the observation says only two seats. Changing the prompt text would make a new prompt condition, so this is noted rather than changed. If the lifeboat becomes a headline condition, fix the prompt first and treat it as a new version.
+
