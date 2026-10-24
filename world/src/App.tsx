@@ -110,7 +110,7 @@ export default function App() {
     ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought })),
     ...scoreRows.filter(s => s.diedAtMs > 0).map(s => ({ key: `d${s.agentId}`, agentId: s.agentId, tier: 0, caption: describeDeath(names.get(s.agentId) ?? 'Someone', s.diedOf), gameTimeMs: s.diedAtMs })),
   ], [ethicsRows, scoreRows, names]);
-  const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0) }) : '';
+  const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0), structures, rescueAtMs: world.rescueState === 'waiting' ? world.rescueAtMs : undefined }) : '';
   // Food anywhere in the world: carried, stored, dropped, and on bushes.
   const foodLeft = useMemo(() => {
     const food = items.filter(i => ['berries', 'ration', 'meat'].includes(i.kind)).reduce((n, i) => n + i.qty, 0);

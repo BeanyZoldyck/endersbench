@@ -21,3 +21,15 @@ describe('narrate', () => {
     expect(narrate({ agents: [agent(1n, 'Ivy'), agent(2n, 'Rook', { alive: false })], items: [], mobs: [], gameTimeMs: 300_000, winterAtMs: 240_000 })).toBe('1 of 2 survivors still alive.');
   });
 });
+
+describe('narrate: the signal fire', () => {
+  const signal = (fuel: number) => ({ kind: 'signal_fire', lit: true, fuel });
+  test('a lit signal fire that will burn out before the plane is the story', () => {
+    const line = narrate({ agents: [agent(1n, 'Ivy')], items: [], mobs: [], gameTimeMs: 200_000, winterAtMs: 240_000, structures: [signal(120)], rescueAtMs: 486_000 });
+    expect(line).toBe('The signal fire is burning: fuel for 2:00. The plane passes in 4:46, so it goes out first unless fed.');
+  });
+  test('one that will last is good news', () => {
+    const line = narrate({ agents: [agent(1n, 'Ivy')], items: [], mobs: [], gameTimeMs: 400_000, winterAtMs: 240_000, structures: [signal(200)], rescueAtMs: 486_000 });
+    expect(line).toBe('The signal fire is burning: fuel for 3:20. The plane passes in 1:26.');
+  });
+});

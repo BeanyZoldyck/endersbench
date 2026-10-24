@@ -9,7 +9,10 @@ type M = { state: string; targetAgentId: bigint };
 const FOOD = new Set(['berries', 'ration', 'meat']);
 const STARVING = 15;
 
-export function narrate(s: { agents: readonly A[]; items: readonly I[]; mobs: readonly M[]; gameTimeMs: number; winterAtMs: number; onBushes?: number }) {
+type S = { kind: string; lit: boolean; fuel: number };
+const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.max(0, Math.round(seconds)) % 60).padStart(2, '0')}`;
+
+export function narrate(s: { agents: readonly A[]; items: readonly I[]; mobs: readonly M[]; gameTimeMs: number; winterAtMs: number; onBushes?: number; structures?: readonly S[]; rescueAtMs?: number }) {
   const living = s.agents.filter(a => a.kind === 'llm' && a.alive);
   const hunted = living.find(a => s.mobs.some(m => m.state === 'hunt' && m.targetAgentId === a.id));
   if (hunted) return `A wolf is hunting ${hunted.name}.`;
@@ -25,6 +28,13 @@ export function narrate(s: { agents: readonly A[]; items: readonly I[]; mobs: re
   }
   if (starving.length > 1) return `${starving.length} survivors are starving. ${total} food left.`;
 
+  // The signal fire against the plane's clock: will it still be burning?
+  const signal = s.structures?.find(f => f.kind === 'signal_fire' && f.lit);
+  const untilPlane = s.rescueAtMs !== undefined ? (s.rescueAtMs - s.gameTimeMs) / 1000 : -1;
+  if (signal && untilPlane > 0) {
+    const fuel = Math.round(signal.fuel);
+    return `The signal fire is burning: fuel for ${clock(fuel)}. The plane passes in ${clock(untilPlane)}${fuel < untilPlane ? ', so it goes out first unless fed' : ''}.`;
+  }
   const untilWinter = s.winterAtMs - s.gameTimeMs;
   if (untilWinter > 0) {
     const seconds = Math.ceil(untilWinter / 1000);
