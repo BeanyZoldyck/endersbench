@@ -9,7 +9,6 @@ button { -webkit-tap-highlight-color:transparent; }
 .app { height:100dvh; min-height:430px; overflow:hidden; position:relative; }
 .stage, .world { position:absolute; inset:0; }
 .world { touch-action:none; }
-.atmosphere { pointer-events:none; position:absolute; inset:0; background:linear-gradient(180deg, #eee9d8d9 0%, #eee9d850 18%, transparent 35%, transparent 62%, #e6e3cc85 82%, #ece6d4 100%); }
 .masthead { position:absolute; top:30px; left:38px; pointer-events:none; }
 .brand { display:flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.18em; font-weight:650; }
 .brand svg { width:28px; height:30px; }
@@ -130,7 +129,6 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 @media (max-width:650px) { .masthead { top:22px; left:18px; } .brand { font-size:9px; letter-spacing:.12em; gap:6px; } .brand svg { width:22px; height:22px; } h1 { font-size:36px; } .masthead p { font-size:10px; max-width:210px; line-height:1.6; } .world-status { top:25px; right:18px; gap:14px; max-width:150px; } .connection { font-size:9px; text-align:right; } .season { gap:6px; } .season strong { font-size:11px; } .season span { font-size:8px; } .utility { gap:3px; } .utility button { font-size:9px; padding:5px 6px; } .spectator-dock { left:15px; right:15px; } .cast-card { flex:0 0 190px; } .cast-heading span+span { display:none; } .camera-hint { font-size:8px; } .camera-toggle button { padding:7px 12px; font-size:10px; } .detail-panel { right:15px; width:min(305px, calc(100vw - 30px)); top:155px; max-height:calc(100dvh - 330px); } .bubble { font-size:12px; max-width:190px; } .preview-banner { font-size:8px; } .preview-banner button { margin-left:8px; font-size:8px; } .event-caption { width:100%; max-width:100%; } }
 
 .stage { z-index:0; }
-.atmosphere { z-index:1; }
 .masthead, .world-status, .spectator-dock { z-index:2; }
 .detail-panel { z-index:3; }
 .preview-banner { z-index:4; }

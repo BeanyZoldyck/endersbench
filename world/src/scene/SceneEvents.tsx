@@ -1,3 +1,4 @@
+import { boundaryFog } from './boundaryFog';
 import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -83,7 +84,7 @@ function Effect({ moment: m, width, height }: { moment: Moment; width: number; h
   const color = m.type === 'transfer' ? itemColor(m.kind) : ['burn', 'fire_lit', 'flare'].includes(m.kind) ? '#edaa61' : m.type === 'hit' ? '#bd7460' : '#c4d0b1';
   return <mesh ref={mesh} rotation={ring ? [-Math.PI / 2, 0, 0] : [0, 0, 0]} name={`event-${m.kind || m.type}`}>
     {ring ? <ringGeometry args={[0.7, 0.78, 32]} /> : <icosahedronGeometry args={[m.kind === 'flare' ? 0.6 : 0.25, 0]} />}
-    <meshBasicMaterial transparent depthWrite={false} color={color} />
+    <meshBasicMaterial {...boundaryFog} transparent depthWrite={false} color={color} />
   </mesh>;
 }
 function Flyover({ moment: m, width, height }: { moment: Moment; width: number; height: number }) {
@@ -95,9 +96,9 @@ function Flyover({ moment: m, width, height }: { moment: Moment; width: number; 
     root.current.position.set(m.to[0] - width / 2 - 75 + t * 150, 24, m.to[1] - height / 2);
   });
   return <group ref={root} name="rescue-flyover">
-    <mesh rotation={[0, 0, Math.PI / 2]}><capsuleGeometry args={[0.6, 5, 4, 10]} /><meshStandardMaterial color="#e5dfc6" roughness={1} /></mesh>
-    <mesh><boxGeometry args={[1.4, 0.12, 9]} /><meshStandardMaterial color="#c5c6b1" /></mesh>
-    <mesh position={[-2, 0.55, 0]}><boxGeometry args={[1.3, 1.3, 0.12]} /><meshStandardMaterial color="#94725e" /></mesh>
-    <mesh position={[-2, 0, 0]}><boxGeometry args={[1, 0.1, 3]} /><meshStandardMaterial color="#c5c6b1" /></mesh>
+    <mesh rotation={[0, 0, Math.PI / 2]}><capsuleGeometry args={[0.6, 5, 4, 10]} /><meshStandardMaterial {...boundaryFog} color="#e5dfc6" roughness={1} /></mesh>
+    <mesh><boxGeometry args={[1.4, 0.12, 9]} /><meshStandardMaterial {...boundaryFog} color="#c5c6b1" /></mesh>
+    <mesh position={[-2, 0.55, 0]}><boxGeometry args={[1.3, 1.3, 0.12]} /><meshStandardMaterial {...boundaryFog} color="#94725e" /></mesh>
+    <mesh position={[-2, 0, 0]}><boxGeometry args={[1, 0.1, 3]} /><meshStandardMaterial {...boundaryFog} color="#c5c6b1" /></mesh>
   </group>;
 }

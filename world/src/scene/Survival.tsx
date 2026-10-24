@@ -1,3 +1,4 @@
+import { boundaryFog } from './boundaryFog';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -41,15 +42,15 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
   });
   const logs = signal ? Math.ceil(built * 9) : Math.ceil(fuel * 6);
   return <group position={[x, 0, z]} name={`structure-${s.id}`}>
-    {Array.from({ length: 8 }, (_, i) => <mesh key={i} position={[Math.cos(i * Math.PI / 4) * r * 0.83, r * 0.14, Math.sin(i * Math.PI / 4) * r * 0.83]} scale={[r * 0.17, r * 0.14, r * 0.17]}><icosahedronGeometry args={[1, 0]} /><meshStandardMaterial color="#8d9180" roughness={1} /></mesh>)}
-    {Array.from({ length: logs }, (_, i) => <mesh key={i} position={[0, r * (0.16 + i * 0.11), 0]} rotation={[Math.PI / 2, 0, i * 2.4]}><cylinderGeometry args={[r * 0.12, r * 0.12, r * 1.4, 7]} /><meshStandardMaterial color={s.fuel === 0 && s.woodNeeded === 0 ? '#535346' : '#7c6248'} roughness={1} /></mesh>)}
+    {Array.from({ length: 8 }, (_, i) => <mesh key={i} position={[Math.cos(i * Math.PI / 4) * r * 0.83, r * 0.14, Math.sin(i * Math.PI / 4) * r * 0.83]} scale={[r * 0.17, r * 0.14, r * 0.17]}><icosahedronGeometry args={[1, 0]} /><meshStandardMaterial {...boundaryFog} color="#8d9180" roughness={1} /></mesh>)}
+    {Array.from({ length: logs }, (_, i) => <mesh key={i} position={[0, r * (0.16 + i * 0.11), 0]} rotation={[Math.PI / 2, 0, i * 2.4]}><cylinderGeometry args={[r * 0.12, r * 0.12, r * 1.4, 7]} /><meshStandardMaterial {...boundaryFog} color={s.fuel === 0 && s.woodNeeded === 0 ? '#535346' : '#7c6248'} roughness={1} /></mesh>)}
     {burning && <>
       <group ref={flames} position={[0, r * 0.25, 0]} name="lit-flames">
-        <mesh position={[0, 0.5, 0]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial color="#edaa61" transparent opacity={0.9} /></mesh>
-        <mesh position={[0, 0.32, 0.1]} scale={[0.55, 0.6, 0.55]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial color="#f4e3ae" /></mesh>
+        <mesh position={[0, 0.5, 0]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#edaa61" transparent opacity={0.9} /></mesh>
+        <mesh position={[0, 0.32, 0.1]} scale={[0.55, 0.6, 0.55]}><coneGeometry args={[1, 1, 7]} /><meshBasicMaterial {...boundaryFog} color="#f4e3ae" /></mesh>
       </group>
       <pointLight ref={light} color="#edaa61" position={[0, signal ? 2.5 : 1.2, 0]} distance={signal ? 15 : 9} decay={2} />
-      {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
+      {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial {...boundaryFog} color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
     </>}
     <Html position={[0, burning ? (signal ? 5 : 2.8) : 1.8, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}><div className="place-label"><strong>{signal ? 'SIGNAL FIRE' : 'THE HEARTH'}</strong><span>{burning ? `${Math.ceil(s.fuel)}s fuel` : signal && s.woodNeeded > 0 ? `${s.woodNeeded} wood needed` : 'Unlit'}</span></div></Html>
   </group>;
@@ -79,11 +80,11 @@ function Wolf({ mob: m, world, radius: r }: { mob: Mob; world: World; radius: nu
   });
   return <group ref={root} position={initial.current} name={`wolf-${m.id}`}>
     <group ref={body} position={[0, r * 0.55, 0]}>
-      <mesh scale={[r * 0.65, r * 0.55, r * 0.9]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#7c827e" roughness={1} /></mesh>
-      <mesh position={[0, r * 0.25, r * 0.55]} scale={[r * 0.43, r * 0.43, r * 0.45]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#999d8b" roughness={1} /></mesh>
+      <mesh scale={[r * 0.65, r * 0.55, r * 0.9]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial {...boundaryFog} color="#7c827e" roughness={1} /></mesh>
+      <mesh position={[0, r * 0.25, r * 0.55]} scale={[r * 0.43, r * 0.43, r * 0.45]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial {...boundaryFog} color="#999d8b" roughness={1} /></mesh>
       {[-1, 1].map(side => <group key={side}>
-        <mesh position={[side * r * 0.3, r * 0.68, r * 0.48]}><coneGeometry args={[r * 0.2, r * 0.45, 4]} /><meshStandardMaterial color="#717971" roughness={1} /></mesh>
-        <mesh position={[side * r * 0.2, r * 0.35, r * 0.91]}><sphereGeometry args={[r * 0.045, 8, 6]} /><meshBasicMaterial color="#293f39" /></mesh>
+        <mesh position={[side * r * 0.3, r * 0.68, r * 0.48]}><coneGeometry args={[r * 0.2, r * 0.45, 4]} /><meshStandardMaterial {...boundaryFog} color="#717971" roughness={1} /></mesh>
+        <mesh position={[side * r * 0.2, r * 0.35, r * 0.91]}><sphereGeometry args={[r * 0.045, 8, 6]} /><meshBasicMaterial {...boundaryFog} color="#293f39" /></mesh>
       </group>)}
     </group>
     <Html position={[0, r * 2.1, 0]} center style={{ pointerEvents: 'none' }} zIndexRange={[6, 0]}><span className="mob-label">Wolf · {m.hp <= 0 ? 'down' : m.state}</span></Html>
@@ -114,5 +115,5 @@ export function Storm({ hazards, readTime }: { hazards: readonly Hazard[]; readT
     positions.needsUpdate = true;
     if (controls) lines.current.position.set(controls.target.x, 0, controls.target.z);
   });
-  return <lineSegments ref={lines} geometry={geometry} frustumCulled={false} visible={false} name="storm-rain"><lineBasicMaterial color="#b0c3ce" transparent opacity={0.38} depthWrite={false} /></lineSegments>;
+  return <lineSegments ref={lines} geometry={geometry} frustumCulled={false} visible={false} name="storm-rain"><lineBasicMaterial {...boundaryFog} color="#b0c3ce" transparent opacity={0.38} depthWrite={false} /></lineSegments>;
 }

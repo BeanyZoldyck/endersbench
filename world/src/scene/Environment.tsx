@@ -1,3 +1,4 @@
+import { boundaryFog } from './boundaryFog';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -31,7 +32,7 @@ function Instances({ data, shape = 'canopy', shadows = false }: { data: Instance
   }, [data]);
   return <instancedMesh ref={mesh} args={[undefined, undefined, data.length]} castShadow={shadows} receiveShadow>
     {shape === 'trunk' ? <cylinderGeometry args={[1, 1, 1, 12]} /> : <icosahedronGeometry args={[1, shape === 'berry' ? 0 : 1]} />}
-    <meshStandardMaterial roughness={1} flatShading />
+    <meshStandardMaterial {...boundaryFog} roughness={1} flatShading />
   </instancedMesh>;
 }
 
@@ -117,11 +118,11 @@ function Ground({ world, onClickTile }: { world: World; onClickTile: (x: number,
     e.stopPropagation();
     onClickTile(e.point.x + world.width / 2, e.point.z + world.height / 2);
   };
-  return <mesh geometry={geometry} receiveShadow onClick={click}><meshStandardMaterial vertexColors roughness={1} /></mesh>;
+  return <mesh geometry={geometry} receiveShadow onClick={click}><meshStandardMaterial {...boundaryFog} vertexColors roughness={1} /></mesh>;
 }
 
 function Box({ position, scale, color, rotation = 0 }: { position: [number, number, number]; scale: [number, number, number]; color: string; rotation?: number; tilt?: number }) {
-  return <mesh position={position} scale={scale} rotation={[0, rotation, 0]} castShadow receiveShadow><boxGeometry /><meshStandardMaterial color={color} roughness={0.92} /></mesh>;
+  return <mesh position={position} scale={scale} rotation={[0, rotation, 0]} castShadow receiveShadow><boxGeometry /><meshStandardMaterial {...boundaryFog} color={color} roughness={0.92} /></mesh>;
 }
 
 function Cargo({ items, radius }: { items: readonly Item[]; radius: number }) {
@@ -146,11 +147,11 @@ function ContainerProp({ container: c, world, items, owner, physics }: { contain
     {wreck && <PlaneWreck world={world} physics={physics} />}
     <group position={[x, 0, z]} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
       {chest ? <>
-        <mesh position={[0, r * 0.55, 0]} castShadow receiveShadow><cylinderGeometry args={[r, r, r * 1.1, 16, 1, true]} /><meshStandardMaterial color="#94725e" roughness={1} side={THREE.DoubleSide} /></mesh>
-        <mesh position={[0, 0.05, 0]}><cylinderGeometry args={[r, r, 0.1, 16]} /><meshStandardMaterial color="#725741" roughness={1} /></mesh>
-        <mesh position={[0, r * 1.4, -r * 0.5]} rotation={[-0.25, 0, 0]}><circleGeometry args={[r * 0.8, 16]} /><meshStandardMaterial color="#ae8e68" roughness={1} side={THREE.DoubleSide} /></mesh>
+        <mesh position={[0, r * 0.55, 0]} castShadow receiveShadow><cylinderGeometry args={[r, r, r * 1.1, 16, 1, true]} /><meshStandardMaterial {...boundaryFog} color="#94725e" roughness={1} side={THREE.DoubleSide} /></mesh>
+        <mesh position={[0, 0.05, 0]}><cylinderGeometry args={[r, r, 0.1, 16]} /><meshStandardMaterial {...boundaryFog} color="#725741" roughness={1} /></mesh>
+        <mesh position={[0, r * 1.4, -r * 0.5]} rotation={[-0.25, 0, 0]}><circleGeometry args={[r * 0.8, 16]} /><meshStandardMaterial {...boundaryFog} color="#ae8e68" roughness={1} side={THREE.DoubleSide} /></mesh>
         <Box position={[0, r * 0.65, r * 0.95]} scale={[r * 0.4, r * 0.35, r * 0.06]} color={owner?.color ?? PALETTE.linen} />
-      </> : <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}><circleGeometry args={[wreck ? 0.65 : 0.45, 16]} /><meshStandardMaterial color={PALETTE.linen} roughness={1} /></mesh>}
+      </> : <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}><circleGeometry args={[wreck ? 0.65 : 0.45, 16]} /><meshStandardMaterial {...boundaryFog} color={PALETTE.linen} roughness={1} /></mesh>}
       <Cargo items={items} radius={wreck ? 0.7 : r * 0.8} />
       <Html position={[0, wreck ? 3.9 : r * 2.5, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
         <div className={`place-label ${wreck ? 'wreck-label' : ''}`}><strong>{wreck ? 'THE WRECK' : chest ? owner?.name ?? 'Shared chest' : 'Supplies'}</strong>{(wreck || hovered) && <span>{total ? `${total} supplies` : 'Empty'}{wreck ? ' · shared cargo' : ''}</span>}</div>
@@ -165,16 +166,16 @@ function PlaneWreck({ world, physics }: { world: World; physics: Physics }) {
   return <group position={[x, 0, z]}>
     {/* The capsule's horizontal silhouette exactly matches the published collider. */}
     <mesh rotation={[0, 0, -Math.PI / 2]} castShadow receiveShadow name="wreck-fuselage">
-      <capsuleGeometry args={[r, length, 8, 16]} /><meshStandardMaterial color="#c8c3aa" roughness={1} />
+      <capsuleGeometry args={[r, length, 8, 16]} /><meshStandardMaterial {...boundaryFog} color="#c8c3aa" roughness={1} />
     </mesh>
     <Box position={[0, 0.38, r * 0.96]} scale={[length * 0.95, 0.18, 0.02]} color="#8d6654" />
-    {[-0.3, 0, 0.3].map(offset => <mesh key={offset} position={[offset * length, r * 0.63, r * 0.78]}><circleGeometry args={[r * 0.11, 12]} /><meshStandardMaterial color="#485d58" /></mesh>)}
+    {[-0.3, 0, 0.3].map(offset => <mesh key={offset} position={[offset * length, r * 0.63, r * 0.78]}><circleGeometry args={[r * 0.11, 12]} /><meshStandardMaterial {...boundaryFog} color="#485d58" /></mesh>)}
     {/* Cargo door is a hatch on the south side, not the collider's origin. */}
     <Box position={[0, r * 0.45, r * 0.9]} scale={[1.15, r * 0.8, 0.025]} color="#536359" />
-    <mesh position={[-length / 2, r * 0.42, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[r * 0.85, 0.06, 5, 16]} /><meshStandardMaterial color="#81897b" /></mesh>
+    <mesh position={[-length / 2, r * 0.42, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[r * 0.85, 0.06, 5, 16]} /><meshStandardMaterial {...boundaryFog} color="#81897b" /></mesh>
     <Box position={[length * 0.4, r * 1.2, 0]} scale={[1.5, r * 1.5, 0.12]} color="#8d6654" />
     {/* Buried wing fragments are flat paint-like surfaces, never false solid obstacles. */}
-    {[-1, 1].map(side => <mesh key={side} position={[0, 0.012, side * r * 1.5]} rotation={[-Math.PI / 2, 0, side * 0.15]}><planeGeometry args={[2.6, r * 2]} /><meshStandardMaterial color="#a8ac96" roughness={1} /></mesh>)}
+    {[-1, 1].map(side => <mesh key={side} position={[0, 0.012, side * r * 1.5]} rotation={[-Math.PI / 2, 0, side * 0.15]}><planeGeometry args={[2.6, r * 2]} /><meshStandardMaterial {...boundaryFog} color="#a8ac96" roughness={1} /></mesh>)}
   </group>;
 }
 
@@ -184,7 +185,7 @@ function FallenTree({ node, world, physics }: { node: ResourceNode; world: World
   const r = physics.treeRadius * 0.7;
   const [x, z] = toScene(world, node.x + Math.cos(node.angle) * length / 2, node.y + Math.sin(node.angle) * length / 2);
   return <group position={[x, r, z]} rotation={[0, -node.angle, 0]} name={`fallen-tree-${node.id}`}>
-    <mesh rotation={[0, 0, -Math.PI / 2]} castShadow receiveShadow><capsuleGeometry args={[r, length, 4, 10]} /><meshStandardMaterial color="#78654e" roughness={1} /></mesh>
-    <mesh position={[-length / 2 - r * 0.9, 0, 0]} rotation={[0, -Math.PI / 2, 0]}><circleGeometry args={[r * 0.4, 10]} /><meshStandardMaterial color="#c3a779" roughness={1} /></mesh>
+    <mesh rotation={[0, 0, -Math.PI / 2]} castShadow receiveShadow><capsuleGeometry args={[r, length, 4, 10]} /><meshStandardMaterial {...boundaryFog} color="#78654e" roughness={1} /></mesh>
+    <mesh position={[-length / 2 - r * 0.9, 0, 0]} rotation={[0, -Math.PI / 2, 0]}><circleGeometry args={[r * 0.4, 10]} /><meshStandardMaterial {...boundaryFog} color="#c3a779" roughness={1} /></mesh>
   </group>;
 }

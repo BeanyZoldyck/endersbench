@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { DbConnection, tables } from './module_bindings';
 import type { Agent, Item } from './module_bindings/types';
@@ -42,6 +42,7 @@ export default function App() {
   const [scores, scoresReady] = useTable(tables.score);
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
+  const explore = useCallback(() => setMode('explore'), []);
   const [panel, setPanel] = useState<'journal' | 'inspector' | 'join' | null>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
@@ -76,10 +77,9 @@ export default function App() {
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={() => setMode('explore')}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
     </div>
-    <div className="atmosphere" />
     <header className="masthead">
       <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><span className="edition">FIELD STUDY 01</span></div>
       <h1>The Clearing<span>.</span></h1>

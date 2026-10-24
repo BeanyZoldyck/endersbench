@@ -26,7 +26,7 @@ export function Atmosphere({ world, hazards, readTime }: { world: World; hazards
     if (Math.abs(ms - lastShadow.current) > 1000) { gl.shadowMap.needsUpdate = true; lastShadow.current = ms; }
   });
   return <>
-    <color attach="background" args={['#a4ad91']} /><fog attach="fog" args={['#a4ad91', 115, 255]} />
+    <color attach="background" args={['#a4ad91']} /><fog attach="fog" args={['#a4ad91', Math.max(0, world.radius - 6), world.radius + 36]} />
     <hemisphereLight ref={fill} args={['#d9e5df', '#706650', 1.3]} />
     <directionalLight ref={sun} castShadow position={[-35, 28, 20]} intensity={2}
       shadow-mapSize={[1024, 1024]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={60} shadow-camera-bottom={-60} shadow-camera-far={180} shadow-normalBias={0.08} shadow-bias={-0.0002} />

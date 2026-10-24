@@ -1,3 +1,4 @@
+import { boundaryFog } from './boundaryFog';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -70,24 +71,24 @@ export function Critter({ agent, world, selected, said, addressedTo, radius, rea
   });
   return <group ref={root} position={initial.current} onClick={e => { e.stopPropagation(); if (e.delta < 4) onSelect(agent.id); }}>
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]} scale={[1, 0.78, 1]}>
-      <circleGeometry args={[radius, 24]} /><meshBasicMaterial color="#293f39" transparent opacity={ghost ? 0.04 : 0.13} depthWrite={false} />
+      <circleGeometry args={[radius, 24]} /><meshBasicMaterial {...boundaryFog} color="#293f39" transparent opacity={ghost ? 0.04 : 0.13} depthWrite={false} />
     </mesh>
     <group ref={feet}>
-      {[-1, 1].map(s => <mesh key={s} position={[s * radius * 0.41, radius * 0.15, 0]} scale={[radius * 0.28, radius * 0.15, radius * 0.4]} ><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#665744" transparent={ghost} opacity={opacity} roughness={1} /></mesh>)}
+      {[-1, 1].map(s => <mesh key={s} position={[s * radius * 0.41, radius * 0.15, 0]} scale={[radius * 0.28, radius * 0.15, radius * 0.4]} ><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#665744" transparent={ghost} opacity={opacity} roughness={1} /></mesh>)}
     </group>
     <group ref={body} position={[0, radius * 1.1, 0]} scale={radius}>
-      <mesh ><sphereGeometry args={[1, 24, 20]} /><meshStandardMaterial color={tint} roughness={0.96} transparent={ghost} opacity={opacity} depthWrite={!ghost} /></mesh>
+      <mesh ><sphereGeometry args={[1, 24, 20]} /><meshStandardMaterial {...boundaryFog} color={tint} roughness={0.96} transparent={ghost} opacity={opacity} depthWrite={!ghost} /></mesh>
       <group ref={eyes} position={[0, 0.15, 0]}>
         {[-1, 1].map(s => <group key={s} position={[s * 0.27, 0, 0.95]}>
-          <mesh scale={[0.075, 0.13, 0.035]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#293b36" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-          <mesh position={[-0.015, 0.045, 0.031]} scale={[0.018, 0.022, 0.01]}><sphereGeometry args={[1, 8, 6]} /><meshBasicMaterial color="#f0e4cc" transparent={ghost} opacity={opacity} /></mesh>
+          <mesh scale={[0.075, 0.13, 0.035]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#293b36" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
+          <mesh position={[-0.015, 0.045, 0.031]} scale={[0.018, 0.022, 0.01]}><sphereGeometry args={[1, 8, 6]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent={ghost} opacity={opacity} /></mesh>
         </group>)}
       </group>
-      <mesh position={[0, -0.47, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.89, 0.105, 6, 24]} /><meshStandardMaterial color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-      <mesh position={[0.57, -0.67, 0.57]} rotation={[0.12, 0, -0.2]} scale={[0.22, 0.55, 0.12]}><sphereGeometry args={[1, 10, 8]} /><meshStandardMaterial color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-      <mesh position={[-0.72, -0.5, -0.4]} rotation={[0, 0, -0.3]} scale={[0.24, 0.35, 0.2]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#b8a583" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
+      <mesh position={[0, -0.47, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.89, 0.105, 6, 24]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
+      <mesh position={[0.57, -0.67, 0.57]} rotation={[0.12, 0, -0.2]} scale={[0.22, 0.55, 0.12]}><sphereGeometry args={[1, 10, 8]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
+      <mesh position={[-0.72, -0.5, -0.4]} rotation={[0, 0, -0.3]} scale={[0.24, 0.35, 0.2]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#b8a583" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
     </group>
-    {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial color="#f0e4cc" transparent opacity={0.85} /></mesh>}
+    {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent opacity={0.85} /></mesh>}
     <Html position={[0, radius * 2.7 + 0.35, 0]} center zIndexRange={[12, 8]} style={{ pointerEvents: 'none' }}>
       <div className="tag-stack">
         {said && <div ref={bubble} className={`bubble ${said.channel === 'whisper' ? 'whisper' : ''}`}>{said.channel === 'whisper' && <span className="speech-channel">🔒 Whisper{addressedTo ? ` to ${addressedTo.name}` : ''}</span>}{said.text.length > 120 ? `${said.text.slice(0, 117)}…` : said.text}</div>}
