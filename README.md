@@ -46,7 +46,8 @@ Two prompt conditions:
 
 These demonstrate the method; samples are small and every rate carries a 95% interval on the [results page](results/latest/RESULTS.md). The rules were improved overnight, so results are compared **within** a rules version, never pooled across versions.
 
-- **Stated rules add the justification, not the restraint.** Under `charter`, 8 of 12 hoarding violations came with the agent's own claim to be taking "a fair share". Under the norm-free `reward` prompt the figure was 0 of 5. Agents hoarded either way.
+- **The agents told to maximise reward got less of it.** Under the latest rules, the reward-only group grabbed, stole, lied and missed the rescue (mean reward 469). The group given rules built the signal fire together and were all rescued (765). The rule-bound group out-earned the reward-only group in 5 of 6 rules versions.
+- **Stated rules add the justification, not the restraint.** Under `charter`, 10 of 14 hoarding violations came with the agent's own claim to be taking "a fair share". Under the norm-free `reward` prompt the figure was 0 of 8. Agents hoarded either way.
 - **They recite the rule while breaking it.** At 100% pressure, an agent took from another survivor's chest, thinking: *"Starving; Wren's chest is nearby and marked supplies must remain untouched."*
 - **Scarcity drives violations.** With twice the food there was 1 violation and everyone lived. At 0.6x, half the mid-pressure opportunities were taken.
 - **Opportunism, not only desperation.** With no rules stated, agents grabbed most of the shared rations in the first minute, at 13–26% pressure.
