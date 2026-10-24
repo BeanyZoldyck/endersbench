@@ -27,6 +27,8 @@ export type SceneProps = {
   selectedCard?: ReactNode;
   // Someone who just broke a rule: the audience camera cuts to them.
   spotlitId?: bigint;
+  // A closer establishing shot for the landing showcase. Other scenes retain the standard framing.
+  framing?: 'standard' | 'showcase';
 };
 
 export function WorldScene(props: SceneProps) {
@@ -73,21 +75,32 @@ const FOV = 30;
 const VIEW = new THREE.Vector3(80, 82, 110).normalize();
 const MIN_DISTANCE = 18, MAX_DISTANCE = 260;
 
-function CameraRig({ world, agents, containers, mode, selectedId, spotlitId, moments, onExplore }: SceneProps) {
+function CameraRig({ world, agents, containers, mode, selectedId, spotlitId, moments, onExplore, framing }: SceneProps) {
   const controls = useRef<Controls>(null);
   const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
   const offset = useMemo(() => new THREE.Vector3(), []);
   const shot = useRef({ at: -Infinity, eventId: 0, priority: 0 });
   const lastMode = useRef(mode);
+  const framedShowcase = useRef(false);
   useEffect(() => {
+    if (framing === 'showcase' && !framedShowcase.current && controls.current) {
+      const wreck = containers.find(container => container.kind === 'wreck');
+      const x = agents.length ? agents.reduce((sum, agent) => sum + agent.x, 0) / agents.length : wreck?.x ?? world.width / 2;
+      const y = agents.length ? agents.reduce((sum, agent) => sum + agent.y, 0) / agents.length : wreck?.y ?? world.height / 2;
+      controls.current.target.set(x - world.width / 2, 0, y - world.height / 2);
+      target.current.copy(controls.current.target);
+      framedShowcase.current = true;
+    }
     // Frame about 88 x 60 tiles around the target; perspective adds the far side for free.
     const half = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     const aspect = size.width / Math.max(1, size.height);
-    const distance = THREE.MathUtils.clamp(Math.max(44 / (half * aspect), 30 / half), MIN_DISTANCE, MAX_DISTANCE);
+    const distance = framing === 'showcase'
+      ? THREE.MathUtils.clamp(Math.max(29 / (half * aspect), 19 / half), MIN_DISTANCE, MAX_DISTANCE)
+      : THREE.MathUtils.clamp(Math.max(44 / (half * aspect), 30 / half), MIN_DISTANCE, MAX_DISTANCE);
     camera.position.copy(controls.current?.target ?? target.current).addScaledVector(VIEW, distance);
     camera.updateProjectionMatrix();
-  }, [camera, size.width, size.height]);
+  }, [camera, size.width, size.height, framing]);
   useFrame((_state, delta) => {
     const control = controls.current;
     if (!control) return;

@@ -1,0 +1,10 @@
+.studio .model-buddy{background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible;flex-shrink:0}
+.studio .model-buddy img{display:block;width:100%;height:100%;object-fit:contain}
+.studio .model-logo.model-buddy{width:80px;height:80px}
+.studio .avatar.model-buddy{width:40px;height:40px}
+.studio .agent-intros .avatar.model-buddy{width:64px;height:64px}
+.studio .result-agents .avatar.model-buddy{width:56px;height:56px}
+.studio .model-card{grid-template-columns:80px minmax(0,1fr)}
+.studio .scenario-copy>strong,.studio .scenario-copy>span,.studio .scenario-copy>small{display:block}
+.studio .scenario-copy>span{margin:8px 0}
+@media(max-width:700px){.studio .model-card{grid-template-columns:48px minmax(0,1fr)}.studio .model-card .model-logo.model-buddy{width:48px;height:48px}}
