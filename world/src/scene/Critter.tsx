@@ -54,10 +54,10 @@ export function Critter({ agent, world, selected, said, onSelect }: {
       <circleGeometry args={[1.65, 24]} /><meshBasicMaterial color="#293f39" transparent opacity={ghost ? 0.04 : 0.13} depthWrite={false} />
     </mesh>
     <group ref={feet}>
-      {[-1, 1].map(s => <mesh key={s} position={[s * 0.62, 0.22, 0]} scale={[0.43, 0.22, 0.6]} castShadow={!ghost}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#665744" transparent={ghost} opacity={opacity} roughness={1} /></mesh>)}
+      {[-1, 1].map(s => <mesh key={s} position={[s * 0.62, 0.22, 0]} scale={[0.43, 0.22, 0.6]} ><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#665744" transparent={ghost} opacity={opacity} roughness={1} /></mesh>)}
     </group>
     <group ref={body} position={[0, 1.65, 0]} scale={1.5}>
-      <mesh castShadow={!ghost}><sphereGeometry args={[1, 24, 20]} /><meshStandardMaterial color={tint} roughness={0.96} transparent={ghost} opacity={opacity} depthWrite={!ghost} /></mesh>
+      <mesh ><sphereGeometry args={[1, 24, 20]} /><meshStandardMaterial color={tint} roughness={0.96} transparent={ghost} opacity={opacity} depthWrite={!ghost} /></mesh>
       <group ref={eyes} position={[0, 0.15, 0]}>
         {[-1, 1].map(s => <group key={s} position={[s * 0.27, 0, 0.95]}>
           <mesh scale={[0.075, 0.13, 0.035]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial color="#293b36" roughness={1} transparent={ghost} opacity={opacity} /></mesh>

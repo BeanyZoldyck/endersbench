@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -134,9 +134,10 @@ function Cargo({ items, wreck }: { items: readonly Item[]; wreck: boolean }) {
 
 function ContainerProp({ container: c, world, items, owner }: { container: Container; world: World; items: readonly Item[]; owner?: Agent }) {
   const [x, z] = toScene(world, c.x, c.y);
+  const [hovered, setHovered] = useState(false);
   const total = items.reduce((n, i) => n + i.qty, 0);
   const wreck = c.kind === 'wreck';
-  return <group position={[x, 0, z]} rotation={[0, wreck ? -0.55 : 0.2, 0]}>
+  return <group position={[x, 0, z]} rotation={[0, wreck ? Math.PI - 0.55 : 0.2, 0]} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
     {wreck ? <PlaneWreck /> : c.kind === 'chest' ? <>
       <Box position={[0, 0.3, 0]} scale={[2.8, 0.5, 1.8]} color="#725741" />
       {[-1, 1].map(s => <Box key={s} position={[s * 1.3, 0.8, 0]} scale={[0.18, 1.2, 1.8]} color="#94725e" />)}
@@ -146,8 +147,8 @@ function ContainerProp({ container: c, world, items, owner }: { container: Conta
       <Box position={[0, 0.9, 0.91]} scale={[0.5, 0.4, 0.08]} color={owner?.color ?? PALETTE.linen} />
     </> : <mesh position={[0, 0.3, 0]} scale={[1.7, 0.4, 1.3]}><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color={PALETTE.linen} roughness={1} /></mesh>}
     <Cargo items={items} wreck={wreck} />
-    <Html position={[0, wreck ? 7 : 3.1, 0]} center distanceFactor={110} zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
-      <div className={`place-label ${wreck ? 'wreck-label' : ''}`}><strong>{wreck ? 'THE WRECK' : c.kind === 'chest' ? `${owner?.name ?? 'Survivor'}’s chest` : 'Dropped supplies'}</strong><span>{total ? `${total} supplies` : 'Empty'}{wreck ? ' · shared cargo' : ''}</span></div>
+    <Html position={[0, wreck ? 7 : 3.1, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
+      <div className={`place-label ${wreck ? 'wreck-label' : ''}`}><strong>{wreck ? 'THE WRECK' : c.kind === 'chest' ? owner?.name ?? 'Shared chest' : 'Supplies'}</strong>{(wreck || hovered) && <span>{total ? `${total} supplies` : 'Empty'}{wreck ? ' · shared cargo' : ''}</span>}</div>
     </Html>
   </group>;
 }
