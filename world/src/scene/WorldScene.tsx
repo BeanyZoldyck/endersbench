@@ -27,6 +27,7 @@ export type SceneProps = {
   selectedCard?: ReactNode;
   // Someone who just broke a rule: the audience camera cuts to them.
   spotlitId?: bigint;
+  agentAvatar?: (agent: Agent) => ReactNode;
   // A closer establishing shot for the landing showcase. Other scenes retain the standard framing.
   framing?: 'standard' | 'showcase';
 };
@@ -52,8 +53,8 @@ export function WorldScene(props: SceneProps) {
       <CameraRig {...props} />
       <StaticShadows nodes={props.nodes} containers={props.containers} items={props.items} phase={world.phase} />
       <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} physics={props.physics} onClickTile={props.onClickTile} />
-      {agents.filter(a => !a.alive).map(a => <Grave key={`grave-${a.id}`} agent={a} world={world} />)}
-      {agents.filter(a => a.alive).map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} card={a.id === selectedId ? props.selectedCard : undefined} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
+      {agents.filter(a => !a.alive).map(a => <Grave key={`grave-${a.id}`} avatar={props.agentAvatar?.(a)} agent={a} world={world} />)}
+      {agents.filter(a => a.alive).map(a => <Critter key={String(a.id)} avatar={props.agentAvatar?.(a)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} card={a.id === selectedId ? props.selectedCard : undefined} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
       <ContainerGlows world={world} containers={props.containers} items={props.items} physics={props.physics} />
       <CarriedGlows world={world} agents={agents} items={props.items} physics={props.physics} />
       <WreckTitle world={world} physics={props.physics} />

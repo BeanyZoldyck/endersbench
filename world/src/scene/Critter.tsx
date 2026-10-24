@@ -11,9 +11,9 @@ import { toScene } from './Environment';
 // distance; the physics radius is unchanged.
 export const CRITTER_SCALE = 1.35;
 
-export function Critter({ agent, world, selected, said, addressedTo, radius: bodyRadius, readTime, connected, onSelect, card }: {
+export function Critter({ agent, world, selected, said, addressedTo, radius: bodyRadius, readTime, connected, onSelect, card, avatar }: {
   agent: Agent; world: World; selected: boolean; said?: Message; addressedTo?: Agent; radius: number; readTime: ReadGameTime; connected: boolean; onSelect: (id: bigint) => void;
-  card?: ReactNode;
+  card?: ReactNode; avatar?: ReactNode;
 }) {
   const radius = bodyRadius * CRITTER_SCALE;
   const root = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), eyes = useRef<THREE.Group>(null);
@@ -113,7 +113,7 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
     <Html position={[0, radius * 2.7 + 0.35, 0]} center zIndexRange={[12, 8]} style={{ pointerEvents: 'none' }}>
       <div className="tag-stack">
         {said && <div ref={bubble} className={`bubble ${said.channel === 'whisper' ? 'whisper' : ''}`}>{said.channel === 'whisper' && <span className="speech-channel">🔒 Whisper{addressedTo ? ` to ${addressedTo.name}` : ''}</span>}{said.text.length > 120 ? `${said.text.slice(0, 117)}…` : said.text}</div>}
-        <div className={`nametag ${ghost ? 'ghost-tag' : ''}`}><span>{agent.name}</span>{thinking && <span className="thinking-dots" aria-label="Thinking"><i /><i /><i /></span>}{ghost && <span className="ghost-word">ghost</span>}{agent.pinned && <span className="condition-tag">Pinned</span>}{dazed && <span className="condition-tag">Dazed</span>}</div>
+        <div className={`nametag ${ghost ? 'ghost-tag' : ''}`}>{avatar}<span>{agent.name}</span>{thinking && <span className="thinking-dots" aria-label="Thinking"><i /><i /><i /></span>}{ghost && <span className="ghost-word">ghost</span>}{agent.pinned && <span className="condition-tag">Pinned</span>}{dazed && <span className="condition-tag">Dazed</span>}</div>
         <div className="mini-needs" aria-label={`Health ${Math.round(agent.hp)}, food ${Math.round(agent.hunger)}, warmth ${Math.round(agent.warmth)}`}><i style={{ width: `${Math.max(0, Math.min(100, agent.hp))}%` }} /><i style={{ width: `${Math.max(0, Math.min(100, agent.hunger))}%` }} /><i style={{ width: `${Math.max(0, Math.min(100, agent.warmth))}%` }} /></div>
       </div>
     </Html>
@@ -122,7 +122,7 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
 
 // Death is permanent: the fallen leave a cairn where they died, ringed in
 // their colour, and a tag that stays for the rest of the run.
-export function Grave({ agent, world }: { agent: Agent; world: World }) {
+export function Grave({ agent, world, avatar }: { agent: Agent; world: World; avatar?: ReactNode }) {
   const [x, z] = toScene(world, agent.x, agent.y);
   return <group position={[x, 0, z]} name={`grave-${agent.id}`}>
     {[[0, 0.22, 0, 0.55], [0.08, 0.6, 0.05, 0.42], [-0.04, 0.92, -0.02, 0.3]].map(([dx, y, dz, r], i) => <mesh key={i} position={[dx, y, dz]} scale={[r, r * 0.62, r]} castShadow receiveShadow>
@@ -130,7 +130,7 @@ export function Grave({ agent, world }: { agent: Agent; world: World }) {
     </mesh>)}
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[0.85, 1.0, 32]} /><meshBasicMaterial {...boundaryFog} color={agent.color} transparent opacity={0.7} depthWrite={false} /></mesh>
     <Html position={[0, 1.7, 0]} center zIndexRange={[7, 2]} style={{ pointerEvents: 'none' }}>
-      <div className="nametag grave-tag"><span>{agent.name}</span><span className="ghost-word">died</span></div>
+      <div className="nametag grave-tag">{avatar}<span>{agent.name}</span><span className="ghost-word">died</span></div>
     </Html>
   </group>;
 }
