@@ -5,7 +5,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import baseline
@@ -107,8 +106,11 @@ class BaselineTests(unittest.TestCase):
         with patch.object(baseline.importlib.util, "find_spec", return_value=None):
             with self.assertRaises(ValueError) as caught:
                 baseline.check_dependencies(["strongreject"])
-        for text in (baseline.sys.executable, "torch", "transformers", "accelerate", "pyarrow"):
+        for text in (baseline.sys.executable, "pyarrow"):
             self.assertIn(text, str(caught.exception))
+
+    def memory(self, rss=0, gpu=None):
+        return {"server_rss_bytes": rss, "gpu_process_bytes": gpu, "system_available_bytes": 4 * 2**30}
 
     def test_dry_run_does_not_require_inference_dependencies(self):
         with patch.object(baseline.importlib.util, "find_spec", return_value=None) as lookup:
@@ -128,7 +130,7 @@ class BaselineTests(unittest.TestCase):
         text, status = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(text), contextlib.redirect_stderr(status):
             with baseline.LiveProgress(output, {"id": "test:0"}, 1, 2, 12,
-                                       lambda: (2**30, 2 * 2**30), interval=3600) as progress:
+                                       lambda: self.memory(2**30, 2 * 2**30), interval=3600) as progress:
                 progress.add_tokens(3)
                 progress.text("Hello world", stream_end=True)
                 snapshot = progress.emit()
@@ -137,40 +139,30 @@ class BaselineTests(unittest.TestCase):
                 self.assertIsNotNone(snapshot["first_token_seconds"])
         saved = json.loads((output / "progress.json").read_text())
         self.assertEqual(saved["status"], "generation_finished")
-        self.assertEqual(saved["cuda_allocated_bytes"], 2**30)
+        self.assertEqual(saved["server_rss_bytes"], 2**30)
         self.assertIn("Hello world", text.getvalue())
         self.assertIn("3 tokens", status.getvalue())
-        self.assertIn("1.00 GiB allocated", status.getvalue())
+        self.assertIn("server RSS 1.00 GiB", status.getvalue())
         self.assertFalse(progress.thread.is_alive())
 
     def test_live_progress_stops_on_failure(self):
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaisesRegex(ValueError, "generation failed"):
                 with baseline.LiveProgress(self.root, {"id": "test:0"}, 1, 1, 12,
-                                           lambda: (0, 0), interval=3600) as progress:
+                                           self.memory, interval=3600) as progress:
                     raise ValueError("generation failed")
         self.assertFalse(progress.thread.is_alive())
         saved = json.loads((self.root / "progress.json").read_text())
         self.assertEqual(saved["status"], "generation_interrupted")
 
-    def test_streamer_counts_only_generated_tokens_and_can_hide_text(self):
-        class FakeTextStreamer:
-            def __init__(self, tokenizer, **kwargs):
-                pass
-
-            def put(self, value):
-                pass
-
+    def test_progress_can_hide_text_without_hiding_counts(self):
         text = io.StringIO()
-        with patch.dict("sys.modules", {"transformers": SimpleNamespace(TextStreamer=FakeTextStreamer)}), \
-                contextlib.redirect_stdout(text), contextlib.redirect_stderr(io.StringIO()):
+        with contextlib.redirect_stdout(text), contextlib.redirect_stderr(io.StringIO()):
             with baseline.LiveProgress(self.root, {"id": "test:0"}, 1, 1, 100,
-                                       lambda: (0, 0), interval=3600, stream=False) as progress:
-                streamer = baseline.make_streamer(None, progress)
-                streamer.put(SimpleNamespace(numel=lambda: 100))
-                streamer.put(SimpleNamespace(numel=lambda: 1))
-                streamer.put(SimpleNamespace(numel=lambda: 1))
-                streamer.on_finalized_text("Hidden response", stream_end=True)
+                                       self.memory, interval=3600, stream=False) as progress:
+                progress.add_tokens(1)
+                progress.add_tokens(1)
+                progress.text("Hidden response", stream_end=True)
         self.assertEqual(progress.tokens, 2)
         self.assertEqual(text.getvalue(), "")
 
@@ -178,12 +170,12 @@ class BaselineTests(unittest.TestCase):
         row = {"id": "test:0", "dataset": "test", "status": "ok", "expected_behavior": "answer",
                "refusal_heuristic": True, "input_tokens": 10, "output_tokens": 4,
                "generation_seconds": 2, "output_tokens_per_second": 2,
-               "peak_cuda_allocated_bytes": 2**30, "peak_cuda_reserved_bytes": 2 * 2**30,
+               "sampled_peak_server_rss_bytes": 2**30, "sampled_peak_gpu_process_bytes": 2 * 2**30,
                "length_limited": False}
         text = io.StringIO()
         with contextlib.redirect_stdout(text):
             baseline.show_result(row, [row], 3, 2)
-        for expected in ("refusal proxy=YES", "latency=2.00s", "2.00 tok/s", "1.00 GiB",
+        for expected in ("screening=refusal_marker", "latency=2.00s", "2.00 tok/s", "1.00 GiB",
                          "[running 1/3]", "ETA~4.0s", "100.0% (n=1)"):
             self.assertIn(expected, text.getvalue())
 

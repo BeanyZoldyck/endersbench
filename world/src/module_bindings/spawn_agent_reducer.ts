@@ -13,6 +13,4 @@ import {
 export default {
   name: __t.string(),
   modelId: __t.string(),
-  x: __t.f32(),
-  y: __t.f32(),
 };

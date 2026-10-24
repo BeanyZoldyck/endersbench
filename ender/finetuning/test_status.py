@@ -1,5 +1,7 @@
 import tempfile
 import unittest
+import contextlib
+import io
 from pathlib import Path
 from unittest.mock import patch
 
@@ -39,6 +41,15 @@ class StatusTests(unittest.TestCase):
             result = status.inspect(self.root, self.root)
         self.assertIn('Missing interpreter', result['error'])
         self.assertEqual(result['packages'], {})
+
+    def test_completed_hf_download_is_not_enough_for_llamacpp_readiness(self):
+        info = {'python': self.root / '.venv/bin/python', 'packages': {'pyarrow': True}, 'error': None,
+                'checkpoint': {'shards': 18, 'bytes': 55563006776, 'ready': True}, 'jobs': [],
+                'server_binary': False, 'gguf': self.root / 'missing.gguf'}
+        text = io.StringIO()
+        with patch.object(status, 'inspect', return_value=info), contextlib.redirect_stdout(text):
+            self.assertEqual(status.main(['--root', str(self.root), '--once']), 1)
+        self.assertNotIn('READY — BF16', text.getvalue())
 
 
 if __name__ == '__main__':

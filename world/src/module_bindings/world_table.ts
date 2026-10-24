@@ -23,4 +23,9 @@ export default __t.row({
   phase: __t.string(),
   winterAtMs: __t.f64().name("winter_at_ms"),
   fairShare: __t.u32().name("fair_share"),
+  dayLengthMs: __t.f64().name("day_length_ms"),
+  dayOffsetMs: __t.f64().name("day_offset_ms"),
+  daylight: __t.string(),
+  rescueAtMs: __t.f64().name("rescue_at_ms"),
+  rescueState: __t.string().name("rescue_state"),
 });

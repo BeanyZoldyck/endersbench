@@ -18,7 +18,8 @@ const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'charter';
 const TIMEOUT_MS = Number(process.env.DECISION_TIMEOUT_MS ?? 20_000);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const TOKEN_FILE = path.join(here, '..', `.harness-token-${DB_NAME}`);
+// One identity per server and database: a local token is meaningless on Maincloud.
+const TOKEN_FILE = path.join(here, '..', `.harness-token-${HOST.replace(/[^a-z0-9]+/gi, '_')}-${DB_NAME}`);
 
 // "Name:provider:model" → { name, modelId: "provider:model" }
 function parseRoster(spec: string) {
@@ -57,7 +58,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; modelId: string; observation: string }) {
   if (inFlight.has(req.id)) return;
   inFlight.add(req.id);
-  const started = Date.now();
+  // Monotonic clock: Date.now() can step backwards when the system clock resyncs.
+  const started = performance.now();
   const agent = conn.db.agent.id.find(req.agentId);
   const name = agent?.name ?? `agent ${req.agentId}`;
   try {
@@ -75,7 +77,7 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
       brain.decide({ agentName: name, observation: JSON.parse(req.observation), tools, system }),
       TIMEOUT_MS
     );
-    const latencyMs = Date.now() - started;
+    const latencyMs = Math.max(0, Math.round(performance.now() - started));
     await conn.reducers.submitDecision({
       requestId: req.id,
       action: JSON.stringify(decision.action),
@@ -84,7 +86,7 @@ async function answer(conn: DbConnection, req: { id: bigint; agentId: bigint; mo
     });
     console.log(`${name.padEnd(8)} ${String(latencyMs).padStart(5)} ms  ${decision.action.name} ${JSON.stringify(decision.action.args)}  "${decision.thought}"`);
   } catch (err) {
-    const latencyMs = Date.now() - started;
+    const latencyMs = Math.max(0, Math.round(performance.now() - started));
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`${name.padEnd(8)} failed after ${latencyMs} ms: ${message}`);
     await conn.reducers.failDecision({ requestId: req.id, error: message, latencyMs }).catch(() => {});
@@ -103,9 +105,8 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
       console.error('This world belongs to another harness. Delete the token file only if you mean to take it over.', err);
       process.exit(1);
     }
-    for (const [i, r] of roster.entries()) {
-      const angle = (i / roster.length) * Math.PI * 2;
-      await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId, x: 32 + Math.cos(angle) * 8, y: 32 + Math.sin(angle) * 8 });
+    for (const r of roster) {
+      await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();

@@ -10,26 +10,13 @@ import time
 from pathlib import Path
 
 from baseline import MODEL, REVISION
+from llamacpp_backend import LlamaClient, provenance
 
 
 PACKAGE_CHECK = """
 import importlib.util, json
-names = ('torch', 'transformers', 'accelerate', 'pyarrow')
+names = ('pyarrow',)
 print(json.dumps({name: importlib.util.find_spec(name) is not None for name in names}))
-"""
-RUNTIME_CHECK = """
-import json, torch, accelerate, pyarrow
-from transformers import AutoConfig, AutoTokenizer, AutoModelForImageTextToText, TextStreamer
-assert torch.cuda.is_available(), 'CUDA is unavailable'
-assert torch.cuda.is_bf16_supported(), 'BF16 is unavailable'
-x = torch.ones((2, 2), device='cuda', dtype=torch.bfloat16)
-assert torch.isfinite(x @ x).all().item(), 'BF16 CUDA operation failed'
-config = AutoConfig.from_pretrained(MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False)
-tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False)
-tokenizer.apply_chat_template([{'role': 'user', 'content': 'Hello'}], tokenize=False,
-                             add_generation_prompt=True, enable_thinking=False)
-print(json.dumps({'gpu': torch.cuda.get_device_name(0), 'torch': torch.__version__,
-                  'cuda': torch.version.cuda, 'model_type': config.model_type}))
 """
 
 
@@ -53,7 +40,9 @@ def active_jobs(root):
             if cwd != root:
                 continue
             if ('pip' in args and 'install' in args) or ('download' in args and any(
-                    Path(arg).name == 'hf' for arg in args)):
+                    Path(arg).name == 'hf' for arg in args)) or any(
+                    'prepare_llamacpp.py' in arg or 'build_llamacpp.sh' in arg for arg in args) or (
+                    '--build' in args and any(Path(arg).name == 'cmake' for arg in args)):
                 jobs.append(f"PID {process.name}: {' '.join(args)}")
         except (OSError, UnicodeError):
             continue
@@ -83,7 +72,9 @@ def inspect(root, cache):
     else:
         error = f'Missing interpreter: {python}'
     return {'python': python, 'packages': packages, 'error': error,
-            'checkpoint': checkpoint_progress(cache), 'jobs': active_jobs(root)}
+            'checkpoint': checkpoint_progress(cache), 'jobs': active_jobs(root),
+            'server_binary': (root / 'llama.cpp/build/bin/llama-server').is_file(),
+            'gguf': root / 'models/Qwen3.8-27B-BF16.gguf'}
 
 
 def display(root, info):
@@ -98,18 +89,12 @@ def display(root, info):
     print('Partial shard transfers are NOT counted, so this number advances one completed shard at a time.')
     print('\nActive setup/download jobs:')
     print('\n'.join('  ' + job for job in info['jobs']) or '  None')
-    print('\nLatest installation output:\n' + read_tail(root / 'setup-install.log'))
+    print(f"\nllama.cpp binary: {'built' if info['server_binary'] else 'not built yet'}")
+    gguf = info['gguf']
+    print(f"BF16 GGUF: {'converted' if gguf.is_file() and gguf.with_suffix('.gguf.json').is_file() else 'not ready'}")
+    print('\nLatest llama.cpp build output:\n' + read_tail(root / 'llamacpp-setup.log', 3))
+    print('\nLatest GGUF conversion output:\n' + read_tail(root / 'gguf-conversion.log', 3))
     print('\nLatest checkpoint output:\n' + read_tail(root / 'model-download.log', 2))
-    validation_file = root / 'environment-validation.json'
-    if validation_file.is_file():
-        validation = json.loads(validation_file.read_text())
-        print(f"\nRecorded runtime checks: BF16 CUDA matmul={validation.get('bf16_cuda_matmul', 'not tested')}, "
-              f"SDPA backward={validation.get('bf16_sdpa_backward', 'not tested')}, "
-              f"baseline imports={validation.get('baseline_imports', 'not tested')}")
-        if validation.get('pip_check_exit_code'):
-            print('Dependency check warning: ' + validation.get('pip_check_output', '').strip())
-            print('NVIDIA wheel platform tag: ' + validation.get('cusparselt_wheel_tag', 'unknown'))
-            print('The recorded CUDA checks passed, but full-model inference remains untested.')
 
 
 def main(argv=None):
@@ -131,18 +116,19 @@ def main(argv=None):
         packages_ready = bool(info['packages']) and all(info['packages'].values())
         # Avoid import checks against an environment while pip is still changing it.
         installing = any(' pip install ' in f' {job} ' for job in info['jobs'])
-        if packages_ready and info['checkpoint']['ready'] and not installing:
-            print('\nChecking actual imports, CUDA BF16, and cached tokenizer/config...', flush=True)
-            code = f'MODEL={MODEL!r}\nREVISION={REVISION!r}\n' + RUNTIME_CHECK
-            check = subprocess.run([str(info['python']), '-c', code], capture_output=True, text=True, timeout=120)
-            if check.returncode == 0:
-                print('\a\nREADY — package imports, CUDA BF16, and complete checkpoint cache checks passed.')
-                print(check.stdout.strip())
-                print('Full-model inference has not yet been tested. Start the baseline with:')
+        if packages_ready and info['server_binary'] and info['gguf'].is_file() and not installing:
+            try:
+                provenance(info['gguf'], MODEL, REVISION)
+                props = LlamaClient(timeout=3).check(info['gguf'])
+            except (OSError, ValueError) as exc:
+                print(f'\nllama.cpp not ready: {exc}')
+                print(f'Start the server in another terminal: bash {root}/finetuning/serve_llamacpp.sh')
+            else:
+                print('\a\nREADY — BF16 GGUF provenance and local llama-server health/model checks passed.')
+                print('Server build:', props.get('build_info'))
+                print('Start the baseline with:')
                 print(f'cd {root}\n.venv/bin/python -u finetuning/baseline.py')
                 return 0
-            print('\nBLOCKED — runtime check failed:\n' + check.stderr[-6000:])
-            return 1
         print('\nNOT READY — do not start the baseline yet.', flush=True)
         if not info['jobs']:
             print('No setup/download job is active. An incomplete setup needs attention; inspect the logs.', flush=True)

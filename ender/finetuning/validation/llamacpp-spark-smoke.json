@@ -1,0 +1,12 @@
+{
+  "backend": "llama.cpp",
+  "status": "completed",
+  "suites": 9,
+  "real_model_requests": 18,
+  "errors": 0,
+  "server_build": "b1-6b9ba4f",
+  "gguf_precision": "bf16",
+  "aggregate_client_output_tokens_per_second": 3.4042182847546014,
+  "output_dir": "results/llamacpp-all-suites-smoke-20261024T074327",
+  "note": "Short integration smoke test, not an alignment evaluation; responses capped at 16 tokens."
+}

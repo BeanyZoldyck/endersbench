@@ -5,6 +5,7 @@
 - Host: `asus@172.20.13.192` (`gx10-b29c`).
 - Remote directory: `/home/asus/endersbench-finetune`.
 - Model: `Qwen/Qwen3.8-27B`, Apache-2.0, BF16 base weights.
+- Inference: local llama.cpp CUDA server with BF16 GGUF. No Transformers inference or quantization.
 - Method: supervised fine-tuning (SFT) with low-rank adaptation (LoRA).
 - Output: a LoRA adapter. The export configuration can merge the adapter into a BF16 checkpoint.
 - No automatic training, model publication, or external experiment reports.
@@ -18,7 +19,7 @@ Standard full fine-tuning with Adam needs more memory than this Spark provides.
 LoRA keeps the base weights in BF16 without quantization.
 The microbatch size is 1, with 8 accumulation steps.
 Compilation stays off until a short test establishes memory use and stability.
-Model fit and training throughput remain untested until the checkpoint is available.
+Training memory use and throughput remain untested until a training test completes.
 
 Installation follows the [current NVIDIA LLaMA-Factory guide](https://build.nvidia.com/spark/llama-factory/instructions).
 The remote environment contains CUDA 13 PyTorch and a separate Python virtual environment.
@@ -75,23 +76,24 @@ python3 finetuning/status.py
 
 The monitor uses the system Python. It does not need PyTorch to start.
 It checks packages in `.venv`, not `.download-venv`.
-It shows active jobs, recent installation output, and complete checkpoint shards.
+It shows active jobs, checkpoint shards, the llama.cpp build, and GGUF conversion output.
 Partial shards are not counted as complete downloads.
 It refreshes every 5 seconds.
-It prints `READY` only after package imports, a CUDA BF16 operation, and checkpoint cache checks pass.
+It prints `READY` after it checks the baseline dependency, BF16 GGUF provenance, and the local server model.
 It then rings the terminal bell and exits.
 These checks do not test full-model inference.
 Use `--once` for a single status report.
 Use Ctrl+C to stop the monitor without stopping installation or downloads.
 
-To see the full installation log, use this command:
+To see the llama.cpp build log, use this command:
 
 ```bash
-tail -f ~/endersbench-finetune/setup-install.log
+tail -f ~/endersbench-finetune/llamacpp-setup.log
 ```
 
-The installation log is a mirror of the current OpenCode setup job.
-The mirror depends on that OpenCode SSH connection.
+`gguf-conversion.log` contains conversion progress.
+`llama-server.log` contains server startup, CUDA offload, and request diagnostics.
+`setup-install.log` contains the earlier Python training environment installation.
 
 1. Connect to the Spark.
 
@@ -111,7 +113,7 @@ The mirror depends on that OpenCode SSH connection.
    source .venv/bin/activate
    ```
 
-4. Run the environment check.
+4. Run the training environment check, if needed.
 
    ```bash
    python finetuning/preflight.py
@@ -154,7 +156,10 @@ Download duration depends on the network.
 
 ## Base-model baseline
 
-`baseline.py` runs the unmodified BF16 checkpoint without a LoRA adapter.
+`baseline.py` uses a local llama.cpp CUDA server with the BF16 conversion of the pinned checkpoint.
+It does not load a model with PyTorch or Transformers.
+PyTorch and Transformers remain available for training and the one-time GGUF conversion.
+The server has no LoRA adapter, tool execution, or public network listener.
 It does not train the model or send responses to an external judge.
 It uses greedy generation with thinking disabled and no added system prompt.
 The model revision matches the training configuration.
@@ -168,11 +173,12 @@ The script keeps the context for contextual behaviors.
 OR-Bench 80k is available with `--datasets or-bench-80k`.
 SORRY-Bench variants and duplicate HarmBench files are not included.
 
-The checkpoint download and Python package installation must finish before inference.
-StrongREJECT needs `pyarrow` in `.venv`, the same environment that runs inference.
+The GGUF conversion and llama.cpp build must finish before inference.
+The client uses the Python standard library, plus `pyarrow` for StrongREJECT.
+StrongREJECT needs `pyarrow` in `.venv`, the environment that runs the client.
 Packages in `.download-venv` are not available to `.venv`.
 The script checks all required package names before it reads datasets or creates result files.
-After CUDA PyTorch installation finishes, install the explicit baseline dependencies with this command:
+Install the client dependency with this command:
 
 ```bash
 .venv/bin/python -m pip install -r finetuning/requirements-baseline.txt
@@ -180,23 +186,62 @@ After CUDA PyTorch installation finishes, install the explicit baseline dependen
 
 A dry run does not need PyTorch or model weights.
 
+### Server preparation
+
 1. Open `~/endersbench-finetune` on the Spark.
-2. Activate `.venv`.
-3. Check the selected prompts without model inference.
+2. Build the pinned llama.cpp revision with CUDA support for GB10.
+
+   ```bash
+   bash finetuning/build_llamacpp.sh
+   ```
+
+3. Convert the complete cached checkpoint to BF16 GGUF.
+
+   ```bash
+   .venv/bin/python -u finetuning/prepare_llamacpp.py
+   ```
+
+The conversion keeps the training safetensors unchanged.
+It does not download another model or quantize weights.
+It exports the text model without vision or the unused MTP draft head.
+The converter can retain some tensors, such as norms, in FP32.
+The sidecar `models/Qwen3.8-27B-BF16.gguf.json` records the source revision, converter revision, file size, and SHA256.
+The client checks the provenance and file size before inference.
+It records the conversion hash without hashing the full GGUF again on each run.
+The conversion requires about 55 GB of additional disk space.
+
+4. Start the server in a separate terminal.
+
+   ```bash
+   bash finetuning/serve_llamacpp.sh
+   ```
+
+The server binds to `127.0.0.1:8080` only.
+It requests all model layers on the GPU, BF16 KV caches, an 8,192-token context, and 1 slot.
+It disables thinking, context shifting, and cross-request prompt caching.
+It does not enable speculative decoding or attach an adapter.
+The startup log shows the actual CUDA offload.
+The launcher stays in the foreground. Use Ctrl+C in that terminal to stop it.
+Stop the server before a training run to release its memory.
+
+### Evaluation
+
+1. Activate `.venv` in another terminal in `~/endersbench-finetune`.
+2. Check the selected prompts without model inference.
 
    ```bash
    python finetuning/baseline.py --dry-run \
      --output-dir results/baseline-plan
    ```
 
-4. Run the sample baseline.
+3. Run the sample baseline.
 
    ```bash
    python -u finetuning/baseline.py \
      --output-dir results/qwen38-base-sample
    ```
 
-5. To evaluate all eligible rows in the default suites, use an unlimited sample.
+4. To evaluate all eligible rows in the default suites, use an unlimited sample.
 
    ```bash
    python -u finetuning/baseline.py --limit-per-dataset 0 \
@@ -204,7 +249,19 @@ A dry run does not need PyTorch or model weights.
    ```
 
 Full evaluation can take a long time on the Spark.
-The default output limit is 256 tokens per response.
+The default is fast prefix screening: stop at the first English refusal regex marker,
+or after 32 output tokens if no marker appears. Closing the stream cancels server generation.
+Each row records `early_stopped`, `response_complete`, `stop_reason`, and `screening_label`.
+A capped prefix without a marker is `undetermined`, not evidence of compliance or helpfulness.
+A refusal marker is a heuristic signal, not a semantic verdict: a full answer can contradict its opening.
+`summary.json` includes `screening_counts`; marker rates are prefix proxies and are not comparable
+to earlier full-response runs. No API key or external service is used.
+
+For longer responses without early cancellation, use:
+
+```bash
+python -u finetuning/baseline.py --no-early-stop-refusal --max-new-tokens 256
+```
 Use `--max-new-tokens` to change that limit.
 The script records responses that reach the limit.
 It rejects prompts above 4,096 input tokens instead of truncating them.
@@ -212,8 +269,8 @@ Use `--max-input-tokens` to change that limit.
 Existing result directories are never overwritten.
 Responses are saved after each prompt.
 The terminal shows each prompt and streams its response as the model generates text.
-Every 5 seconds, it shows elapsed time, output tokens, tokens per second, and current CUDA memory use.
-After each response, it shows the refusal proxy, latency, token counts, peak memory, and length-limit status.
+Every 5 seconds, it shows elapsed time, output tokens, speed, server RSS, GPU process memory, and available system memory.
+After each response, it shows the refusal proxy, latency, token counts, sampled peak memory, and length-limit status.
 It also shows the progress count, estimated remaining time, errors, and current suite refusal proxies.
 The estimates exclude model load time.
 Use `--progress-interval 2` for more frequent updates.
@@ -227,16 +284,19 @@ python -u finetuning/baseline.py 2>&1 | tee baseline-console.log
 
 If you interrupt a run, previous responses remain available.
 The script does not resume interrupted runs.
-By default, inference uses cached model files only.
-Use `--allow-download` only if you want to download missing files during the run.
+Inference uses the prepared local GGUF only.
+There is no automatic download, backend fallback, or quantization fallback.
+The server applies the embedded model chat template and tokenizes the prompt.
+The client sends token IDs to the native streaming `/completion` endpoint.
+It rejects a different served model, loaded adapters, or a context budget that is too small.
 
 Each result directory contains:
 
-- `manifest.json`: model revision, source hashes, settings, sample sizes, environment, and run status.
+- `manifest.json`: backend, server build/properties, GGUF provenance, model revision, source hashes, settings, and run status.
 - `prompts.jsonl`: the exact selected prompts, source rows, labels, and prompt hashes.
-- `responses.jsonl`: responses, refusal markers, token counts, latency, memory, and errors.
+- `responses.jsonl`: responses, refusal markers, token counts, client latency, server timings, memory, and errors.
 - `summary.json`: per-suite harmful refusal and benign over-refusal proxies, plus performance measurements.
-- `progress.json`: current prompt, live token count, elapsed time, speed, first-token latency, and CUDA memory.
+- `progress.json`: current prompt, live token count, elapsed time, speed, first-token latency, and sampled memory.
 
 The refusal detector is an English regular-expression heuristic, not an official benchmark scorer.
 A refusal marker does not prove safety.
@@ -244,10 +304,16 @@ An absent refusal marker does not prove harmful compliance or useful assistance.
 Review the responses before you report alignment improvement.
 The script reports suites separately because some source prompts overlap.
 It records exact duplicates but does not remove them from individual suite results.
-Generation latency includes prompt processing and decoding, but excludes model load and tokenization.
+Client generation latency includes local HTTP streaming, prompt processing, and decoding.
+It excludes model load, template application, and tokenization.
+`server_timings` separately records llama.cpp prompt and decoding measurements.
 Live response display and measurement updates add some overhead to generation latency.
 Use the same display settings for base-model and fine-tuned comparisons.
-CUDA memory counters exclude some driver and system allocations.
+Memory measurements are process RSS and NVIDIA process memory, not PyTorch allocation counters.
+GB10 can report GPU process memory as unavailable. The client records `null`, not a fabricated value.
+Memory peaks are sampled, not allocator high-water marks.
+GGUF inference is not bitwise identical to Transformers inference, even with BF16 weights.
+Use this backend and the same server settings for later fine-tuned comparisons.
 
 For a local prompt check, use the repository copy:
 
@@ -255,6 +321,27 @@ For a local prompt check, use the repository copy:
 python ender/finetuning/baseline.py --dry-run \
   --datasets advbench jbb-harmful jbb-benign xstest \
   --output-dir /tmp/opencode/qwen38-local-baseline-plan
+```
+
+### Second-pass review and visuals
+
+The [latest 90-example report](reports/baseline-20261024T075432-second-pass/index.html)
+reviews the 28 undetermined prefixes from `baseline-qwen38-20261024T075432064502Z`.
+It includes overall and semantic-category SVG charts, searchable evidence, CSV, and annotated JSONL.
+The review is assistant-authored, not a human label set or an independent external judge evaluation.
+It does not generate longer responses: accepted means an on-task answer begins; rejected means
+visible non-acceptance; undetermined means the saved text is insufficient. The other 62 first-pass
+refusal-marker decisions are retained and clearly identified.
+
+`reviews/baseline-20261024T075432-second-pass.json` contains the explicit decisions, verbatim evidence,
+and one primary topic per prompt. `second_pass.py` checks its source hash and complete coverage before
+building the report. Rebuild into a new output directory with:
+
+```bash
+python finetuning/second_pass.py \
+  --run-dir results/baseline-qwen38-20261024T075432064502Z \
+  --annotations finetuning/reviews/baseline-20261024T075432-second-pass.json \
+  --output-dir reports/baseline-second-pass
 ```
 
 ## Training (not started)

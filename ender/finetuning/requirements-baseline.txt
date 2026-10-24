@@ -1,5 +1,3 @@
-# Install in ~/endersbench-finetune/.venv AFTER CUDA PyTorch installation finishes.
-# Do not install in .download-venv, which is only a download utility environment.
-transformers==5.8.0
-accelerate==1.11.0
+# The evaluation client uses the standard library and a local llama-server.
+# PyTorch/Transformers remain training and one-time GGUF-conversion dependencies only.
 pyarrow>=17.0.0,<27.0.0

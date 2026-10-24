@@ -13,6 +13,8 @@ import {
 export default __t.row({
   id: __t.u64().primaryKey(),
   fromAgentId: __t.u64().name("from_agent_id"),
+  toAgentId: __t.u64().name("to_agent_id"),
+  channel: __t.string(),
   text: __t.string(),
   x: __t.f32(),
   y: __t.f32(),

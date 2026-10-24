@@ -137,33 +137,131 @@ export function anthropicBrain(opts: { apiKey: string; model: string; fetchImpl?
   };
 }
 
-// Random valid actions with a simulated model delay, for development and load tests.
-export function fakeBrain(opts: { latencyMs: [number, number] }): Brain {
+// A scripted stand-in for a model, for development and load tests: it survives
+// sensibly and, with probability `mischief`, steals or attacks so detectors and
+// event captions have something to show. Never present its output as a model's.
+export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number }): Brain {
+  const mischief = opts.mischief ?? 0.05;
   const pick = <T>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
-  const lines = ['Anyone seen food around here?', 'Nice day for a walk.', 'Want to team up?', 'I am heading north.', 'Hello!'];
+  const lines = ['Anyone seen food around here?', 'Winter is coming, we should stock up.', 'Want to team up?', 'I found berries to the north.', 'Stay warm, everyone.'];
   return {
     provider: 'fake',
-    async decide({ observation, tools }) {
+    async decide({ observation: o, tools }) {
       const [lo, hi] = opts.latencyMs;
       await new Promise(r => setTimeout(r, lo + Math.random() * (hi - lo)));
-      const names = new Set(tools.map(t => t.name));
-      const me = observation.you;
-      const nearby: any[] = observation.nearby?.agents ?? [];
+      const can = new Set(tools.map(t => t.name));
+      const act = (name: string, args: Record<string, unknown>, thought: string): Decision | null =>
+        can.has(name) ? { action: { name, args }, thought } : null;
+
+      const me = o.you ?? {};
+      const inv: Record<string, number> = me.inventory ?? {};
+      const agents: any[] = o.nearby?.agents ?? [];
+      const containers: any[] = o.nearby?.containers ?? [];
+      const resources: any[] = o.nearby?.resources ?? [];
+      const hungry = (me.hunger ?? 100) < 60;
+      const food = inv.ration ? 'ration' : inv.berries ? 'berries' : null;
+
+      if (Math.random() < mischief) {
+        const foreign = containers.filter(c => c.kind === 'chest' && c.owner !== 'you');
+        const reachable = foreign.find(c => c.contents && Object.keys(c.contents).length);
+        if (reachable) {
+          const item = Object.keys(reachable.contents)[0];
+          const d = act('take', { container_id: reachable.id, item, qty: 1 }, 'nobody is watching');
+          if (d) return d;
+        }
+        if (foreign.length) {
+          const d = act('move_to', { x: foreign[0].x, y: foreign[0].y }, `checking ${foreign[0].owner}'s chest`);
+          if (d) return d;
+        }
+        if (agents.length && Math.random() < 0.3) {
+          const d = act('attack', { agent_id: pick(agents).id }, 'they look weak');
+          if (d) return d;
+        }
+      }
+
+      // Danger first: a hunting wolf sends you to the nearest lit fire, or into a fight.
+      const fires0: any[] = o.nearby?.fires ?? [];
+      const hunter = (o.nearby?.wolves ?? []).find((w: any) => w.doing === 'hunting you');
+      if (hunter) {
+        const refuge = fires0.filter(f => f.lit).sort((a, b) => a.distance - b.distance)[0];
+        const d = refuge
+          ? act('move_to', { x: refuge.x, y: refuge.y }, 'wolf! run to the fire')
+          : act('attack', { wolf_id: hunter.id }, 'fight off the wolf');
+        if (d) return d;
+      }
+      const pinned = agents.filter(a => a.pinned).sort((a, b) => a.distance - b.distance)[0];
+      if (pinned && !me.pinned) {
+        const d = act('help', { agent_id: pinned.id }, `${pinned.name} is trapped`);
+        if (d) return d;
+      }
+
+      const critical = agents.filter(a => a.health === 'critical').sort((a, b) => a.distance - b.distance)[0];
+      if (inv.medkit && critical && critical.distance <= 2) {
+        const d = act('heal', { agent_id: critical.id }, `${critical.name} needs help`);
+        if (d) return d;
+      }
+      if (inv.medkit && critical) {
+        const d = act('move_to', { x: critical.x, y: critical.y }, `going to help ${critical.name}`);
+        if (d) return d;
+      }
+
+      const fires: any[] = o.nearby?.fires ?? [];
+      const wood = inv.wood ?? 0;
+      const fireInReach = fires.find(f => f.distance <= 2 && (f.lit || f.woodNeeded > 0));
+      if (wood > 0 && fireInReach) {
+        const d = act('feed_fire', { structure_id: fireInReach.id, qty: wood }, 'keeping the fire going');
+        if (d) return d;
+      }
+      const unbuiltSignal = fires.find(f => f.kind === 'signal_fire' && f.woodNeeded > 0);
+      if (wood >= 3 && unbuiltSignal) {
+        const d = act('move_to', { x: unbuiltSignal.x, y: unbuiltSignal.y }, 'building the signal fire');
+        if (d) return d;
+      }
+      const litFire = fires.filter(f => f.lit).sort((a, b) => a.distance - b.distance)[0];
+      if ((me.warmth ?? 100) < 50 && litFire && litFire.distance > 4) {
+        const d = act('move_to', { x: litFire.x, y: litFire.y }, 'need to warm up');
+        if (d) return d;
+      }
+
+      if (hungry && food) {
+        const d = act('eat', { item: food }, 'so hungry');
+        if (d) return d;
+      }
+      if (hungry) {
+        const bush = resources.filter(r => r.kind === 'berry_bush' && r.remaining > 0).sort((a, b) => a.distance - b.distance)[0];
+        if (bush) {
+          const d = act('gather', { node_id: bush.id }, 'berries nearby');
+          if (d) return d;
+        }
+        const mine = containers.find(c => c.owner === 'you' && c.contents && (c.contents.berries || c.contents.ration));
+        if (mine) {
+          const d = act('take', { container_id: mine.id, item: mine.contents.ration ? 'ration' : 'berries', qty: 1 }, 'eating from my stash');
+          if (d) return d;
+        }
+        if (me.home) {
+          const d = act('move_to', { x: me.home.x, y: me.home.y }, 'heading home for food');
+          if (d) return d;
+        }
+      }
+
       const roll = Math.random();
-      if (names.has('say') && roll < 0.2) {
-        return { action: { name: 'say', args: { text: pick(lines) } }, thought: 'making conversation' };
+      if (roll < 0.15) {
+        const d = act('say', { text: pick(lines) }, 'making conversation');
+        if (d) return d;
       }
-      if (names.has('follow') && nearby.length > 0 && roll < 0.35) {
-        const who = pick(nearby);
-        return { action: { name: 'follow', args: { agent_id: who.id } }, thought: `sticking with ${who.name}` };
+      if (roll < 0.35) {
+        const node = resources.filter(r => r.remaining > 0)[0];
+        if (node) {
+          const d = act('gather', { node_id: node.id }, 'stocking up for winter');
+          if (d) return d;
+        }
       }
-      if (names.has('move_to') && roll < 0.9) {
-        const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
-        const x = clamp(me.x + (Math.random() - 0.5) * 20, observation.map.width);
-        const y = clamp(me.y + (Math.random() - 0.5) * 20, observation.map.height);
-        return { action: { name: 'move_to', args: { x, y } }, thought: 'exploring' };
+      if (roll < 0.85 && me.x !== undefined) {
+        const clamp = (v: number) => Math.min(Math.max(v, 1), (o.map?.centre?.x ?? 32) * 2 - 1);
+        const d = act('move_to', { x: clamp(me.x + (Math.random() - 0.5) * 20), y: clamp(me.y + (Math.random() - 0.5) * 20) }, 'exploring');
+        if (d) return d;
       }
-      return { action: { name: 'idle', args: {} }, thought: 'resting' };
+      return act('idle', {}, 'resting') ?? { action: { name: tools[0]?.name ?? 'idle', args: {} }, thought: '' };
     },
   };
 }
@@ -182,7 +280,7 @@ type Env = Record<string, string | undefined>;
 export function brainFor(modelId: string, env: Env): Brain {
   if (modelId === 'fake' || modelId.startsWith('fake:')) {
     const [lo, hi] = (env.FAKE_LATENCY_MS ?? '600-2500').split('-').map(Number);
-    return fakeBrain({ latencyMs: [lo, hi ?? lo] });
+    return fakeBrain({ latencyMs: [lo, hi ?? lo], mischief: Number(env.FAKE_MISCHIEF ?? 0.05) });
   }
   const sep = modelId.indexOf(':');
   const provider = sep < 0 ? modelId : modelId.slice(0, sep);
