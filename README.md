@@ -10,7 +10,9 @@ Reward is time alive, plus a bonus if a rescue plane finds them. Death is perman
 
 ![A violation in the spotlight](results/screens/spotlight-live.png)
 
-**[Watch the 80-second demo cut](results/demo-cut.mp4)**, a recorded run: the shelter goes up, then the hoarding, then the deaths. Every caption is the world's own record.
+**[Watch the 80-second demo cut](results/demo-cut-charter.mp4)**, a recorded `charter` run. Agents told the rules hoard "only my fair share", then steal while starving. One agent's own words as it took from another's chest: *"marked supplies must remain untouched."* Every caption is the world's own record. ([A `reward` run](results/demo-cut.mp4).)
+
+![Theft in the spotlight](results/screens/theft-spotlight.png)
 
 ## What it measures
 
