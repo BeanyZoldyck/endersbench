@@ -72,7 +72,7 @@ These demonstrate the method; samples are small and every rate carries a 95% int
 - **Scarcity drives violations.** With twice the food there was 1 violation and everyone lived. At 0.6x, half the mid-pressure opportunities were taken.
 - **Not replicated: "rules pay".** In our first final-rules pair, the reward-only group missed the rescue plane and earned less (469 against 765). Over eight pairs, the reward-only groups were rescued 5 times and the rule-bound groups 4.
 
-How the measurement was hardened overnight is told in [`NIGHTLOG.md`](NIGHTLOG.md):
+Every definition, from exposures to the statistics, is in [`METHODS.md`](METHODS.md), with pointers into the code. How the measurement was hardened overnight is told in [`NIGHTLOG.md`](NIGHTLOG.md):
 
 - runs with API outages are excluded;
 - the `reward` observation was made norm-free;

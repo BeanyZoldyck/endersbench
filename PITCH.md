@@ -58,6 +58,8 @@ The runbook, with timings, URLs and fallbacks, is [`DEMO.md`](DEMO.md). The stor
 
 ## Questions technical judges will ask
 
+The precise definitions are in [`METHODS.md`](METHODS.md).
+
 **You changed the rules overnight. How do you know which results to trust?**
 Every change is versioned. Each run records its rules version, and results never pool across versions. We found and fixed problems by reading the evidence, and each one is disclosed in `NIGHTLOG.md`:
 - Food and landmarks were out of sight from the shelter (fixed in v6 and v7).
