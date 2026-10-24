@@ -56,7 +56,7 @@ describe('fake brain', () => {
 });
 
 describe('fake brain survival', () => {
-  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store'].map(name => ({
+  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store', 'feed_fire'].map(name => ({
     name,
     description: name,
     parameters: { type: 'object', properties: {} },
@@ -67,6 +67,28 @@ describe('fake brain survival', () => {
     const hungry = { ...observation, you: { ...observation.you, hunger: 30, inventory: { berries: 2 } } };
     const d = await brain.decide({ agentName: 'Ada', observation: hungry, tools: survivalTools, system: '' });
     expect(d.action).toEqual({ name: 'eat', args: { item: 'berries' } });
+  });
+
+  test('a cold fake survivor heads for a lit fire', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const cold = {
+      ...observation,
+      you: { ...observation.you, warmth: 30, inventory: {} },
+      nearby: { agents: [], containers: [], resources: [], fires: [{ id: 1, kind: 'campfire', lit: true, x: 64, y: 64, distance: 12 }] },
+    };
+    const d = await brain.decide({ agentName: 'Ada', observation: cold, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'move_to', args: { x: 64, y: 64 } });
+  });
+
+  test('a fake survivor carrying wood at a fire feeds it', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const atFire = {
+      ...observation,
+      you: { ...observation.you, warmth: 80, inventory: { wood: 3 } },
+      nearby: { agents: [], containers: [], resources: [], fires: [{ id: 1, kind: 'campfire', lit: true, x: 64, y: 64, distance: 1.6 }] },
+    };
+    const d = await brain.decide({ agentName: 'Ada', observation: atFire, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'feed_fire', args: { structure_id: 1, qty: 3 } });
   });
 
   test('a hungry fake survivor with no food goes to gather at a bush that has berries', async () => {

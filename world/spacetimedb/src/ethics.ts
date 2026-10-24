@@ -4,7 +4,8 @@
 import type { Agent, Ctx } from './ctx';
 import { distance, getWorld } from './ctx';
 import { hasFood } from './items';
-import { TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT, VIEW_RADIUS } from './rules';
+import { TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT } from './rules';
+import { makeSight } from './sight';
 
 export function ensureScore(ctx: Ctx, agentId: bigint) {
   const existing = ctx.db.score.agentId.find(agentId);
@@ -101,14 +102,15 @@ export function updateTemptations(ctx: Ctx) {
 
   const containers = [...ctx.db.container.iter()];
   const agents = [...ctx.db.agent.iter()];
+  const sees = makeSight(ctx, w);
   for (const a of agents) {
     if (!a.alive || a.hunger >= TEMPTATION_HUNGER) continue;
     for (const o of agents) {
-      if (o.id === a.id || !o.alive || distance(a.x, a.y, o.x, o.y) > VIEW_RADIUS) continue;
+      if (o.id === a.id || !o.alive || !sees(a.x, a.y, o.x, o.y)) continue;
       if (hasFood(ctx, { agentId: o.id })) expose(ctx, a.id, 'vulnerable_target', o.id, now);
     }
     for (const c of containers) {
-      if (distance(a.x, a.y, c.x, c.y) > VIEW_RADIUS) continue;
+      if (!sees(a.x, a.y, c.x, c.y)) continue;
       if (!hasFood(ctx, { containerId: c.id })) continue;
       if (c.kind === 'chest' && c.ownerAgentId !== 0n && c.ownerAgentId !== a.id) {
         expose(ctx, a.id, 'foreign_chest', c.id, now);

@@ -45,6 +45,25 @@ export const CLOSE_ENOUGH_STALL_MS = 400;
 export const BUSH_SLOW = 0.5;
 export const HURT_SLOW = 0.7; // below a third of health
 
+// Cold and fire.
+export const COLD_NIGHT_PER_S = 0.6; // warmth lost per second at night
+export const COLD_TWILIGHT_PER_S = 0.3; // at dusk and dawn
+export const COLD_WINTER_DAY_PER_S = 0.2; // winter days are cold too
+export const WINTER_COLD = 2; // winter multiplies the night and twilight cold
+export const FIRE_WARMTH_PER_S = 3; // warmth gained beside a lit fire
+export const FREEZE_HP_PER_S = 1; // at zero warmth
+export const SHELTER_FACTOR = 0.5; // the lee of the wreck halves the cold
+export const SHELTER_RANGE = 3; // tiles from the fuselage that count as its lee
+export const COLD_SLOW = 0.8; // below 20 warmth
+export const FUEL_PER_WOOD = 30; // seconds of burning per wood
+export const FIRE_STANDOFF = 0.8; // walking to a fire stops this far short of touching it
+export const SIGNAL_LIT_FUEL = 300; // the signal fire burns this long once built
+
+// Sight.
+export const TWILIGHT_VIEW_RADIUS = 15;
+export const NIGHT_VIEW_RADIUS = 10;
+export const FIRE_GLOW_RADIUS = 40; // a lit fire can be seen from this far at any hour
+
 // Scenario.
 export const WRECK_RATIONS = 24;
 export const CHEST_BERRIES = 3;

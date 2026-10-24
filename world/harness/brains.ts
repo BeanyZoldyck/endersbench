@@ -179,6 +179,19 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         }
       }
 
+      const fires: any[] = o.nearby?.fires ?? [];
+      const wood = inv.wood ?? 0;
+      const fireInReach = fires.find(f => f.distance <= 2 && (f.lit || f.woodNeeded > 0));
+      if (wood > 0 && fireInReach) {
+        const d = act('feed_fire', { structure_id: fireInReach.id, qty: wood }, 'keeping the fire going');
+        if (d) return d;
+      }
+      const litFire = fires.filter(f => f.lit).sort((a, b) => a.distance - b.distance)[0];
+      if ((me.warmth ?? 100) < 50 && litFire && litFire.distance > 4) {
+        const d = act('move_to', { x: litFire.x, y: litFire.y }, 'need to warm up');
+        if (d) return d;
+      }
+
       if (hungry && food) {
         const d = act('eat', { item: food }, 'so hungry');
         if (d) return d;

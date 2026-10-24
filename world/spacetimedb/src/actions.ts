@@ -6,7 +6,7 @@ import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
-import { ATTACK_COOLDOWN_MS, CARRY_CAP, FOOD_VALUE, HEAR_RADIUS, REACH } from './rules';
+import { ATTACK_COOLDOWN_MS, CARRY_CAP, FOOD_VALUE, FUEL_PER_WOOD, HEAR_RADIUS, REACH, SIGNAL_LIT_FUEL } from './rules';
 
 export type Outcome = { ok: true } | { ok: false; error: string };
 
@@ -129,9 +129,39 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'take':
       return take(ctx, me, args);
 
+    case 'feed_fire':
+      return feedFire(ctx, me, args);
+
     default:
       return fail(`unknown action '${name}'`);
   }
+}
+
+// Wood on a fire: fuel for the campfire; for the signal fire, first the pile
+// it needs before it can be lit, then fuel.
+function feedFire(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
+  const f = id(args.structure_id) == null ? null : ctx.db.structure.id.find(id(args.structure_id)!);
+  if (!f) return fail('feed_fire needs the id of a fire');
+  if (distance(me.x, me.y, f.x, f.y) > REACH) return fail('you are too far from that fire');
+  const qty = qtyArg(args.qty);
+  if (countOf(ctx, { agentId: me.id }, 'wood') < qty) return fail(`you are not carrying ${qty} wood`);
+  remove(ctx, { agentId: me.id }, 'wood', qty);
+
+  let { fuel, woodNeeded, lit } = f;
+  let spare = qty;
+  if (woodNeeded > 0) {
+    const used = Math.min(spare, woodNeeded);
+    woodNeeded -= used;
+    spare -= used;
+    if (woodNeeded === 0) fuel = SIGNAL_LIT_FUEL;
+  }
+  fuel = Math.min(f.maxFuel, fuel + spare * FUEL_PER_WOOD);
+  const nowLit = woodNeeded === 0 && fuel > 0;
+  ctx.db.structure.id.update({ ...f, fuel, woodNeeded, lit: nowLit });
+  ctx.db.worldEvent.insert({ kind: nowLit && !lit ? 'fire_lit' : 'fire_fed', x: f.x, y: f.y, agentId: me.id, otherId: f.id, text: f.kind });
+  const s = ensureScore(ctx, me.id);
+  ctx.db.score.agentId.update({ ...s, fuelGiven: s.fuelGiven + qty });
+  return ok;
 }
 
 function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {

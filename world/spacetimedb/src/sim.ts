@@ -6,6 +6,7 @@ import { distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
+import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
   AGENT_RADIUS,
   ATTACK_COOLDOWN_MS,
@@ -15,6 +16,15 @@ import {
   BUSH_REGROW_MS,
   BUSH_SLOW,
   CARRY_CAP,
+  FIRE_STANDOFF,
+  COLD_NIGHT_PER_S,
+  COLD_SLOW,
+  COLD_TWILIGHT_PER_S,
+  COLD_WINTER_DAY_PER_S,
+  FIRE_WARMTH_PER_S,
+  FREEZE_HP_PER_S,
+  SHELTER_FACTOR,
+  WINTER_COLD,
   CLOSE_ENOUGH,
   CLOSE_ENOUGH_STALL_MS,
   FIRE_RECOIL,
@@ -58,7 +68,16 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
     }
   }
 
+  // Day and night.
+  const daylight = daylightAt(timeOfDay(w, nowMs));
+  if (daylight !== w.daylight) {
+    ctx.db.world.id.update({ ...w, daylight });
+    w = getWorld(ctx);
+  }
+  burnFuel(ctx, dt);
+
   const colliders = staticColliders(ctx, w);
+  const fires = litFires(ctx);
   const rewardSecond = crossed(prevMs, nowMs, 1_000);
   const walks: Walk[] = [];
   for (const { id } of [...ctx.db.agent.iter()]) {
@@ -73,7 +92,7 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
       const s = ensureScore(ctx, a.id);
       ctx.db.score.agentId.update({ ...s, reward: s.reward + 1 });
     }
-    if (!needs(ctx, a, dt)) continue;
+    if (!needs(ctx, w, fires, a, dt)) continue;
     const walk = stepAgent(ctx, w, colliders, a.id, dt, prevMs, nowMs);
     if (walk) walks.push(walk);
   }
@@ -83,14 +102,39 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
   for (const walk of walks) checkHeadway(ctx, walk, dt);
 }
 
-// Returns false if the agent starved into a knockout.
-function needs(ctx: Ctx, a: Agent, dt: number) {
+// Lit fires burn down and go out when their fuel runs dry.
+function burnFuel(ctx: Ctx, dt: number) {
+  for (const f of [...ctx.db.structure.iter()]) {
+    if (!f.lit) continue;
+    const fuel = f.fuel - dt / 1000;
+    if (fuel > 0) {
+      ctx.db.structure.id.update({ ...f, fuel });
+      continue;
+    }
+    ctx.db.structure.id.update({ ...f, fuel: 0, lit: false });
+    ctx.db.worldEvent.insert({ kind: 'fire_out', x: f.x, y: f.y, agentId: 0n, otherId: f.id, text: f.kind });
+  }
+}
+
+function coldPerSecond(w: World) {
+  const winter = w.phase === 'winter';
+  if (w.daylight === 'night') return COLD_NIGHT_PER_S * (winter ? WINTER_COLD : 1);
+  if (w.daylight === 'day') return winter ? COLD_WINTER_DAY_PER_S : 0;
+  return COLD_TWILIGHT_PER_S * (winter ? WINTER_COLD : 1);
+}
+
+// Hunger, warmth and their effect on health. Returns false on a knockout.
+function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, a: Agent, dt: number) {
   const s = dt / 1000;
   const hunger = Math.max(0, a.hunger - HUNGER_PER_S * s);
+  const warmth = inFirelight(fires, a.x, a.y)
+    ? Math.min(100, a.warmth + FIRE_WARMTH_PER_S * s)
+    : Math.max(0, a.warmth - coldPerSecond(w) * (sheltered(w, a.x, a.y) ? SHELTER_FACTOR : 1) * s);
   let hp = a.hp;
   if (hunger <= 0) hp -= STARVE_HP_PER_S * s;
-  else if (hunger > REGEN_ABOVE_HUNGER) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
-  ctx.db.agent.id.update({ ...a, hunger, hp });
+  if (warmth <= 0) hp -= FREEZE_HP_PER_S * s;
+  if (hunger > REGEN_ABOVE_HUNGER && warmth > 0) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
+  ctx.db.agent.id.update({ ...a, hunger, warmth, hp });
   if (hp <= 0) {
     knockOut(ctx, a.id);
     return false;
@@ -116,10 +160,19 @@ type Walk = { id: bigint; intentKind: string; goal: Goal; distBefore: number; sp
 
 // Where the current intent wants to go, or null to stand still. May end the
 // intent (idle + wake) when its target is gone.
-function goalFor(ctx: Ctx, a: Agent): Goal | null | 'ended' {
+function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ended' {
   switch (a.intentKind) {
-    case 'move_to':
+    case 'move_to': {
+      // Walking to something solid (a chest, a fire) means walking up to it;
+      // a fire you stand back from a little.
+      for (const c of colliders) {
+        const [cx, cy] = closestOnSegment(c, a.targetX, a.targetY);
+        if (distance(cx, cy, a.targetX, a.targetY) < c.r) {
+          return { x: a.targetX, y: a.targetY, stopAt: c.r + AGENT_RADIUS + (c.tag === 'fire' ? FIRE_STANDOFF : 0.1) };
+        }
+      }
       return { x: a.targetX, y: a.targetY, stopAt: 0 };
+    }
     case 'follow': {
       const target = ctx.db.agent.id.find(a.targetAgentId);
       if (!target || !target.alive) return goIdle(ctx, a, 'lost_target'), 'ended';
@@ -143,7 +196,7 @@ function goalFor(ctx: Ctx, a: Agent): Goal | null | 'ended' {
 // Moves one agent for this tick. Returns the walk to judge for headway, if any.
 function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: number, prevMs: number, nowMs: number): Walk | null {
   const a = ctx.db.agent.id.find(id)!;
-  const goal = goalFor(ctx, a);
+  const goal = goalFor(ctx, a, colliders);
   if (goal === 'ended') return null;
 
   const s = dt / 1000;
@@ -159,7 +212,7 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
     if (remaining <= 0.001) {
       arrived = true;
     } else {
-      speed = WALK_SPEED * (inBush(ctx, a.x, a.y) ? BUSH_SLOW : 1) * (a.hp < 33 ? HURT_SLOW : 1);
+      speed = WALK_SPEED * (inBush(ctx, a.x, a.y) ? BUSH_SLOW : 1) * (a.hp < 33 ? HURT_SLOW : 1) * (a.warmth < 20 ? COLD_SLOW : 1);
       const tx = (goal.x - a.x) / distBefore;
       const ty = (goal.y - a.y) / distBefore;
       // Don't steer around the thing we're walking up to (the tree we chop, the fire we feed).

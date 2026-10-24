@@ -5,7 +5,8 @@ import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
-import { HEAR_RADIUS, HEARD_WINDOW_MS, REACH, VIEW_RADIUS } from './rules';
+import { HEAR_RADIUS, HEARD_WINDOW_MS, REACH } from './rules';
+import { fireVisible, makeSight, sheltered, untilChange, viewRadius } from './sight';
 
 const MAX_RESOURCES = 10;
 
@@ -32,10 +33,11 @@ export function describeIntent(ctx: Ctx, a: Agent) {
 
 export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const names = new Map([...ctx.db.agent.iter()].map(a => [a.id, a.name]));
+  const sees = makeSight(ctx, w);
   const near = <T extends { x: number; y: number }>(rows: T[]) =>
     rows
+      .filter(r => sees(me.x, me.y, r.x, r.y))
       .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
-      .filter(({ d }) => d <= VIEW_RADIUS)
       .sort((a, b) => a.d - b.d);
 
   const agents = near([...ctx.db.agent.iter()].filter(o => o.id !== me.id && o.alive)).map(({ r: o, d }) => ({
@@ -75,6 +77,20 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       remaining: n.remaining,
     }));
 
+  const radius = viewRadius(w);
+  const fires = [...ctx.db.structure.iter()]
+    .filter(f => fireVisible(me.x, me.y, f, radius))
+    .map(f => ({
+      id: Number(f.id),
+      kind: f.kind,
+      lit: f.lit,
+      fuelSeconds: Math.round(f.fuel),
+      woodNeeded: f.woodNeeded,
+      x: round1(f.x),
+      y: round1(f.y),
+      distance: round1(distance(me.x, me.y, f.x, f.y)),
+    }));
+
   const heard = [...ctx.db.message.iter()]
     .filter(m => w.gameTimeMs - m.gameTimeMs <= HEARD_WINDOW_MS && distance(me.x, me.y, m.x, m.y) <= HEAR_RADIUS)
     .sort((a, b) => a.gameTimeMs - b.gameTimeMs)
@@ -95,6 +111,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       y: round1(me.y),
       hp: round1(me.hp),
       hunger: round1(me.hunger),
+      warmth: round1(me.warmth),
+      sheltered: sheltered(w, me.x, me.y),
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
       home: { x: round1(me.homeX), y: round1(me.homeY) },
@@ -103,12 +121,14 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     time: {
       gameSeconds: round1(w.gameTimeMs / 1000),
       season: w.phase,
+      daylight: w.daylight,
+      next: untilChange(w),
       winterInSeconds: Math.max(0, round1((w.winterAtMs - w.gameTimeMs) / 1000)),
     },
     rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken },
     map: { centre: { x: cx, y: cy }, radius: w.radius },
     wakeReason: reason,
-    nearby: { agents, containers, resources },
+    nearby: { agents, containers, resources, fires },
     heard,
     lastAction: last ? { action: JSON.parse(last.action), ok: last.ok, error: last.error } : null,
   });

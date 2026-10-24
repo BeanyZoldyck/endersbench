@@ -20,6 +20,9 @@ const {
   setRunning,
 } = moduleExports;
 
+// Game times on the default day: the run starts mid-morning, night is 90-162 s.
+const NIGHT_MS = 100_000;
+
 const publisher = TestAuth.fromJwtPayload(JSON.stringify({ iss: 'test', sub: 'publisher' }), new ConnectionId(1n));
 const harness = TestAuth.fromJwtPayload(JSON.stringify({ iss: 'test', sub: 'harness' }), new ConnectionId(2n));
 const stranger = TestAuth.fromJwtPayload(JSON.stringify({ iss: 'test', sub: 'stranger' }), new ConnectionId(3n));
@@ -346,8 +349,8 @@ describe('physics', () => {
   test('touching a lit fire burns and makes you recoil', () => {
     const t = freshWorld();
     const fire = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
-    spawn(t, 'Ada', fire.x - (R.FIRE_RADIUS + R.AGENT_RADIUS + 0.05), fire.y);
-    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: fire.x, targetY: fire.y });
+    // Pressed against the fire (say, after being knocked into it).
+    spawn(t, 'Ada', fire.x - (R.FIRE_RADIUS + R.AGENT_RADIUS - 0.05), fire.y);
 
     run(t, 500);
 
@@ -366,6 +369,156 @@ describe('physics', () => {
 
     const bo = agentNamed(t, 'Bo');
     expect(dist(bo.x, bo.y, 64, 64)).toBeLessThanOrEqual(R.MAP_RADIUS - R.EDGE_MARGIN + 0.01);
+  });
+});
+
+describe('night, cold and fire', () => {
+  function setClock(t: T, gameTimeMs: number) {
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs });
+  }
+  function fire(t: T, kind: string) {
+    return ([...t.db.structure.iter()] as any[]).find(f => f.kind === kind);
+  }
+  const away = { x: 50, y: 50 }; // well outside the hearth's warmth
+
+  test('the daylight label follows the clock', () => {
+    const t = freshWorld();
+    advance(t, 100);
+    expect(t.db.world.id.find(0)!.daylight).toBe('day');
+    setClock(t, NIGHT_MS);
+    advance(t, 100);
+    expect(t.db.world.id.find(0)!.daylight).toBe('night');
+  });
+
+  test('warmth drains at night away from a fire', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    setClock(t, NIGHT_MS);
+    run(t, 2_000);
+    expect(agentNamed(t, 'Ada').warmth).toBeCloseTo(100 - R.COLD_NIGHT_PER_S * 2, 1);
+  });
+
+  test('winter nights are colder', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, winterAtMs: 0 });
+    run(t, 2_000);
+    expect(agentNamed(t, 'Ada').warmth).toBeCloseTo(100 - R.COLD_NIGHT_PER_S * R.WINTER_COLD * 2, 1);
+  });
+
+  test('a lit fire warms anyone within reach of its light', () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    spawn(t, 'Ada', hearth.x + 3, hearth.y);
+    setAgent(t, 'Ada', { warmth: 50 });
+    setClock(t, NIGHT_MS);
+    run(t, 2_000);
+    expect(agentNamed(t, 'Ada').warmth).toBeCloseTo(50 + R.FIRE_WARMTH_PER_S * 2, 1);
+  });
+
+  test('the lee of the wreck halves the cold', () => {
+    const t = freshWorld();
+    const w = wreck(t);
+    spawn(t, 'Ada', w.x, w.y + 0.5);
+    setClock(t, NIGHT_MS);
+    run(t, 2_000);
+    expect(agentNamed(t, 'Ada').warmth).toBeCloseTo(100 - R.COLD_NIGHT_PER_S * 0.5 * 2, 1);
+  });
+
+  test('freezing costs health', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    setAgent(t, 'Ada', { warmth: 0 });
+    setClock(t, NIGHT_MS);
+    run(t, 2_000);
+    expect(agentNamed(t, 'Ada').hp).toBeCloseTo(100 - R.FREEZE_HP_PER_S * 2, 1);
+  });
+
+  test("walking to a fire's own coordinates stops beside it, unburned and warm", () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    spawn(t, 'Ada', hearth.x - 8, hearth.y);
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: hearth.x, targetY: hearth.y });
+
+    run(t, 4_000);
+
+    const a = agentNamed(t, 'Ada');
+    expect(a.hp).toBe(100);
+    expect(a.intentKind).toBe('idle');
+    expect(dist(a.x, a.y, hearth.x, hearth.y)).toBeLessThanOrEqual(R.FIRE_WARMTH_RADIUS);
+  });
+
+  test('a lit fire burns fuel and goes out when it runs dry', () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    t.db.structure.id.update({ ...hearth, fuel: 1.5 });
+    run(t, 1_000);
+    expect(fire(t, 'campfire').fuel).toBeCloseTo(0.5, 1);
+    run(t, 1_000);
+    expect(fire(t, 'campfire').lit).toBe(false);
+    expect(fire(t, 'campfire').fuel).toBe(0);
+  });
+
+  test('feeding wood to a fire adds fuel and relights it', () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    t.db.structure.id.update({ ...hearth, fuel: 0, lit: false });
+    const ada = spawn(t, 'Ada', hearth.x + 1.6, hearth.y);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 3 });
+
+    decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id), qty: 2 } });
+
+    const after = fire(t, 'campfire');
+    expect(after.fuel).toBe(2 * R.FUEL_PER_WOOD);
+    expect(after.lit).toBe(true);
+    expect(carried(t, 'Ada', 'wood')).toBe(1);
+    expect(scoreOf(t, 'Ada').fuelGiven).toBe(2);
+  });
+
+  test('feeding a fire needs wood in hand and the fire within reach', () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    const ada = spawn(t, 'Ada', hearth.x + 1.6, hearth.y);
+    expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id) } }).status).toBe('failed');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 1 });
+    setAgent(t, 'Ada', { x: hearth.x + 8 });
+    expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id) } }).status).toBe('failed');
+  });
+
+  test('the signal fire is built from wood, then lights', () => {
+    const t = freshWorld();
+    const signal = fire(t, 'signal_fire');
+    const ada = spawn(t, 'Ada', signal.x + 1.6, signal.y);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: R.SIGNAL_WOOD });
+
+    decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(signal.id), qty: R.SIGNAL_WOOD - 1 } });
+    expect(fire(t, 'signal_fire').woodNeeded).toBe(1);
+    expect(fire(t, 'signal_fire').lit).toBe(false);
+
+    decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(signal.id), qty: 1 } });
+    expect(fire(t, 'signal_fire').woodNeeded).toBe(0);
+    expect(fire(t, 'signal_fire').lit).toBe(true);
+    expect(fire(t, 'signal_fire').fuel).toBe(R.SIGNAL_LIT_FUEL);
+  });
+
+  test('at night survivors see less far, except into firelight', () => {
+    const t = freshWorld();
+    const hearth = fire(t, 'campfire');
+    const ada = spawn(t, 'Ada', hearth.x - 16, hearth.y);
+    spawn(t, 'Bo', hearth.x + 2, hearth.y); // lit by the fire, 18 tiles away
+    spawn(t, 'Cy', hearth.x - 16, hearth.y + 14); // in the dark, 14 tiles away
+    setClock(t, NIGHT_MS);
+    advance(t, 100);
+
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+
+    const obs = JSON.parse(pendingFor(t, ada.id)[0].observation);
+    const names = obs.nearby.agents.map((a: any) => a.name);
+    expect(names).toContain('Bo');
+    expect(names).not.toContain('Cy');
+    expect(obs.time.daylight).toBe('night');
+    expect(obs.you.warmth).toBeDefined();
+    expect(obs.nearby.fires.find((f: any) => f.kind === 'campfire').lit).toBe(true);
   });
 });
 
@@ -933,7 +1086,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'eat', 'follow', 'gather', 'give', 'idle', 'move_to', 'say', 'store', 'take'].sort());
+    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'follow', 'gather', 'give', 'idle', 'move_to', 'say', 'store', 'take'].sort());
   });
 });
 

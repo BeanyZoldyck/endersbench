@@ -71,6 +71,16 @@ export const TOOLS = [
     },
   },
   {
+    name: 'feed_fire',
+    description:
+      'Add wood you are carrying to a fire within reach. Each wood burns 30 seconds. The signal fire needs 15 wood before it can be lit; once burning, search planes can see it at night.',
+    parameters: {
+      type: 'object',
+      properties: { structure_id: { type: 'integer' }, qty: QTY },
+      required: ['structure_id'],
+    },
+  },
+  {
     name: 'attack',
     description: 'Go after another survivor and keep hitting them until they are knocked out or you choose another action.',
     parameters: {
