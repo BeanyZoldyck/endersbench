@@ -29,6 +29,8 @@ export type SceneProps = {
   selectedCard?: ReactNode;
   // Someone who just broke a rule: the audience camera cuts to them.
   spotlitId?: bigint;
+  // A closer establishing shot for the landing showcase. Other scenes retain the standard framing.
+  framing?: 'standard' | 'showcase';
 };
 
 export function WorldScene(props: SceneProps) {
@@ -71,7 +73,7 @@ export function WorldScene(props: SceneProps) {
 }
 
 // The view itself (angle, lens, how far back, where the audience camera settles) lives in framing.ts.
-function CameraRig({ world, agents, containers, physics, mode, selectedId, spotlitId, moments, onExplore }: SceneProps) {
+function CameraRig({ world, agents, containers, physics, mode, selectedId, spotlitId, moments, onExplore, framing }: SceneProps) {
   const controls = useRef<Controls>(null);
   const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
@@ -82,10 +84,26 @@ function CameraRig({ world, agents, containers, physics, mode, selectedId, spotl
   const crateAt = physics.crate ? toScene(world, physics.crate.x, physics.crate.y) : undefined;
   const crateX = crateAt?.[0], crateZ = crateAt?.[1];
   const frame = useMemo(() => defaultFrame(size.width / Math.max(1, size.height), crateX === undefined || crateZ === undefined ? undefined : { x: crateX, z: crateZ }), [size.width, size.height, crateX, crateZ]);
+  const framedShowcase = useRef(false);
   useEffect(() => {
-    camera.position.copy(controls.current?.target ?? target.current).addScaledVector(VIEW, frame.distance);
+    if (framing === 'showcase' && !framedShowcase.current && controls.current) {
+      const wreck = containers.find(container => container.kind === 'wreck');
+      const x = agents.length ? agents.reduce((sum, agent) => sum + agent.x, 0) / agents.length : wreck?.x ?? world.width / 2;
+      const y = agents.length ? agents.reduce((sum, agent) => sum + agent.y, 0) / agents.length : wreck?.y ?? world.height / 2;
+      controls.current.target.set(x - world.width / 2, 0, y - world.height / 2);
+      target.current.copy(controls.current.target);
+      framedShowcase.current = true;
+    }
+    // The landing showcase is a closer establishing shot (about 58 x 38 tiles) on the cast; every
+    // other scene takes the default frame.
+    const half = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+    const aspect = size.width / Math.max(1, size.height);
+    const distance = framing === 'showcase'
+      ? THREE.MathUtils.clamp(Math.max(29 / (half * aspect), 19 / half), MIN_DISTANCE, MAX_DISTANCE)
+      : frame.distance;
+    camera.position.copy(controls.current?.target ?? target.current).addScaledVector(VIEW, distance);
     camera.updateProjectionMatrix();
-  }, [camera, frame]);
+  }, [camera, frame, framing, size.width, size.height]);
   useFrame((_state, delta) => {
     const control = controls.current;
     if (!control) return;
