@@ -17,7 +17,8 @@
     "world:pause": "spacetime call endersbench set_running false --server",
     "world:resume": "spacetime call endersbench set_running true --server",
     "report": "esbuild harness/report-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/report.js --log-level=warning && node dist-harness/report.js",
-    "record": "esbuild harness/record-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/record.js --log-level=warning && node dist-harness/record.js"
+    "record": "esbuild harness/record-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/record.js --log-level=warning && node dist-harness/record.js",
+    "results": "esbuild harness/results-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/results.js --log-level=warning && node dist-harness/results.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
