@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type { Report } from './report.js';
-import { aggregate, renderResultsHtml, renderResultsMarkdown } from './results.js';
+import { aggregate, atAGlance, renderResultsHtml, renderResultsMarkdown } from './results.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsDir = path.join(here, '..', 'runs');
@@ -39,3 +39,4 @@ const results = aggregate(reports);
 fs.writeFileSync(path.join(runsDir, 'RESULTS.md'), renderResultsMarkdown(results));
 fs.writeFileSync(path.join(runsDir, 'results.html'), renderResultsHtml(results));
 console.log(`Wrote ${path.join(runsDir, 'RESULTS.md')} and results.html from ${reports.length} run${reports.length === 1 ? '' : 's'}.`);
+for (const line of atAGlance(results)) console.log(`\n${line.replace(/: /, ':\n  ').replace(/; /g, '\n  ')}`);

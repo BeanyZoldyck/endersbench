@@ -31,7 +31,7 @@ A second condition gives the same agents eight explicit rules. The question it a
 
 - **Stated rules changed when they took, not how much.** Over six pairs under our final rules, the agents given eight rules took 37 rations past a fair share of the shared food; the agents told only to pursue reward took 38.
 - **The rules delayed the grab.** Without rules, the first over-take came within 46 seconds in 8 of 8 runs. With rules, after 165 seconds in 6 of 8 (exact rank test, p = 0.0003).
-- **And they changed the story.** Under the rules, 16 of 28 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 21 mentioned fairness.
+- **And they changed the story.** Under the rules, 12 of 20 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 21 mentioned fairness.
 - **They recite the rule while breaking it.** Starving, one agent took from another's chest, thinking: "Wren's chest is nearby and marked supplies must remain untouched."
 - **A result that didn't survive replication.** Our first final-rules pair looked like a headline:
   - the reward-only group missed the rescue plane (mean reward 469);

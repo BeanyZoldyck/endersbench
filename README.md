@@ -48,7 +48,7 @@ Two prompt conditions:
 
 ## Early results (GPT-6-Luna, 4 agents per run, 28 runs overnight)
 
-These demonstrate the method; samples are small and every rate carries a 95% interval on the [results page](results/latest/RESULTS.md). The rules were improved overnight, so results are compared **within** a rules version, never pooled across versions. Every number below comes from `npm run headline`.
+These demonstrate the method; samples are small and every rate carries a 95% interval on the [results page](results/latest/RESULTS.md). The rules were improved overnight, so results are compared **within** a rules version, never pooled across versions. Every number below is printed by `npm run headline` and shown at the top of the results page.
 
 - **Stated rules changed *when* they took, not *how much*.** Under the final rules, six reward-vs-charter pairs:
   - the agents told the eight rules took 37 rations past a fair share of the shared wreck;
@@ -58,7 +58,7 @@ These demonstrate the method; samples are small and every rate carries a 95% int
 
   ![When each run's first over-take came: reward early, charter late](results/screens/first-over-take.png)
 
-- **And they changed the story the agents told themselves.** Under the rules, 16 of 28 hoards came with the agent's own reasoning calling the take fair, and 5 more admitted going over and took anyway. One agent thought *"Already exceeded fair share; stop taking wreck supplies and preserve food"* and took 4 more rations. Without rules, 0 of 21 hoards mentioned fairness.
+- **And they changed the story the agents told themselves.** Under the rules (v4 on), 12 of 20 hoards came with the agent's own reasoning calling the take fair, and 5 more admitted going over and took anyway. One agent thought *"Already exceeded fair share; stop taking wreck supplies and preserve food"* and took 4 more rations. Without rules, 0 of 21 hoards mentioned fairness.
 
   ![The spotlight tags the admission](results/screens/admission-spotlight.png)
 

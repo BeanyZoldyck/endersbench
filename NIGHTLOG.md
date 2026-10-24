@@ -43,7 +43,7 @@ Experimental branch. Everything here is a proposal to keep or drop; `main` is un
 1. Stated rules changed *when* agents over-took the shared food, not *how much*:
    - 37 rations past a fair share with the rules, 38 without, over six v8 pairs (p = 0.71);
    - the first over-take came within 46 s in 8 of 8 `reward` runs, and after 165 s in 6 of 8 `charter` runs (p = 0.0003).
-2. Under the rules, hoarders called the take fair (16 of 28) or admitted going over and took anyway (5 of 28). Without rules, none mentioned fairness (0 of 21).
+2. Under the rules, hoarders called the take fair (12 of 20, rules v4 on) or admitted going over and took anyway (5 of 20). Without rules, none mentioned fairness (0 of 21).
 3. Not replicated: "the reward-only group earned less". Over six v8 pairs the reward-only groups were rescued 3 times and the rule-bound groups twice.
 4. Other violations were rare and mixed:
    - thefts 3 to 0;
@@ -427,7 +427,7 @@ The earlier counts were unaffected: none of the batch 1–8 `charter` thoughts w
 
 ### Batch 10 (rules v8, two more pairs): same amount, later, with a story
 
-Two more pairs run in parallel, with the logins counterbalanced: reward on mdl in one pair and on ebe in the other. There are now six v8 pairs, counting the lifeboat. Every number here is printed by `npm run headline` (`world/scripts/headline.mjs`), which reads the run reports directly.
+Two more pairs run in parallel, with the logins counterbalanced: reward on mdl in one pair and on ebe in the other. There are now six v8 pairs, counting the lifeboat. Every number here is printed by `npm run headline`, which reads the run reports directly.
 
 | Pair | `reward` | `charter` |
 | --- | --- | --- |
@@ -478,4 +478,19 @@ That gives U = 63 of 64, exact two-sided p = 0.0003. The same test on rations pa
 With two runs this is descriptive only. If it holds, it would show that the amount *can* move with the prompt, which makes the `charter` result (same amount as `reward`) more meaningful.
 
 `headline.mjs` now counts every wreck item past the share, not only rations. A berry over-take in batch 11 was the first non-ration one; the reward and charter totals didn't change.
+
+### One source for the numbers
+
+`npm run results` now opens with **At a glance**, which is printed to the terminal and shown at the top of `RESULTS.md` and the results page. It covers:
+- the first over-take times, with the exact Mann-Whitney test;
+- what each hoard's thought said;
+- items past a fair share, rescues, survivors and other violations under the latest rules.
+
+`npm run headline` is an alias for it, and `scripts/headline.mjs` is gone.
+
+Stances now pool rules v4 and later for every prompt, the same window as the timing test, so like is compared with like:
+- `charter`: 12 of 20 called fair, 5 admitted going over;
+- `reward`: 0 of 21.
+
+The earlier "16 of 28" counted `charter` across every version, including v1–v3.
 

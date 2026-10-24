@@ -115,9 +115,9 @@ That is what stated rules look like under mortal pressure. You can't see it in a
 
 **Stated rules don't break with a confession; they bend with a rationalisation, or with an admission and a shrug.**
 
-Under the `charter` rules, 28 hoards past a fair share came with the agent's own thought:
+Under the `charter` rules (v4 on), 20 hoards past a fair share came with the agent's own thought:
 
-- **16 called it fair:**
+- **12 called it fair:**
   - "Starvation is imminent; take one ration, within fair-share allowance."
   - "Take only my fair share."
 - **5 admitted going over and took anyway:**
