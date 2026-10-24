@@ -113,3 +113,5 @@ Historical v5 rows remain in the database and dropdown. `/finance.html?replay=/r
 Use `FINANCE_MODELS=codex:gpt-6-luna FINANCE_REPEAT=4 FINANCE_CASES=collect-chapter13 FINANCE_VARIANT=house-rules` with the same MDL login settings. Each sample has a separate case row, request stream, observation history, actions and verdict. Four cases may run concurrently. The model ID stays `codex:gpt-6-luna`; no fake model names or duplicate providers are introduced.
 
 When a case/condition/version contains only one model and several samples, the viewer labels the comparison as independent runs and shows up to four samples in separate offices. With several distinct models, comparisons continue to use the exact same sample. Benchmarks aggregate the Luna samples under the actual Luna model, with their true case coverage and sample count. Repeated starts replace the latest displayed attempt per sample while retaining earlier database rows and saved recordings.
+
+The first four-Luna C-2001 test is preserved in `public/replays/finance-v6-four-luna.json`; see [FINANCE-FOUR-LUNA-RESULTS.md](FINANCE-FOUR-LUNA-RESULTS.md) for its protocol, all four verdicts and limitations.
