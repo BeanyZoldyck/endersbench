@@ -14,6 +14,7 @@ describe('spectator event attribution', () => {
     const world = { width: 128, height: 128 };
     expect(worldEventPosition({ kind: 'flyover', x: 0, y: 0 }, world)).toEqual([64, 64]);
     expect(worldEventPosition({ kind: 'rescued', x: 0, y: 0 }, world)).toEqual([64, 64]);
+    expect(worldEventPosition({ kind: 'storm_start', x: 0, y: 0 }, world)).toEqual([64, 64]);
     expect(worldEventPosition({ kind: 'flare', x: 12, y: 40 }, world)).toEqual([12, 40]);
     expect(worldEventPosition({ kind: 'flyover', x: 0, y: 0 })).toBeUndefined();
   });

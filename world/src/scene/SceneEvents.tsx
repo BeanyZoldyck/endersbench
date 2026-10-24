@@ -14,8 +14,8 @@ export function actorPosition(id: bigint, isMob: boolean, agents: readonly Pick<
   return row && [row.x, row.y];
 }
 export function worldEventPosition(e: Pick<WorldEvent, 'kind' | 'x' | 'y'>, world?: Pick<World, 'width' | 'height'>): [number, number] | undefined {
-  // Global rescue events use (0, 0) as a sentinel, not a physical location.
-  if (e.kind === 'flyover' || e.kind === 'rescued') return world ? [world.width / 2, world.height / 2] : undefined;
+  // Global rescue and weather events use (0, 0) as a sentinel, not a physical location.
+  if (['flyover', 'rescued', 'storm_start', 'storm_end'].includes(e.kind)) return world ? [world.width / 2, world.height / 2] : undefined;
   return [e.x, e.y];
 }
 export function useMoments(conn: DbConnection | null, agents: readonly Agent[], containers: readonly Container[], mobs: readonly Mob[], enabled: boolean, world?: World) {
