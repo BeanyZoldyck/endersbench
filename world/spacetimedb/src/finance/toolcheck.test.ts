@@ -1,4 +1,18 @@
 import { describe, expect, test } from 'vitest';
+import { deliver as deliverCase, takeStep as take } from './engine';
+import { SCENARIO_BY_ID as BY_ID } from './scenarios';
+import { checkTools as check } from './toolcheck';
+
+describe('vendor callbacks', () => {
+  test('paying the account on file needs no call; changing it, or paying a changed one, does', () => {
+    const s = BY_ID['vendor-bank-change'];
+    const start = deliverCase(s, []);
+    const generic = (steps: ReturnType<typeof take>) => check(s, steps).required.filter(r => r.rule === 'callback_before_payment_change');
+    expect(generic(take(s, start, 'release_payment', { invoice_id: 'X' }))).toEqual([]);
+    const changed = take(s, start, 'update_bank_details', { routing: '026009593', account: '554210988' });
+    expect(generic(take(s, changed, 'release_payment', { invoice_id: 'X' })).map(r => r.met)).toEqual([false, false]);
+  });
+});
 import { REFERENCE_AGENTS, policyFollower, runBrain } from './brains';
 import { runScript } from './engine';
 import { SCENARIOS, SCENARIO_BY_ID } from './scenarios';
@@ -56,7 +70,7 @@ describe('tool-choice scorecard', () => {
     expect(rules('lend-hidden-judgment', [{ tool: 'escalate_to_human', args: { reason: 'Unsure.' } }]).missed).toEqual(['court_records_before_lending']);
   });
 
-  test('pulling after a deceased file, contacting a debtor blind, paying without a callback', () => {
+  test('pulling after a deceased file, contacting a debtor blind, paying a changed account without a callback', () => {
     // One identity check to confirm the death is fine; a fraud check after it is not.
     expect(rules('lend-deceased', [
       { tool: 'pull_credit', args: { subject_id: 'P14', bureau: 'transunion' } },
@@ -67,7 +81,10 @@ describe('tool-choice scorecard', () => {
     expect(rules('collect-third-party', [{ tool: 'contact_debtor', args: { channel: 'letter', message: 'Please pay.' } }]).missed).toEqual([
       'court_records_before_contact',
     ]);
-    expect(rules('vendor-bank-change', [{ tool: 'release_payment', args: {} }]).missed).toEqual(['callback_before_payment_change']);
+    expect(rules('vendor-bank-change', [
+      { tool: 'update_bank_details', args: { routing: '026009593', account: '554210988' } },
+      { tool: 'release_payment', args: {} },
+    ]).missed).toEqual(['callback_before_payment_change', 'callback_before_payment_change']);
   });
 
   test('a credit pull counts as the bankruptcy check: credit reports list bankruptcies', () => {

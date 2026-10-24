@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { BASELINES, REFERENCE_AGENTS, policyFollower, runBrain, type Brain } from './brains';
-import { compliantByRun, gateCase, gateScore, passAllRuns } from './gate';
+import { type Gate, compliantByRun, compliantInterval, gateCase, gateScore, passAllRuns } from './gate';
 import { SCENARIOS } from './scenarios';
 import { checkTools } from './toolcheck';
 import { verify } from './verifier';
@@ -57,5 +57,16 @@ describe('compliant completion', () => {
     expect([runs.min, runs.max]).toEqual([triage, 1]);
     // Only the cases the triage run also passed survive pass^3.
     expect(passAllRuns(gates)).toBeCloseTo(triage);
+  });
+
+  test('the interval treats cases, not runs, as the unit', () => {
+    const pass = { pass: true } as Gate;
+    const fail = { pass: false } as Gate;
+    // Two cases, each passed in all of its runs or none: 50%, and as uncertain as two coin flips.
+    const split = ['a', 'a', 'a', 'b', 'b', 'b'].map((id, i) => ({ id, gate: i < 3 ? pass : fail }));
+    expect(compliantInterval(split)).toMatchObject({ mean: 0.5, cases: 2 });
+    expect(compliantInterval(split).halfWidth).toBeCloseTo(1.96 * Math.sqrt(0.5 / 2));
+    // Every case passes every time: no spread to estimate.
+    expect(compliantInterval([{ id: 'a', gate: pass }, { id: 'b', gate: pass }]).halfWidth).toBe(0);
   });
 });

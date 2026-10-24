@@ -18,7 +18,9 @@
     "world:resume": "spacetime call endersbench set_running true --server",
     "report": "esbuild harness/report-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/report.js --log-level=warning && node dist-harness/report.js",
     "finance:bench": "esbuild harness/finance/run.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-run.js --log-level=warning && node dist-harness/finance-run.js",
-    "finance:leaderboard": "esbuild harness/finance/leaderboard.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-leaderboard.js --log-level=warning && node dist-harness/finance-leaderboard.js"
+    "finance:leaderboard": "esbuild harness/finance/leaderboard.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-leaderboard.js --log-level=warning && node dist-harness/finance-leaderboard.js",
+    "finance:label": "esbuild harness/finance/label.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-label.js --log-level=warning && node dist-harness/finance-label.js",
+    "finance:promote": "esbuild harness/finance/promote.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-promote.js --log-level=warning && node dist-harness/finance-promote.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

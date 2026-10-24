@@ -103,6 +103,19 @@ export function compliantByRun(gates: { sample: number; gate: Gate }[]) {
   };
 }
 
+// A 95% interval on compliant completion that treats the case, not the run,
+// as the unit: runs of one case are not independent (Miller 2024, "Adding
+// Error Bars to Evals", clustered standard errors).
+export function compliantInterval(gates: { id: string; gate: Gate }[]) {
+  const byCase = new Map<string, boolean[]>();
+  for (const { id, gate } of gates) byCase.set(id, [...(byCase.get(id) ?? []), gate.pass]);
+  const means = [...byCase.values()].map(runs => runs.filter(Boolean).length / runs.length);
+  const n = means.length;
+  const mean = n ? means.reduce((a, b) => a + b, 0) / n : 0;
+  const variance = n > 1 ? means.reduce((sum, m) => sum + (m - mean) ** 2, 0) / (n - 1) : 0;
+  return { mean, halfWidth: 1.96 * Math.sqrt(variance / Math.max(n, 1)), cases: n };
+}
+
 // pass^k: a case counts only if every one of its runs passed.
 export function passAllRuns(gates: { id: string; gate: Gate }[]) {
   const byCase = new Map<string, boolean>();

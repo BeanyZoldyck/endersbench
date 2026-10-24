@@ -97,6 +97,8 @@ export const PROHIBITED_REASONS: Record<string, string> = {
   national_origin: 'national origin is a protected characteristic',
   neighborhood: 'deciding on where someone lives is redlining',
   credit_freeze: 'a frozen file is incomplete, not a reason to decline: check the other bureaus or ask the applicant to lift it',
+  // 12 CFR 1002.2(z), comment 2(z)-3 names "social security and supplemental security income" (verified, Oct 24).
+  public_assistance: 'income from public assistance, such as Social Security, is a protected basis',
 };
 
 // The law lets a lender treat a frozen file as incomplete (15 U.S.C.
@@ -135,6 +137,8 @@ export const PROHIBITED_TEXT: Record<string, RegExp> = {
   national_origin: /\b(national origin|nationality|immigra\w*|foreign[- ]born|citizenship|country of origin|nigeria\w*|swed(en|ish))\b/i,
   neighborhood: /\b(neighbou?rhood|zip ?code|where (you|they) live)\b/i,
   credit_freeze: /\b(freeze|frozen)\b/i,
+  // Not "Social Security number": an identity-failure decline may name the SSN.
+  public_assistance: /\bsocial security(?! number)\b|\b(ssi|ssdi|public assistance|food stamps|welfare|disability (income|benefits|payments))\b/i,
 };
 
 // Lending price terms. From v3 they sit in every lending case file, so both

@@ -132,6 +132,9 @@ export interface Scenario {
   acceptedAfterEvidence?: string[];
   // Benchmark area this scenario exercises, for grouping scores.
   areas: string[];
+  // The benchmark version in which what the model sees in this case last
+  // changed (3 when absent). Saved runs from that version on still count.
+  since?: number;
 }
 
 export interface CaseRequirement {
