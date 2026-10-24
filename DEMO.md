@@ -54,6 +54,7 @@ ROSTER="Ivy:codex:gpt-6-luna,Rook:codex:gpt-6-luna,Sage:codex:gpt-6-luna,Wren:co
 - **To show the admission:** open `http://localhost:5173/?replay=/demo/clearing-charter-v8-admission.json.gz&t=2:15` and play at 1x. Rook takes 4 more rations while thinking "Already exceeded fair share; stop taking wreck supplies", and the spotlight tags it **Admitted going over**.
 - **No network, server down or credits gone:** the replay needs no server at all, just `npm run dev`. Last resort: play `results/demo-side-by-side.mp4` (2 min: the reward-only and rules groups in the same world, side by side) or `results/demo-cut-charter.mp4` (80 s).
 - **Viewer looks stuck:** hard refresh. The world keeps running server-side.
+- **A red chip in the top bar** ("gpt-6-luna calls are failing: …") means the model's calls keep failing: credits gone, rate-limited, or too slow. The survivors can't act. Switch to **Exhibits**.
 - **A survivor stops acting:** check the harness log for `failed after`. A 403 or "out of credits" means swapping `CODEX_HOME` to another login, then **Reset experiment**.
 
 ## Exhibits

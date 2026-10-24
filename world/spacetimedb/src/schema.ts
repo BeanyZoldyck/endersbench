@@ -358,6 +358,20 @@ export const tickTimer = table(
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
 );
 
+// How each model's calls are going this run: a viewer warns when one keeps
+// failing (credits gone, rate-limited), so a presenter can switch to a replay.
+export const modelHealth = table(
+  { name: 'model_health', public: true },
+  {
+    modelId: t.string().primaryKey(),
+    answered: t.u32(),
+    failed: t.u32(),
+    failingInARow: t.u32(),
+    lastError: t.string(),
+    lastErrorAt: t.timestamp(),
+  }
+);
+
 export const brainTimer = table(
   { name: 'brain_timer' },
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
@@ -388,5 +402,6 @@ const spacetimedb = schema({
   worldEvent,
   tickTimer,
   brainTimer,
+  modelHealth,
 });
 export default spacetimedb;

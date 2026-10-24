@@ -200,6 +200,16 @@ export const Mob = __t.object("Mob", {
 });
 export type Mob = __Infer<typeof Mob>;
 
+export const ModelHealth = __t.object("ModelHealth", {
+  modelId: __t.string(),
+  answered: __t.u32(),
+  failed: __t.u32(),
+  failingInARow: __t.u32(),
+  lastError: __t.string(),
+  lastErrorAt: __t.timestamp(),
+});
+export type ModelHealth = __Infer<typeof ModelHealth>;
+
 export const ResourceNode = __t.object("ResourceNode", {
   id: __t.u64(),
   kind: __t.string(),

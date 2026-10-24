@@ -179,7 +179,7 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
   stopTimers(ctx);
   const d = ctx.db;
   for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
-    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score]) table.clear();
+    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
 });
@@ -210,7 +210,10 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
       const req = ctx.db.decisionRequest.id.find(a.pendingRequestId);
       const ageMs = req ? Number(ctx.timestamp.microsSinceUnixEpoch - req.createdAt.microsSinceUnixEpoch) / 1000 : Infinity;
       if (req && req.status === 'pending' && ageMs < REQUEST_TIMEOUT_MS) continue;
-      if (req && req.status === 'pending') ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+      if (req && req.status === 'pending') {
+        ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+        noteModel(ctx, req.modelId, 'no answer in time');
+      }
       ctx.db.agent.id.update({ ...a, pendingRequestId: 0n, wake: true, wakeReason: 'retry' });
       continue;
     }
@@ -235,6 +238,15 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
 });
 
 // The only door for model output.
+// Records a model's answer, or its failure with the error, for the viewer's warning.
+function noteModel(ctx: Ctx, modelId: string, error?: string) {
+  const h = ctx.db.modelHealth.modelId.find(modelId)
+    ?? ctx.db.modelHealth.insert({ modelId, answered: 0, failed: 0, failingInARow: 0, lastError: '', lastErrorAt: ctx.timestamp });
+  ctx.db.modelHealth.modelId.update(error === undefined
+    ? { ...h, answered: h.answered + 1, failingInARow: 0 }
+    : { ...h, failed: h.failed + 1, failingInARow: h.failingInARow + 1, lastError: error.slice(0, 200), lastErrorAt: ctx.timestamp });
+}
+
 export const submitDecision = spacetimedb.reducer(
   { requestId: t.u64(), action: t.string(), thought: t.string(), latencyMs: t.u32() },
   (ctx, { requestId, action, thought, latencyMs }) => {
@@ -243,6 +255,7 @@ export const submitDecision = spacetimedb.reducer(
     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
     const me = ctx.db.agent.id.find(req.agentId);
     if (!me) throw new SenderError('agent is gone');
+    noteModel(ctx, req.modelId);
     const w = getWorld(ctx);
 
     if (!me.alive) {
@@ -287,6 +300,7 @@ export const failDecision = spacetimedb.reducer(
     const req = ctx.db.decisionRequest.id.find(requestId);
     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
     ctx.db.decisionRequest.id.update({ ...req, status: 'failed', error: error.slice(0, 500), latencyMs });
+    noteModel(ctx, req.modelId, error);
     const me = ctx.db.agent.id.find(req.agentId);
     if (me) ctx.db.agent.id.update({ ...me, pendingRequestId: 0n, nextThinkAtMs: getWorld(ctx).gameTimeMs + RETRY_MS });
   }

@@ -8,6 +8,7 @@ import { useMoments, type Moment } from './scene/SceneEvents';
 import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
 import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
+import { modelTrouble } from './modelHealth';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
@@ -72,6 +73,7 @@ export default function App() {
     : '';
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
   const [scores, scoresReady] = useTable(tables.score);
+  const [modelHealth] = useTable(tables.modelHealth);
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
@@ -89,6 +91,8 @@ export default function App() {
   previewSource.current = liveWorld;
   const worldAvailable = !!liveWorld;
   const preview = useMemo(() => import.meta.env.DEV && staged && previewSource.current ? artPreview(previewSource.current, winterPreview, depleted, survivalPreview) : null, [staged, worldAvailable, winterPreview, depleted, survivalPreview]);
+  // In a live run, a model whose calls keep failing is named on screen.
+  const trouble = !replay.active && !preview ? modelTrouble(modelHealth) : null;
   const world = recorded?.world ?? preview?.world ?? liveWorld;
   const agents = recorded?.agents ?? preview?.agents ?? liveAgents, nodes = recorded?.nodes ?? preview?.nodes ?? liveNodes;
   const containers = recorded?.containers ?? preview?.containers ?? liveContainers, items = recorded?.items ?? preview?.items ?? liveItems, messages = recorded?.messages ?? preview?.messages ?? liveMessages;
@@ -172,6 +176,7 @@ export default function App() {
     <div className="world-status">
       <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
+      {trouble && <span className="model-trouble" role="alert" title="The survivors cannot act while their model is failing. Exhibits has recorded runs.">{trouble}</span>}
       {condition && <span className="condition-chip" title="The experimental condition of this run">{condition}</span>}
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}

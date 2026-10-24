@@ -12,6 +12,7 @@ const {
   spawnAgent,
   claimHarness,
   submitDecision,
+  failDecision,
   setTimeScale,
   joinAsHuman,
   humanMoveTo,
@@ -2298,5 +2299,44 @@ describe('acting at a distance', () => {
     decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id), qty: 3 } });
     run(t, 6_000);
     expect(([...t.db.structure.iter()] as any[]).find(x => x.kind === 'shelter').woodNeeded).toBe(R.SHELTER_WOOD - 3);
+  });
+});
+
+describe('model health', () => {
+  function openRequest(t: T, name: string) {
+    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    return pendingFor(t, agentNamed(t, name).id)[0];
+  }
+  const health = (t: T) => [...t.db.modelHealth.iter()].find((h: any) => h.modelId === 'fake')!;
+
+  test('failed calls are counted per model, with the last error, so a viewer can warn', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    for (let i = 0; i < 3; i++) {
+      const req = openRequest(t, 'Ada');
+      t.withReducerTx(harness, ctx => failDecision(ctx, { requestId: req.id, error: 'ERROR: You have hit your usage limit.', latencyMs: 9 }));
+      setAgent(t, 'Ada', { nextThinkAtMs: 0 });
+    }
+    expect(health(t)).toMatchObject({ answered: 0, failed: 3, failingInARow: 3, lastError: 'ERROR: You have hit your usage limit.' });
+  });
+
+  test('an answer ends the streak of failures', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const req = openRequest(t, 'Ada');
+    t.withReducerTx(harness, ctx => failDecision(ctx, { requestId: req.id, error: 'boom', latencyMs: 9 }));
+    setAgent(t, 'Ada', { nextThinkAtMs: 0 });
+    decide(t, 'Ada', { name: 'idle' });
+    expect(health(t)).toMatchObject({ answered: 1, failed: 1, failingInARow: 0 });
+  });
+
+  test('a new run starts with a clean record', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const req = openRequest(t, 'Ada');
+    t.withReducerTx(harness, ctx => failDecision(ctx, { requestId: req.id, error: 'boom', latencyMs: 9 }));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    expect([...t.db.modelHealth.iter()]).toHaveLength(0);
   });
 });

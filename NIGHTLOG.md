@@ -602,3 +602,13 @@ What to run next, when there are calls again:
 1. More Sol pairs. One pair hints that Sol doesn't grab early.
 2. More Luna v8 pairs, to settle the amount (p = 0.15 now).
 
+### Live-demo guard: the viewer says when the model is failing
+
+Twice tonight a login ran dry mid-run. Each time the survivors quietly stopped acting and starved, and only the harness log said why.
+
+- **Module:** a small public `model_health` table records each model's answered and failed calls, its failures in a row and its last error. `submitDecision`, `failDecision` and request expiry update it, and a reset clears it.
+- **Viewer:** after 3 failures in a row it shows a red chip in the top bar, for example "gpt-6-luna calls are failing: out of credits". The presenter knows to switch to Exhibits.
+- **Check:** tested end to end against the exhausted ebe login, which costs no credits because the calls fail at once.
+
+The databases were republished for the new table. The data was already saved in the reports, and no run was in progress.
+

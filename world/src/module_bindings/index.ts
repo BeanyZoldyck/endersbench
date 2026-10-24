@@ -63,6 +63,7 @@ import MemoryRow from "./memory_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
 import MobRow from "./mob_table";
+import ModelHealthRow from "./model_health_table";
 import ResourceNodeRow from "./resource_node_table";
 import ScoreRow from "./score_table";
 import StructureRow from "./structure_table";
@@ -229,6 +230,17 @@ const tablesSchema = __schema({
       { name: 'mob_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, MobRow),
+  modelHealth: __table({
+    name: 'model_health',
+    indexes: [
+      { accessor: 'modelId', name: 'model_health_model_id_idx_btree', algorithm: 'btree', columns: [
+        'modelId',
+      ] },
+    ],
+    constraints: [
+      { name: 'model_health_model_id_key', constraint: 'unique', columns: ['modelId'] },
+    ],
+  }, ModelHealthRow),
   resourceNode: __table({
     name: 'resource_node',
     indexes: [
