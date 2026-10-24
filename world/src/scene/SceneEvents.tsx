@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { DbConnection, EventContext } from '../module_bindings';
-import type { Agent, Container, HitEvent, Mob, TransferEvent, WorldEvent } from '../module_bindings/types';
+import type { Agent, Container, HitEvent, Mob, TransferEvent, World, WorldEvent } from '../module_bindings/types';
 import { itemColor } from './contract';
 
 export type Moment = { id: number; type: 'hit' | 'transfer' | 'world'; from: [number, number]; to: [number, number]; kind: string; born: number; knockedOut?: boolean };
@@ -13,10 +13,15 @@ export function actorPosition(id: bigint, isMob: boolean, agents: readonly Pick<
   const row = (isMob ? mobs : agents).find(a => a.id === id);
   return row && [row.x, row.y];
 }
-export function useMoments(conn: DbConnection | null, agents: readonly Agent[], containers: readonly Container[], mobs: readonly Mob[], enabled: boolean) {
+export function worldEventPosition(e: Pick<WorldEvent, 'kind' | 'x' | 'y'>, world?: Pick<World, 'width' | 'height'>): [number, number] | undefined {
+  // Global rescue events use (0, 0) as a sentinel, not a physical location.
+  if (e.kind === 'flyover' || e.kind === 'rescued') return world ? [world.width / 2, world.height / 2] : undefined;
+  return [e.x, e.y];
+}
+export function useMoments(conn: DbConnection | null, agents: readonly Agent[], containers: readonly Container[], mobs: readonly Mob[], enabled: boolean, world?: World) {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [events, setEvents] = useState<ObservedEvent[]>([]);
-  const latest = useRef({ agents, containers, mobs, enabled }); latest.current = { agents, containers, mobs, enabled };
+  const latest = useRef({ agents, containers, mobs, enabled, world }); latest.current = { agents, containers, mobs, enabled, world };
   const serial = useRef(0);
   useEffect(() => {
     if (!conn) return;
@@ -39,7 +44,8 @@ export function useMoments(conn: DbConnection | null, agents: readonly Agent[], 
     const worldEvent = (_ctx: EventContext, e: WorldEvent) => {
       if (!latest.current.enabled) return;
       setEvents(old => [...old.slice(-79), { ...e, localId: ++serial.current, receivedAt: performance.now() }]);
-      add({ type: 'world', from: [e.x, e.y], to: [e.x, e.y], kind: e.kind });
+      const position = worldEventPosition(e, latest.current.world);
+      if (position) add({ type: 'world', from: position, to: position, kind: e.kind });
     };
     conn.db.hitEvent.onInsert(hit); conn.db.transferEvent.onInsert(transfer); conn.db.worldEvent.onInsert(worldEvent);
     const subscription = conn.subscriptionBuilder().subscribe(['SELECT * FROM hit_event', 'SELECT * FROM transfer_event', 'SELECT * FROM world_event']);

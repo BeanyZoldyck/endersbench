@@ -58,7 +58,7 @@ export default function App() {
   const agents = preview?.agents ?? liveAgents, nodes = preview?.nodes ?? liveNodes;
   const containers = preview?.containers ?? liveContainers, items = preview?.items ?? liveItems, messages = preview?.messages ?? liveMessages;
   const structures = preview?.structures ?? liveStructures, mobs = preview?.mobs ?? liveMobs, hazards = preview?.hazards ?? liveHazards, memories = preview?.memories ?? liveMemories;
-  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview);
+  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
   const ready = worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));

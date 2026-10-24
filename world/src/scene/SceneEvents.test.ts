@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actorPosition, momentDuration, momentPriority, type Moment } from './SceneEvents';
+import { actorPosition, worldEventPosition, momentDuration, momentPriority, type Moment } from './SceneEvents';
 
 describe('spectator event attribution', () => {
   it('resolves overlapping agent and mob IDs in the correct table', () => {
@@ -9,6 +9,13 @@ describe('spectator event attribution', () => {
     expect(actorPosition(1n, true, agents, mobs)).toEqual([80, 90]);
     expect(actorPosition(2n, true, agents, mobs)).toBeUndefined();
     expect(actorPosition(1n, true, agents, [])).toBeUndefined();
+  });
+  it('centers global rescue events without relocating physical events', () => {
+    const world = { width: 128, height: 128 };
+    expect(worldEventPosition({ kind: 'flyover', x: 0, y: 0 }, world)).toEqual([64, 64]);
+    expect(worldEventPosition({ kind: 'rescued', x: 0, y: 0 }, world)).toEqual([64, 64]);
+    expect(worldEventPosition({ kind: 'flare', x: 12, y: 40 }, world)).toEqual([12, 40]);
+    expect(worldEventPosition({ kind: 'flyover', x: 0, y: 0 })).toBeUndefined();
   });
   it('holds a flyover long enough to cross and prioritizes actual harm', () => {
     const flyover: Moment = { id: 1, type: 'world', from: [64, 64], to: [64, 64], kind: 'flyover', born: 0 };
