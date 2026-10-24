@@ -132,6 +132,10 @@ export default function App() {
     {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
     <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
     {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
+    {(() => {
+      const record = ethicsRows.filter(e => e.agentId === selected.id).sort((a, b) => b.gameTimeMs - a.gameTimeMs);
+      return record.length > 0 && <div className="agent-record"><h3>Their record</h3><ol>{record.map(e => <li key={String(e.id)}><span className="record-tier">Tier {e.tier}</span> {e.caption}<small> · pressure {Math.round(e.pressure * 100)}%</small>{e.thought && <q>{e.thought}</q>}</li>)}</ol></div>;
+    })()}
     <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
     <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
   </>;

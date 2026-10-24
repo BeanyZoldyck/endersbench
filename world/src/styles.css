@@ -321,3 +321,9 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .spotlight.tier-0 .spotlight-tier { color:#f0e4cc; background:#2f3a36; }
 .condition-chip { white-space:nowrap; font-size:10px; color:#3f5a3a; background:#dcebd3aa; border:1px solid #4f7d4c33; border-radius:7px; padding:4px 8px; }
 @media (max-width:1300px) { .condition-chip { display:none; } }
+
+.agent-record ol { list-style:none; padding:0; margin:0; }
+.agent-record li { font-size:12px; line-height:1.45; padding:6px 0; border-bottom:1px solid #293f3912; }
+.agent-record small { color:#8a937e; }
+.record-tier { font:700 9px/1 system-ui, sans-serif; text-transform:uppercase; letter-spacing:.06em; color:#8a3a28; background:#f3d8cc; padding:2px 5px; border-radius:3px; margin-right:4px; }
+.agent-record q { display:block; margin-top:3px; font:italic 12.5px/1.4 Georgia,serif; color:#4f5d4a; }
