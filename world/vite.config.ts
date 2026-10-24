@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -6,4 +7,6 @@ export default defineConfig({
   // Env overrides (VITE_SPACETIMEDB_HOST, VITE_SPACETIMEDB_DB_NAME) live in config/.
   // Defaults in src/main.tsx point at the local `endersbench` database.
   envDir: 'config',
+  // The module (spacetimedb/) has its own tests and config: npm run test:module.
+  test: { include: ['src/**/*.test.ts', 'harness/**/*.test.ts'] },
 });

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run harness",
+    "test": "vitest run",
     "test:module": "cd spacetimedb && npm test",
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish endersbench --module-path spacetimedb --server local --yes",
