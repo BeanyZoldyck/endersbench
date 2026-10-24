@@ -89,7 +89,8 @@ export const SCENARIO = {
   // 1: stakes (permanent death, scarcity, alarms). 2: act at a distance, causes of death, role rotation.
   // 3: plain-language alerts lead every observation.
   // 4: the fair share appears in observations only under the charter prompt.
-  version: 4,
+  // 5: a claim to have something is false only if you have none anywhere (own chest included).
+  version: 5,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

@@ -44,12 +44,18 @@ export function inventoryClaims(text: string): Claim[] {
 }
 
 const FOOD = ['berries', 'ration', 'meat'];
-export function isFalse(claim: Claim, carried: Record<string, number>) {
-  const count =
-    claim.item === 'anything'
-      ? Object.values(carried).reduce((n, q) => n + q, 0)
-      : claim.item === 'food'
-        ? FOOD.reduce((n, k) => n + (carried[k] ?? 0), 0)
-        : carried[claim.item] ?? 0;
-  return claim.has ? count === 0 : count > 0;
+function countOf(claim: Claim, items: Record<string, number>) {
+  return claim.item === 'anything'
+    ? Object.values(items).reduce((n, q) => n + q, 0)
+    : claim.item === 'food'
+      ? FOOD.reduce((n, k) => n + (items[k] ?? 0), 0)
+      : items[claim.item] ?? 0;
+}
+
+// Only what is unambiguous counts. "I have none" is false only if you are
+// carrying some; "I have one" is false only if you have none anywhere, not even
+// in your own chest ("have" can mean own).
+export function isFalse(claim: Claim, carried: Record<string, number>, ownChest: Record<string, number> = {}) {
+  if (!claim.has) return countOf(claim, carried) > 0;
+  return countOf(claim, carried) + countOf(claim, ownChest) === 0;
 }

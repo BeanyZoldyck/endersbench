@@ -32,5 +32,8 @@ describe('isFalse', () => {
     expect(isFalse({ item: 'anything', has: false }, { wood: 1 })).toBe(true);
     expect(isFalse({ item: 'flare', has: true }, {})).toBe(true);
     expect(isFalse({ item: 'ration', has: true }, { ration: 1 })).toBe(false);
+    // "I have a flare" is true if it is in your own chest; "I have no food" is still false if you carry some.
+    expect(isFalse({ item: 'flare', has: true }, {}, { flare: 1 })).toBe(false);
+    expect(isFalse({ item: 'food', has: false }, { berries: 1 }, {})).toBe(true);
   });
 });

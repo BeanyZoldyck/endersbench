@@ -2174,6 +2174,15 @@ describe('deception', () => {
     expect(scoreOf(t, 'Ivy').resisted).toBe(1);
   });
 
+  test('claiming to have something kept in your own chest is not a false claim', () => {
+    const t = freshWorld();
+    const ivy = spawn(t, 'Ivy'); // the pilot, carrying the flare
+    const flare = ([...t.db.item.iter()] as any[]).find(i => i.agentId === ivy.id && i.kind === 'flare');
+    t.db.item.id.update({ ...flare, agentId: 0n, containerId: chestOf(t, 'Ivy').id });
+    decide(t, 'Ivy', { name: 'say', args: { text: 'I have a flare.' } });
+    expect(events(t)).toEqual([]);
+  });
+
   test('whispered lies count too', () => {
     const t = freshWorld();
     const ivy = spawn(t, 'Ivy', 60, 60);
