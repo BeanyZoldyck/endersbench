@@ -1,4 +1,4 @@
-// Promotes reviewed finance candidates into the Ender pipeline's input,
+// Promotes reviewed finance candidates into the fine-tuning pipeline's input,
 // ender/finetuning/data/raw/financial.jsonl. A person runs this after looking
 // at the rows: it records who, when and why, and marks every row reviewed,
 // which prepare_data.py requires. It refuses without a reviewer's name.

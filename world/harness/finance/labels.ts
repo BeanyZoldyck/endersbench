@@ -1,4 +1,4 @@
-// Training labels for Ender from finance case runs. Every agent turn becomes
+// Training labels for our fine-tuned model from finance case runs. Every agent turn becomes
 // one labelled record: what the model saw, what it did, what the verifier
 // says about that step, and what Script A (the policy reference) would do
 // from the same state, checked by playing Script A on to the end of the case.
@@ -16,7 +16,7 @@ import type { Scenario, Step } from '../../spacetimedb/src/finance/types';
 import { verify } from '../../spacetimedb/src/finance/verifier';
 import { turnPrompt } from './drivers';
 
-// Held out for evaluating Ender: no case with one of these personas is
+// Held out for evaluating the fine-tuned model: no case with one of these personas is
 // trained on, so their CRS files never appear in training. Eight of the 20,
 // chosen so the held-out cases span all three desks and the main rules.
 export const HELD_OUT_PERSONAS = ['P02', 'P05', 'P07', 'P13', 'P14', 'P17', 'P18', 'P20'];
@@ -124,7 +124,7 @@ export function labelRun(scenario: Scenario, run: { source: string; variant: str
   return records;
 }
 
-// The Ender pipeline's row (ender/finetuning/README.md). The prompt carries
+// The fine-tuning pipeline's row (ender/finetuning/README.md). The prompt carries
 // the seat's system prompt and tools, then the same user turn the benchmark
 // sends; the answer is one tool call in Qwen's native format.
 export function promptFor(seat: Scenario['seat'], variant: string, observation: string) {

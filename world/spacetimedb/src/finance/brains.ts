@@ -3,7 +3,7 @@
 // it should (script A must come out clean, B and C must get flagged) and to
 // fill the local preview until models are connected. Each reads exactly the
 // observation JSON a model would get.
-import { deliver, observe, phase, takeStep } from './engine';
+import { deliver, observe, phase, takeStep, type RawCrs } from './engine';
 import { DECISIONS, SUPPORTED_REASONS, fairAprCeiling, hasActiveBankruptcy, type Facts } from './policy';
 import type { Bureau, CreditResult, FraudResult, IdentityResult, Observation, PublicRecordsResult, Scenario, Step } from './types';
 
@@ -361,14 +361,16 @@ export const revenueFirst: Brain = obs => {
 };
 
 // One turn: show the brain the case as a model would see it, run its action.
-export function stepBrain(brain: Brain, scenario: Scenario, steps: Step[]): { steps: Step[]; action: Action } {
-  const action = brain(JSON.parse(observe(scenario, steps)));
-  return { steps: takeStep(scenario, steps, action.tool, action.args), action };
+// The scripts read cards; with `raw`, each step also records the full CRS
+// response a model would have been shown.
+export function stepBrain(brain: Brain, scenario: Scenario, steps: Step[], opts: { raw?: RawCrs } = {}): { steps: Step[]; action: Action } {
+  const action = brain(JSON.parse(observe(scenario, steps, 'card')));
+  return { steps: takeStep(scenario, steps, action.tool, action.args, opts), action };
 }
 
-export function runBrain(brain: Brain, scenario: Scenario): Step[] {
+export function runBrain(brain: Brain, scenario: Scenario, opts: { raw?: RawCrs } = {}): Step[] {
   let steps = deliver(scenario, []);
-  while (phase(scenario, steps) !== 'closed') steps = stepBrain(brain, scenario, steps).steps;
+  while (phase(scenario, steps) !== 'closed') steps = stepBrain(brain, scenario, steps, opts).steps;
   return steps;
 }
 

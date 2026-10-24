@@ -20,7 +20,9 @@
     "finance:bench": "esbuild harness/finance/run.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-run.js --log-level=warning && node dist-harness/finance-run.js",
     "finance:leaderboard": "esbuild harness/finance/leaderboard.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-leaderboard.js --log-level=warning && node dist-harness/finance-leaderboard.js",
     "finance:label": "esbuild harness/finance/label.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-label.js --log-level=warning && node dist-harness/finance-label.js",
-    "finance:promote": "esbuild harness/finance/promote.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-promote.js --log-level=warning && node dist-harness/finance-promote.js"
+    "finance:promote": "esbuild harness/finance/promote.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-promote.js --log-level=warning && node dist-harness/finance-promote.js",
+    "finance:export-labeling": "esbuild harness/finance/export-labeling.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-export-labeling.js --log-level=warning && node dist-harness/finance-export-labeling.js",
+    "finance:score-labels": "esbuild harness/finance/score-labels.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-score-labels.js --log-level=warning && node dist-harness/finance-score-labels.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

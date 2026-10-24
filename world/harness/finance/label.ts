@@ -1,4 +1,4 @@
-// Builds Ender's finance training data. No API calls.
+// Builds the finance training data for our fine-tuned Qwen3.8-27B. No API calls.
 //
 //   npm run finance:label                         scripted states only (the default)
 //   npm run finance:label -- --include-model-runs also states from saved Claude and GPT runs
@@ -29,10 +29,17 @@ import { FINANCE_BENCHMARK_VERSION, SCENARIOS, SCENARIO_BY_ID } from '../../spac
 import type { Scenario, Step } from '../../spacetimedb/src/finance/types';
 import { HELD_OUT_PERSONAS, TEST_CASES, labelRun, pairRows, roughTokens, scriptedOnly, sftRows, splitOf, type StepRecord } from './labels';
 import { ARCHETYPES, archetypeOf, syntheticCards, syntheticInstances } from './synthetic';
+import { isCrsTool } from '../../spacetimedb/src/finance/engine';
+import { rawCrs } from './rawcrs';
 
 const RUNS_DIR = path.resolve('harness/finance/runs');
-const OUT_DIR = path.resolve('..', 'ender', 'finetuning', 'data', 'candidates');
 const includeModelRuns = process.argv.includes('--include-model-runs');
+// --raw-crs: rows show the full CRS responses instead of cards. The synthetic
+// files exist only as cards, so they are left out in this mode.
+const rawMode = process.argv.includes('--raw-crs');
+const OUT_DIR = path.resolve('..', 'ender', 'finetuning', 'data', rawMode ? 'candidates-raw' : 'candidates');
+const withRaw = (steps: Step[]) =>
+  rawMode ? steps.map(s => (isCrsTool(s.tool) && s.raw === undefined && !(s.result && typeof s.result === 'object' && 'error' in s.result) ? { ...s, raw: rawCrs(s.tool, s.args) } : s)) : steps;
 const CAP_PER_CASE_TOOL = 3;
 
 interface SavedRun {
@@ -52,7 +59,7 @@ for (const file of fs.readdirSync(RUNS_DIR).filter(f => f.endsWith('.json') && f
   for (const c of loop.cases) {
     const scenario = SCENARIO_BY_ID[c.id];
     if (!scenario || version < (scenario.since ?? 3) || c.steps.length === 0) continue;
-    records.push(...labelRun(scenario, { source: `${run.config.provider}:${run.config.model}`, variant: run.config.variant, sample: c.sample ?? 0, steps: c.steps }));
+    records.push(...labelRun(scenario, { source: `${run.config.provider}:${run.config.model}`, variant: run.config.variant, sample: c.sample ?? 0, steps: withRaw(c.steps) }));
     modelRuns++;
   }
 }
@@ -68,7 +75,7 @@ const synthetic = Object.fromEntries(
   Object.entries(allSynthetic).filter(([id]) => !strictHoldout || !HELD_OUT_PERSONAS.includes(ARCHETYPES[archetypeOf(id)]))
 );
 Object.assign(CARDS, synthetic);
-const syntheticCases = familyCases(syntheticInstances(synthetic), synthetic, { prefix: 'syn-' });
+const syntheticCases = rawMode ? [] : familyCases(syntheticInstances(synthetic), synthetic, { prefix: 'syn-' });
 for (const s of syntheticCases) if (s.seat === 'lending') s.brief.rateCard = RATE_CARD;
 
 // 3. Scripted runs on every training case, benchmark and synthetic.
@@ -79,7 +86,7 @@ const SCRIPTS: { source: string; brain: Brain }[] = [
 const trainingCases: Scenario[] = [...SCENARIOS.filter(s => splitOf(s) === 'train'), ...syntheticCases];
 for (const scenario of [...SCENARIOS.filter(s => splitOf(s) === 'test'), ...trainingCases]) {
   for (const variant of FINANCE_PROMPT_VARIANTS) {
-    for (const { source, brain } of SCRIPTS) records.push(...labelRun(scenario, { source, variant, sample: 0, steps: runBrain(brain, scenario) }));
+    for (const { source, brain } of SCRIPTS) records.push(...labelRun(scenario, { source, variant, sample: 0, steps: runBrain(brain, scenario, { raw: rawMode ? rawCrs : undefined }) }));
   }
 }
 
@@ -103,6 +110,7 @@ const summary = {
   benchmarkVersion: FINANCE_BENCHMARK_VERSION,
   trainingRowsFrom: includeModelRuns ? 'scripted and saved model runs' : 'scripted runs only',
   holdout: strictHoldout ? 'strict: held-out personas and the archetypes cloned from them' : 'held-out personas',
+  crsFormat: rawMode ? 'full CRS responses (no synthetic files)' : 'cards',
   modelCaseRunsLabelled: modelRuns,
   heldOut: { personas: HELD_OUT_PERSONAS, cases: TEST_CASES.length },
   trainingCases: { benchmark: trainingCases.length - syntheticCases.length, synthetic: syntheticCases.length, syntheticFiles: Object.keys(synthetic).length },

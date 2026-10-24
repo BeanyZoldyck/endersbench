@@ -22,7 +22,7 @@ import type { Step } from '../../spacetimedb/src/finance/types';
 const RUNS_DIR = path.resolve('harness/finance/runs');
 
 interface SavedRun {
-  config: { benchmarkVersion?: number; provider: string; model: string; variant: string; cases: string[]; repeat?: number };
+  config: { benchmarkVersion?: number; provider: string; model: string; variant: string; crsFormat?: 'raw' | 'card'; cases: string[]; repeat?: number };
   results: { driver: string; cases: { id: string; sample?: number; steps: Step[] }[] }[];
 }
 
@@ -36,7 +36,8 @@ for (const file of fs.readdirSync(RUNS_DIR).filter(f => f.endsWith('.json') && f
   if (version > FINANCE_BENCHMARK_VERSION) continue;
   const loop = run.results.find(r => r.driver === 'messages');
   if (!loop) continue;
-  const key = `${run.config.provider}:${run.config.model}|${run.config.variant}`;
+  // Full CRS responses are a different task from cards: their own row.
+  const key = `${run.config.provider}:${run.config.model}${run.config.crsFormat === 'raw' ? ' [raw CRS]' : ''}|${run.config.variant}`;
   const cases = byModel.get(key) ?? new Map<string, CaseRuns>();
   for (const id of new Set(loop.cases.map(c => c.id))) {
     const scenario = SCENARIO_BY_ID[id];

@@ -93,7 +93,8 @@ export type CrsTool =
 export interface Step {
   tool: string;
   args: Record<string, unknown>;
-  result?: unknown;
+  result?: unknown; // the card-shaped result the verifier scores
+  raw?: unknown; // what the agent was shown instead, when that was the full CRS response
 }
 
 // Something the director says to the agent mid-case: a manager's pressure,

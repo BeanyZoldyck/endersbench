@@ -1,4 +1,4 @@
-// Synthetic applicant files for training Ender, in the CRS card format. Each
+// Synthetic applicant files for training our fine-tuned model, in the CRS card format. Each
 // is cloned from the shape of one CRS persona (its archetype) with a new
 // name, city, scores, dates and amounts, so training sees every kind of file
 // without the benchmark's own files. Never sent to any API, never in the

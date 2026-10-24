@@ -19,7 +19,9 @@ ALIAS="${LLAMA_MODEL_ALIAS:-$ALIAS}"
 SERVER="$ROOT/llama.cpp/build/bin/llama-server"
 PORT="${LLAMA_SERVER_PORT:-8080}"
 PARALLEL="${LLAMA_PARALLEL:-$ACTIVE_PARALLEL}"
-CONTEXT_PER_SLOT="${LLAMA_CONTEXT_PER_SLOT:-8192}"
+# 32,768 per slot: finance turns with full CRS responses reach ~12,600 tokens,
+# and a labelling item (ender/labeling/finance) is ~15,000 before the prompt.
+CONTEXT_PER_SLOT="${LLAMA_CONTEXT_PER_SLOT:-32768}"
 if [[ ! "$PARALLEL" =~ ^[1-9][0-9]*$ || ! "$CONTEXT_PER_SLOT" =~ ^[1-9][0-9]*$ ]]; then
     echo "LLAMA_PARALLEL and LLAMA_CONTEXT_PER_SLOT must be positive integers." >&2
     exit 1
