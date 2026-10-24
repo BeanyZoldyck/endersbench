@@ -283,3 +283,9 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .spotlight blockquote { margin:9px 0 0; font:italic 15px/1.45 Georgia,serif; color:#4f5d4a; }
 @keyframes spotlight-in { from { opacity:0; transform:translate(-50%, -10px); } to { opacity:1; transform:translate(-50%, 0); } }
 @media (prefers-reduced-motion: reduce) { .spotlight { animation:none; } }
+
+.cast-name span.hunted { color:#b4392a; font-weight:700; animation:hunted 0.8s ease-in-out infinite alternate; }
+@keyframes hunted { from { opacity:1; } to { opacity:.55; } }
+@media (prefers-reduced-motion: reduce) { .cast-name span.hunted { animation:none; } }
+.card-pressure { align-self:flex-end; font:700 10px/1 system-ui, sans-serif; font-variant-numeric:tabular-nums; color:#7a3a2a; background:linear-gradient(90deg, #e9b9a6 var(--p), #f1e9d8 var(--p)); border:1px solid #c46a4f44; border-radius:4px; padding:3px 5px; margin-right:6px; }
+.food-left { font-size:11px; color:#5f6c55; border:1px solid #526c4222; border-radius:7px; padding:4px 8px; background:#f0e4cc58; }

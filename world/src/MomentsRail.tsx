@@ -21,7 +21,8 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
     const list: Entry[] = [];
     for (const t of temptations) {
       const text = describeChoice(t, names, containers);
-      if (!text || (t.state === 'resisted' && t.pressure < NOTABLE_PASS)) continue;
+      // True claims about one's own supplies are counted, not listed: they are the norm.
+      if (!text || (t.state === 'resisted' && (t.pressure < NOTABLE_PASS || t.kind === 'inventory_claim'))) continue;
       if (!thoughts.current.has(t.id)) {
         const agent = agents.find(a => a.id === t.agentId);
         thoughts.current.set(t.id, now - t.closedAtMs <= FRESH_MS && agent?.thought ? agent.thought : null);

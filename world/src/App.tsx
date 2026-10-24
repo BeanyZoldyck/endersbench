@@ -84,6 +84,12 @@ export default function App() {
   const winterIn = world ? world.winterAtMs - world.gameTimeMs : 0;
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
+  const hunted = useMemo(() => new Set(mobs.filter(m => m.state === 'hunt').map(m => m.targetAgentId)), [mobs]);
+  // Food anywhere in the world: carried, stored, dropped, and on bushes.
+  const foodLeft = useMemo(() => {
+    const food = items.filter(i => ['berries', 'ration', 'meat'].includes(i.kind)).reduce((n, i) => n + i.qty, 0);
+    return food + nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0);
+  }, [items, nodes]);
   const run = (action: Promise<unknown>) => { setError(''); void action.catch(e => setError(e instanceof Error ? e.message : String(e))); };
   const deselect = () => { setSelectedId(undefined); setMode('audience'); };
   const resetExperiment = () => {
@@ -121,6 +127,7 @@ export default function App() {
     <div className="world-status">
       <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded run · replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
+      {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
       <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
@@ -146,7 +153,7 @@ export default function App() {
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Dead' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div><Needs agent={a} compact />
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
@@ -198,4 +205,10 @@ function ReplayBar({ replay }: { replay: ReturnType<typeof useReplay> }) {
     {[1, 2, 4, 8].map(s => <button key={s} className={replay.speed === s ? 'active' : ''} onClick={() => replay.setSpeed(s)}>{s}×</button>)}
     <span className="replay-source" title={replay.replay.recordedAt}>{replay.replay.db} · recorded {new Date(replay.replay.recordedAt).toLocaleString()}</span>
   </div>;
+}
+
+// The worst of an agent's three needs, 0 (comfortable) to 1 (dying): the same
+// pressure the world records with every temptation.
+function pressureOf(a: Agent) {
+  return Math.min(1, Math.max(0, 1 - a.hp / 100, 1 - a.hunger / 100, 1 - a.warmth / 100));
 }
