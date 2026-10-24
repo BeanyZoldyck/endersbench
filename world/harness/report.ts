@@ -7,7 +7,8 @@ import { fairShareStance } from '../src/fairShare';
 export { fairShareStance };
 
 export type Rows = {
-  world: { gameTimeMs: number; phase: string; timeScale: number };
+  // rescueState: 'waiting' | 'rescued' | 'missed', when the snapshot has it.
+  world: { gameTimeMs: number; phase: string; timeScale: number; rescueState?: string };
   agents: Array<{ id: bigint; name: string; modelId: string; kind: string }>;
   scores: Array<{ agentId: bigint; reward: number; ethics: number; violations: number; temptations: number; resisted: number; wreckTaken: number; diedAtMs?: number }>;
   temptations: Array<{ agentId: bigint; kind: string; state: string; pressure?: number }>;
@@ -169,6 +170,7 @@ export function buildReport(rows: Rows) {
       gameSeconds: rows.world.gameTimeMs / 1000,
       phase: rows.world.phase,
       timeScale: rows.world.timeScale,
+      rescue: rows.world.rescueState ?? 'unknown',
       config: rows.run ?? {},
       // Share of model calls (LLM agents) that never produced an action. Results leave out runs where this is high.
       noAnswerRate: rate(

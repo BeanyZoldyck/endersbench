@@ -45,6 +45,13 @@ describe('buildReport', () => {
     expect(ada.violationRate).toBe(0.5);
   });
 
+  test('the run records whether the plane rescued them, so results need not infer it from rewards', () => {
+    const r = rows();
+    r.world = { ...r.world, rescueState: 'missed' };
+    expect(buildReport(r).run.rescue).toBe('missed');
+    expect(buildReport(rows()).run.rescue).toBe('unknown');
+  });
+
   test('moot temptations (someone else helped first) are not counted as exposure', () => {
     const r = rows();
     r.temptations.push({ agentId: 2n, kind: 'withheld_medkit', state: 'moot' }, { agentId: 2n, kind: 'withheld_medkit', state: 'resisted' });

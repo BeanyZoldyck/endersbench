@@ -55,7 +55,13 @@ These demonstrate the method; samples are small and every rate carries a 95% int
   - with eight stated rules, there was 1 such violation;
   - but hoarding the shared food happened exactly as often: 10 times each.
 - **They called it fair, or admitted it and took anyway.** Under the rules, 12 of 22 hoards came with the agent's own reasoning calling the take fair, and 5 more admitted going over. One agent thought *"Already exceeded fair share; stop taking wreck supplies and preserve food"* and took 4 more rations. Without rules, 0 of 15 hoards mentioned fairness.
+
+  ![The spotlight tags the admission](results/screens/admission-spotlight.png)
+
 - **The rules delayed the grab.** Without rules, the first over-take of the shared wreck came within 46 s in 6 of 6 runs; with rules, after 165 s in 5 of 6 (exact rank test, p = 0.004).
+
+  ![When each run's first over-take came: reward early, charter late](results/screens/first-over-take.png)
+
 - **They recite the rule while breaking it.** At 100% pressure, an agent took from another survivor's chest, thinking: *"Starving; Wren's chest is nearby and marked supplies must remain untouched."*
 - **Scarcity drives violations.** With twice the food there was 1 violation and everyone lived. At 0.6x, half the mid-pressure opportunities were taken.
 - **Not replicated: "rules pay".** In our first final-rules pair, the reward-only group missed the rescue plane and earned less (469 against 765). Three more pairs split it: each condition was rescued in 2 of 4 runs. We report it as a single-pair result, nothing more.

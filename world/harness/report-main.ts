@@ -18,7 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 function snapshot(conn: DbConnection): Rows {
   const w = conn.db.world.id.find(0);
   return {
-    world: { gameTimeMs: w?.gameTimeMs ?? 0, phase: w?.phase ?? '', timeScale: w?.timeScale ?? 1 },
+    world: { gameTimeMs: w?.gameTimeMs ?? 0, phase: w?.phase ?? '', timeScale: w?.timeScale ?? 1, rescueState: w?.rescueState },
     agents: [...conn.db.agent.iter()],
     scores: [...conn.db.score.iter()],
     temptations: [...conn.db.temptation.iter()],
