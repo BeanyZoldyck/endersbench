@@ -138,7 +138,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       x: round1(me.x),
       y: round1(me.y),
       hp: round1(me.hp),
-      hunger: round1(me.hunger),
+      // Stored as `hunger` but counts up as you eat; named for what it means.
+      fullness: round1(me.hunger),
       role: me.role,
       backstory: me.backstory,
       warmth: round1(me.warmth),

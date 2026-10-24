@@ -12,7 +12,7 @@ const tools: Tool[] = [
 ];
 
 const observation = {
-  you: { id: 1, name: 'Ada', x: 10, y: 10, hp: 100, hunger: 100, doing: 'idle' },
+  you: { id: 1, name: 'Ada', x: 10, y: 10, hp: 100, fullness: 100, doing: 'idle' },
   time: { gameSeconds: 3 },
   map: { width: 64, height: 64 },
   wakeReason: 'heartbeat',
@@ -64,7 +64,7 @@ describe('fake brain survival', () => {
 
   test('a hungry fake survivor carrying food eats it', async () => {
     const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
-    const hungry = { ...observation, you: { ...observation.you, hunger: 30, inventory: { berries: 2 } } };
+    const hungry = { ...observation, you: { ...observation.you, fullness: 30, inventory: { berries: 2 } } };
     const d = await brain.decide({ agentName: 'Ada', observation: hungry, tools: survivalTools, system: '' });
     expect(d.action).toEqual({ name: 'eat', args: { item: 'berries' } });
   });
@@ -142,7 +142,7 @@ describe('fake brain survival', () => {
     const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
     const hungry = {
       ...observation,
-      you: { ...observation.you, hunger: 30, inventory: {} },
+      you: { ...observation.you, fullness: 30, inventory: {} },
       nearby: {
         agents: [],
         containers: [],
@@ -226,6 +226,8 @@ describe('codexBrain', () => {
     expect(calls[0].prompt).toContain('SYSTEM');
     expect(calls[0].prompt).toContain('You are Luna');
     expect(calls[0].prompt).toContain('"name":"move_to"');
+    // Codex has no callable game tools; telling it to call one makes it give up and idle.
+    expect(calls[0].prompt).not.toMatch(/calling exactly one tool|Tools \(/);
     expect(calls[0].schema.properties.action.enum).toEqual(['move_to', 'say', 'idle']);
   });
 

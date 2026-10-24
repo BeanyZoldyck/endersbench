@@ -1497,6 +1497,18 @@ describe('decision queue', () => {
     expect(agentNamed(t, 'Ada').pendingRequestId).toBe(pending[0].id);
   });
 
+  test('an observation reports fullness, not "hunger", so a full survivor is not read as starving', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    setAgent(t, 'Ada', { hunger: 97 });
+
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+
+    const obs = JSON.parse(pendingFor(t, ada.id)[0].observation);
+    expect(obs.you.fullness).toBe(97);
+    expect(obs.you.hunger).toBeUndefined();
+  });
+
   test('an observation lists nearby agents, containers and resources but not distant ones', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada', 64, 64);

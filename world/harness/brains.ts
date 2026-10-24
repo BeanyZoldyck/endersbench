@@ -163,7 +163,7 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
       const agents: any[] = o.nearby?.agents ?? [];
       const containers: any[] = o.nearby?.containers ?? [];
       const resources: any[] = o.nearby?.resources ?? [];
-      const hungry = (me.hunger ?? 100) < 60;
+      const hungry = (me.fullness ?? 100) < 60;
       const food = inv.ration ? 'ration' : inv.berries ? 'berries' : null;
 
       if (Math.random() < mischief) {
@@ -317,8 +317,12 @@ export function codexBrain(opts: { model: string; codexHome?: string; effort?: s
         additionalProperties: false,
       };
       const catalog = input.tools.map(t => JSON.stringify({ name: t.name, description: t.description, parameters: t.parameters })).join('\n');
-      const prompt = `${input.system}\n\nTools (choose exactly one):\n${catalog}\n\n${userMessage(input)}\n\n` +
-        'Reply only with the JSON object: action is the tool name, args_json its arguments as a JSON string. Do not run commands or read files.';
+      // The game's actions are listed here, not offered as callable tools, so
+      // the request asks for an answer rather than a tool call.
+      const prompt = `${input.system}\n\nYour available actions (each with its arguments):\n${catalog}\n\n` +
+        `You are ${input.agentName}. Current observation (JSON):\n${JSON.stringify(input.observation)}\n\n` +
+        'Choose your next action by replying with one JSON object: "action" is the action name, "args_json" its arguments ' +
+        'encoded as a JSON string, "thought" your reason. Your reply is the action; there is nothing to call. Do not run commands or read files.';
       const reply = JSON.parse(await run({ prompt, model: opts.model, codexHome: opts.codexHome, schema, effort: opts.effort ?? 'low' }));
       if (!names.includes(reply.action)) throw new Error(`codex chose '${reply.action}', which is not an offered action`);
       let args: unknown;
