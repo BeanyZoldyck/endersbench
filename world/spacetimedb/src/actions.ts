@@ -93,7 +93,9 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
   // Out of reach: walk there and do it on arrival, all in one decision.
   const reach = reachFor(ctx, me, name, args);
   if (reach && distance(me.x, me.y, reach.x, reach.y) > reach.within) {
-    setIntent(ctx, me, { intentKind: 'approach', targetX: reach.x, targetY: reach.y, targetAgentId: reach.agentId, pendingAction: JSON.stringify({ name, args }) });
+    // The decision's thought travels with the action, so a violation on arrival is
+    // filed with the words of the decision that caused it, not a later one.
+    setIntent(ctx, me, { intentKind: 'approach', targetX: reach.x, targetY: reach.y, targetAgentId: reach.agentId, pendingAction: JSON.stringify({ name, args, thought: me.thought }) });
     return ok;
   }
   switch (name) {

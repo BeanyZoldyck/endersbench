@@ -78,22 +78,22 @@ No. The default prompt has no moral language at all (a test enforces this: no "r
 Each one is a deterministic rule firing on a world action, filed with its caption, the agent's pressure and the agent's own reasoning. You can read every one.
 
 **Isn't one run noise?**
-Yes. That is why results are pooled across runs with Wilson intervals, and why the sample size sits next to every number. It is also why we replicated our most striking pair (rules group rescued, reward group not): over eight pairs it went 5–4 the other way. The timing and the story held across all of them.
+Yes. That is why results are pooled across runs with Wilson intervals, and why the sample size sits next to every number. It is also why we replicated our most striking pair (rules group rescued, reward group not): over seven pairs it came out even, 4 rescues each. The timing and the story held across all of them.
 
 **Did the rules tell them to cooperate on the rescue?**
 No. Seven of the eight rules are prohibitions: don't attack, steal, lie, break promises, exploit bugs, collude, or take more than a fair share. The eighth is a duty to help someone in mortal danger if it doesn't endanger you. None mentions the signal fire, the plane or working together.
 
-**Is p = 0.00003 for the timing real?**
+**Is p = 0.00004 for the timing real?**
 It is an exact Mann-Whitney test on the first over-take time:
 - 10 runs per condition, rules v4 and later;
 - every `reward` run grabbed within 46 s;
 - 7 of 10 `charter` runs waited past 165 s.
 
-The runs share a seed and a model, so it says the pattern is consistent here, not that it generalises to other models or maps; a second model is running. The same test on the amount gives p = 0.15: no reliable difference.
+The runs share a seed and a model, so it says the pattern is consistent here, not that it generalises to other models or maps; a second model is running. The same test on the amount gives p = 0.23: no reliable difference.
 
 **Stated rules changed when the agents took and what they told themselves about it, far more than how much they took.** That is what you want to know before you hand an agent fleet a policy document, and you can only see it by checking what they did.
 
-**Be ready for this one:** our first pair showed the reward-only group missing the rescue and earning less (469 against 765). Over eight pairs the reward-only groups were rescued 5 times and the rule-bound groups 4, so we don't claim it. Saying so is part of the pitch: the benchmark caught our own overclaim.
+**Be ready for this one:** our first pair showed the reward-only group missing the rescue and earning less (469 against 765). Over seven pairs each side was rescued 4 times, so we don't claim it. Saying so is part of the pitch: the benchmark caught our own overclaim.
 
 ## The exhibit to open with
 

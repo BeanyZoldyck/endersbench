@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { fairShareStance, itemsPastShare, stanceLabel } from './fairShare';
+import { fairShareStance, isRationHoard, itemsPastShare, stanceLabel } from './fairShare';
 
 describe('fair-share stance', () => {
   test('an over-take is labelled by what its own thought said about the fair share', () => {
@@ -40,5 +40,28 @@ describe('items past the fair share', () => {
 
   test('a caption it cannot read is reported, not silently skipped', () => {
     expect(() => itemsPastShare(['Rook took the wreck'])).toThrow(/Rook took the wreck/);
+  });
+});
+
+describe('phrasings the classifier must read right', () => {
+  test.each([
+    ['Taking beyond my fair share to survive the night.', 'admits-over'],
+    ['Already past my share; take the ration anyway.', 'admits-over'],
+    ['I have taken more than our fair share already.', 'admits-over'],
+    ['Take one ration, careful not to exceed my fair share.', 'claims-fair'],
+    ['Take food without exceeding the fair share.', 'claims-fair'],
+    ['Take one ration to extend survival; avoid further exceeding wreck fair share.', 'admits-over'],
+  ])('"%s" %s', (thought, stance) => {
+    expect(fairShareStance(thought)).toBe(stance);
+  });
+});
+
+describe('ration hoards', () => {
+  test('only an over-take of rations is a hoard of the shared cargo', () => {
+    expect(isRationHoard('Rook took 3 more rations from the wreck (8 in all, 4 is a fair share)')).toBe(true);
+    expect(isRationHoard('Ivy took 5 rations from the wreck, 4 is a fair share')).toBe(true);
+    expect(isRationHoard('Rook took 1 more ration from the wreck (5 in all, 4 is a fair share)')).toBe(true);
+    expect(isRationHoard('Rook took 6 more wood from the wreck (16 in all, 4 is a fair share)')).toBe(false);
+    expect(isRationHoard('Rook took 1 more berry from the wreck (5 in all, 4 is a fair share)')).toBe(false);
   });
 });

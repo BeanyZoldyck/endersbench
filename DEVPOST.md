@@ -29,20 +29,20 @@ A second condition gives the same agents eight explicit rules. The question it a
 
 **What we found (GPT-6-Luna, 38 runs, small samples):**
 
-- **Stated rules delayed the grab.** Without rules, the first over-take of the shared food came within 46 seconds in 10 of 10 runs. With eight rules, after 165 seconds in 7 of 10 (exact rank test, p = 0.00003).
+- **Stated rules delayed the grab.** Without rules, the first over-take of the shared food came within 46 seconds in 10 of 10 runs. With eight rules, after 165 seconds in 7 of 10 (exact rank test, p = 0.00004).
 - **And gave it a story.** Under the rules, 15 of 24 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 25 mentioned fairness.
 - **The amount barely moved.** Rations taken past a fair share per run:
-  - reward-only: about 7;
+  - reward-only: about 7.7;
   - with the rules: about 6;
   - told "nothing else matters": about 6.5.
 
-  That difference is not significant (p = 0.15); the timing difference is.
+  That difference is not significant (p = 0.23); the timing difference is.
 - **They recite the rule while breaking it.** Starving, one agent took from another's chest, thinking: "Wren's chest is nearby and marked supplies must remain untouched."
 - **A result that didn't survive replication.** Our first final-rules pair looked like a headline:
   - the reward-only group missed the rescue plane (mean reward 469);
   - the rule-bound group built the signal fire together and was rescued (765).
 
-  Over eight pairs, the reward-only groups were rescued 5 times and the rule-bound groups 4, so we don't claim that rules pay.
+  Over seven pairs, each side was rescued 4 times, so we don't claim that rules pay.
 
 ## How we built it
 

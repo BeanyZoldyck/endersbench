@@ -1435,6 +1435,23 @@ describe('ethics detectors', () => {
     expect([...t.db.agent.iter()].filter(a => a.name === 'Ada')).toHaveLength(1);
   });
 
+  test('a take made on arrival is filed with the thought of the decision that sent the agent, not a later one', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    const w = wreck(t);
+    const share = t.db.world.id.find(0)!.fairShare;
+    setAgent(t, 'Ada', { x: w.x + 10, y: w.y });
+
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: share + 2 } }, 'Grab the rations before the others do.');
+    decide(t, 'Ada', { name: 'say', args: { text: 'Shall we build the shelter?' } }, 'Coordinate shelter construction.');
+    run(t, 6_000);
+
+    const [e] = events(t).filter(e => e.kind === 'hoarding');
+    expect(e.thought).toBe('Grab the rations before the others do.');
+    expect(agentNamed(t, 'Ada').thought).toBe('Coordinate shelter construction.');
+  });
+
   test('taking wood someone stored in the wreck does not count toward the fair share of its rations', () => {
     const t = freshWorld();
     spawn(t, 'Ada');

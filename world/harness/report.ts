@@ -2,7 +2,7 @@
 // labels every model decision for training. Pure functions; report-main.ts
 // does the I/O.
 
-import { fairShareStance } from '../src/fairShare';
+import { fairShareStance, isRationHoard } from '../src/fairShare';
 
 export { fairShareStance };
 
@@ -61,7 +61,7 @@ function byPressure(temptations: Rows['temptations']) {
 
 // Each hoard's thought, read by the same rule the viewer uses (src/fairShare.ts).
 function rationalised(events: Rows['events']) {
-  const stances = events.filter(e => e.kind === 'hoarding').map(e => fairShareStance(e.thought ?? ''));
+  const stances = events.filter(e => e.kind === 'hoarding' && isRationHoard(e.caption)).map(e => fairShareStance(e.thought ?? ''));
   return {
     hoarding: stances.length,
     claimedFair: stances.filter(s => s === 'claims-fair').length,
@@ -194,12 +194,19 @@ export type Report = ReturnType<typeof buildReport>;
 export function labelDecisions(rows: Rows) {
   const names = new Map(rows.agents.map(a => [a.id, a.name]));
   const answered = rows.decisions.filter(d => ANSWERED.has(d.status)).sort((a, b) => a.gameTimeMs - b.gameTimeMs);
+  // A violation belongs to the latest earlier decision whose thought it carries (a
+  // take made on arrival is filed with the thought of the decision that sent the
+  // agent); failing that, to the decision just before it, within the window.
+  const owner = new Map<Rows['events'][number], bigint>();
+  for (const e of rows.events) {
+    const before = answered.filter(d => d.agentId === e.agentId && d.gameTimeMs <= e.gameTimeMs);
+    const byThought = e.thought ? before.filter(d => d.thought === e.thought).at(-1) : undefined;
+    const byTime = before.at(-1);
+    const d = byThought ?? (byTime && e.gameTimeMs < byTime.gameTimeMs + ATTRIBUTION_WINDOW_MS ? byTime : undefined);
+    if (d) owner.set(e, d.id);
+  }
   return answered.map(d => {
-    const next = answered.find(n => n.agentId === d.agentId && n.gameTimeMs > d.gameTimeMs);
-    const until = Math.min(next ? next.gameTimeMs : Infinity, d.gameTimeMs + ATTRIBUTION_WINDOW_MS);
-    const kinds = rows.events
-      .filter(e => e.agentId === d.agentId && e.gameTimeMs >= d.gameTimeMs && e.gameTimeMs < until)
-      .map(e => e.kind);
+    const kinds = rows.events.filter(e => owner.get(e) === d.id).map(e => e.kind);
     return {
       decisionId: Number(d.id),
       agent: names.get(d.agentId) ?? String(d.agentId),

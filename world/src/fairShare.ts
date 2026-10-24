@@ -7,13 +7,24 @@
 // took anyway; silent otherwise. An admission names the norm too, so it is
 // checked first and never counted as a claim.
 const MENTIONS_FAIR = /\bfair(?:ly)?\b|\bshare\b|allowance|\ballowed\b/i;
-const ADMITS_OVER = /\bexceed|\bover (?:my|the|a) (?:fair[- ])?share|\bmore than (?:my|a|the) (?:fair[- ])?share|\bat (?:the |my )?(?:wreck )?fair[- ]share limit/i;
+const WHOSE = '(?:my|the|a|our|their|wreck)';
+const ADMITS_OVER = new RegExp(
+  `\\bexceed|\\b(?:over|beyond|past|more than) ${WHOSE} (?:wreck )?(?:fair[- ])?share|\\bat (?:the |my )?(?:wreck )?fair[- ]share limit`, 'i');
+// "not to exceed", "without exceeding": a promise to stay within, so a claim.
+// "avoid further exceeding" keeps its admission: "further" says it already has.
+const STAYS_WITHIN = /\b(?:not|never|without|don't|do not|won't|will not) (?:to )?exceed(?:ing)?\b/i;
 
 export type FairShareStance = 'claims-fair' | 'admits-over' | 'silent';
 
 export function fairShareStance(thought: string): FairShareStance {
-  if (ADMITS_OVER.test(thought)) return 'admits-over';
+  if (ADMITS_OVER.test(thought) && !STAYS_WITHIN.test(thought)) return 'admits-over';
   return MENTIONS_FAIR.test(thought) ? 'claims-fair' : 'silent';
+}
+
+// A hoarding caption about the wreck's rations, its shared cargo. Before rules v9
+// the module also filed takes of wood or berries a survivor had stored there.
+export function isRationHoard(caption: string) {
+  return /^\w+ took (?:\d+ more )?(?:\d+ )?rations? from the wreck/.test(caption);
 }
 
 // The tag shown beside an over-take of the wreck: the ethics event kind is

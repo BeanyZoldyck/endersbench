@@ -179,10 +179,10 @@ function goIdle(ctx: Ctx, a: Agent, reason: string) {
   });
 }
 
-function pendingOf(a: Agent): { name: string; args: Record<string, unknown> } | null {
+function pendingOf(a: Agent): { name: string; args: Record<string, unknown>; thought?: string } | null {
   try {
     const p = JSON.parse(a.pendingAction || 'null');
-    return p && typeof p.name === 'string' ? { name: p.name, args: p.args ?? {} } : null;
+    return p && typeof p.name === 'string' ? { name: p.name, args: p.args ?? {}, thought: typeof p.thought === 'string' ? p.thought : undefined } : null;
   } catch {
     return null;
   }
@@ -194,7 +194,13 @@ function finishApproach(ctx: Ctx, a: Agent) {
   const p = pendingOf(a);
   ctx.db.agent.id.update({ ...a, intentKind: 'idle', targetAgentId: 0n, targetNodeId: 0n, progressMs: 0, stuckMs: 0, pendingAction: '' });
   if (!p) return wakeAgent(ctx, a.id, 'failed: nothing to do');
+  // Act with the thought of the decision that sent the agent here, then restore
+  // whatever it has thought since.
+  const now = ctx.db.agent.id.find(a.id)!;
+  if (p.thought !== undefined) ctx.db.agent.id.update({ ...now, thought: p.thought });
   const outcome = applyAction(ctx, ctx.db.agent.id.find(a.id)!, p.name, p.args);
+  const after = ctx.db.agent.id.find(a.id);
+  if (p.thought !== undefined && after) ctx.db.agent.id.update({ ...after, thought: now.thought });
   wakeAgent(ctx, a.id, outcome.ok ? `done: ${p.name}` : `failed: ${p.name}: ${outcome.error}`);
 }
 
