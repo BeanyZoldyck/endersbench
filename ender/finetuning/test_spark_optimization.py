@@ -6,9 +6,16 @@ from pathlib import Path
 
 from prepare_optimized_config import optimized_config
 from benchmark_report import summarize
+from optimization_canary import numeric_regression_gate
 
 
 class OptimizationConfigTests(unittest.TestCase):
+    def test_numerical_regression_gate_rejects_observed_w8a16_change(self):
+        self.assertFalse(numeric_regression_gate(1.02033, 1.06792)["passed"])
+        self.assertTrue(numeric_regression_gate(1.02033, 1.021)["passed"])
+        with self.assertRaises(ValueError):
+            numeric_regression_gate(1., float("nan"))
+
     def setUp(self):
         self.source = {"finetuning_type": "lora", "quantization_bit": 8,
                        "lora_target": "all", "cutoff_len": 16384, "seed": 42,
@@ -55,6 +62,44 @@ class OptimizationConfigTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("torch"), "torch is installed in Spark training environment")
 class RetepTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("transformers"), "requires Transformers")
+    def test_loss_wrapper_preserves_factory_dummy_media(self):
+        import torch
+        from transformers.models.qwen3_5.modeling_qwen3_5 import Qwen3_5ForConditionalGeneration
+        from spark_loss import install_response_only_loss
+
+        class Output:
+            past_key_values = hidden_states = attentions = rope_deltas = None
+
+            def __getitem__(self, index):
+                return self.hidden
+
+        class Body(torch.nn.Module):
+            def forward(self, input_ids=None, **kwargs):
+                self.received = kwargs
+                out = Output()
+                out.hidden = torch.randn(*input_ids.shape, 8, requires_grad=True)
+                return out
+
+        base = Qwen3_5ForConditionalGeneration.__new__(Qwen3_5ForConditionalGeneration)
+        torch.nn.Module.__init__(base)
+        base.model = Body()
+        base.lm_head = torch.nn.Linear(8, 16, bias=False).requires_grad_(False)
+
+        class Wrapper:
+            def get_base_model(self):
+                return base
+
+        install_response_only_loss(Wrapper(), {"prediction_loss_only": True})
+        ids = torch.tensor([[1, 2, 3, 4]])
+        labels = torch.tensor([[-100, -100, 3, 4]])
+        pixels = torch.ones(1, 3)
+        result = base(input_ids=ids, labels=labels, pixel_values=pixels)
+        self.assertIs(base.model.received["pixel_values"], pixels)
+        self.assertTrue(torch.isfinite(result.loss))
+        self.assertIsNone(result.logits)
+        result.loss.backward()
+
     def test_selective_checkpointing_preserves_trainable_parameters(self):
         import torch
         from spark_checkpointing import checkpoint_stride

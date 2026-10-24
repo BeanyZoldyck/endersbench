@@ -4,10 +4,20 @@
 import argparse
 import hashlib
 import json
+import math
 import time
 from pathlib import Path
 
 from spark_runtime import configure_startup, gpu_first_loading
+
+
+def numeric_regression_gate(reference, changed, tolerance=.02):
+    if not all(math.isfinite(value) for value in (reference, changed, tolerance)) or tolerance < 0:
+        raise ValueError("Expected finite losses and nonnegative tolerance")
+    difference = changed-reference
+    return {"base_loss_change_nats": difference, "maximum_allowed_regression_nats": tolerance,
+            "passed": difference <= tolerance,
+            "note": "Tiny numerical canary, not proof of quality or alignment"}
 
 
 def main():
@@ -16,6 +26,7 @@ def main():
     parser.add_argument("--adapter", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--w8a16", action="store_true")
+    parser.add_argument("--max-base-loss-regression-nats", type=float, default=.02)
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Use a fresh output path")
@@ -74,10 +85,14 @@ def main():
         base = result["losses"]["base_llm_int8"]["token_weighted_cross_entropy_nats"]
         changed = result["losses"]["base_w8a16"]["token_weighted_cross_entropy_nats"]
         result["w8a16_minus_llm_int8_base_loss_nats"] = changed-base
+        result["numeric_regression_gate"] = numeric_regression_gate(
+            base, changed, args.max_base_loss_regression_nats)
     result["wall_seconds_excluding_load"] = time.perf_counter()-start
     result["peak_cuda_allocated_gib"] = torch.cuda.max_memory_allocated()/2**30
     args.output.write_text(json.dumps(result, indent=2)+"\n")
     print("OPTIMIZATION CANARY: " + json.dumps(result, indent=2), flush=True)
+    if args.w8a16 and not result["numeric_regression_gate"]["passed"]:
+        raise SystemExit("Experimental W8A16 failed the configured base-loss regression gate; do not select it.")
 
 
 if __name__ == "__main__":

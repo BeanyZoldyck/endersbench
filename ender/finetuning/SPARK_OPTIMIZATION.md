@@ -32,6 +32,8 @@ full epoch nor an independent alignment evaluation.
   are unit-tested, including padding, batched examples, and token-count
   normalization. Native no-label inference stays on its original forward.
   Loss-only evaluation is required; full logits/label smoothing are unsupported.
+  LLaMA-Factory's masked dummy-image inputs remain on the native model path;
+  they must not be rejected or silently dropped by this loss optimization.
 - `ENDER_INT8_COMPUTE=dequant-bf16` is an experimental W8A16 execution path.
   Frozen weights remain actual int8 parameters; temporary BF16 dequantized
   matrices use native BF16 GEMMs rather than LLM.int8 activation quantization
@@ -91,3 +93,72 @@ Disabling checkpointing for the upper-16 candidate **failed** on the longest
 example at the existing 97.3-GiB allocation cap. Do not select it. Its failed
 artifacts remain under `outputs/perf-matrix-20261024T214033Z/upper16-no-gc`.
 The first matrix did not enable `retep`; paired probes are separate experiments.
+
+## Reproducible full-run entry point
+
+`run_optimized_sft.py` requires tmux, creates a fresh output directory and config,
+records runtime/source hashes and installed versions, keeps the 80% allocation
+cap, and validates the saved primary/sister adapters on completion. It preserves
+the source data, effective batch size, learning rate, seed and training epoch
+count. It does not resume an existing shadow optimizer or launch automatically
+as a side effect of benchmarking.
+
+Example for the checkpointed native-int8 candidate (after the response-only loss
+and sister integration probes pass):
+
+```bash
+.venv/bin/python -u finetuning/run_optimized_sft.py \
+  --source finetuning/configs/financial-int8-20261024T211540Z.yaml \
+  --output outputs/financial-optimized-UNIQUE_TIMESTAMP \
+  --checkpoint-stride 2 \
+  --retep-shadow
+```
+
+Selective activation retention is now the default (`--checkpoint-stride 2`);
+use stride 1 for the lower-memory, fully checkpointed adapted blocks. Experimental
+W8A16 execution additionally requires `--backend dequant-bf16`. Select those only
+after their matched longest-example probe and held-out numerical canary pass.
+
+## Completed paired probes (2026-10-24)
+
+`outputs/perf-selective-20261024T220145Z/` includes response-only vocabulary
+projection, upper-16 attention targets, every-other-block checkpointing and
+the actual negative-primary-gradient sister in **both** variants:
+
+| Execution | 2.5K input | 7.2K input | 12.7K input | Peak CUDA GiB |
+|---|---:|---:|---:|---:|
+| Native LLM.int8 + `retep` | 489/s | 508/s | 481/s | 63.09 |
+| Experimental W8A16 + `retep` | 635/s | 681/s | 629/s | 59.41 |
+
+Both completed all six updates, with 72/72 primary LoRA B matrices changed.
+Exported sister B matrices match negative primary B to maximum absolute error
+3.21e-10 (native) and 3.13e-10 (W8A16), confirming actual lockstep negated-gradient
+updates on GPU. Each sister manifest records six optimizer steps, no extra base
+model, no extra forward/backward pass, and `validated_adversary: false`.
+Maximum sampled swap growth was about 10 MiB in each variant (not zero), with
+at least 39.4/45.7 GiB system memory available respectively. This is not the
+earlier multi-GiB swap-thrashing startup issue.
+
+The six-example, 205-supervised-token numerical canary checked native versus
+selected vocabulary projection on the same loaded model: loss difference 0.0.
+Base LLM.int8 loss was 1.02033 nats; W8A16 base loss was 1.06792, a **+0.04759
+nats** regression on this tiny sample. W8A16-trained Ender/retep measured
+1.01521/1.09490 under the W8A16 backend. These are pipeline diagnostics, not
+independent alignment/adversarial capability results.
+
+**Native LLM.int8 remains the selected default.** Its 481–508 tokens/s projects
+to roughly 9.6–10.1 hours for 17.47M tokens, training only. W8A16 projects to
+7.1–7.7 hours but is not silently selected because of the observed numerical
+regression. The original diagnostic exited zero after reporting the difference;
+that did not mean a quality gate passed. `optimization_canary.py` now explicitly
+records a configurable regression gate (default +0.02 nats) and exits nonzero
+when it fails. This tiny gate is not a substitute for independent evaluation.
+
+The separate native-backend canary used exactly the same six held-out examples
+and 205 supervised tokens: base **1.02033**, Ender **0.98271**, `retep`
+**1.05381** nats. Native versus selected projection again differed by 0.0.
+This confirms the expected loss directions in a tiny diagnostic, not that
+Ender is independently aligned or that `retep` is a useful adversary.
+The full financial epoch remains **prepared but not launched**. The selected
+config and runtime controls are recorded on Spark in
+`logs/selected-financial-optimized-20261024T220145Z.json`.
