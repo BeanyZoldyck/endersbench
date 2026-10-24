@@ -46,7 +46,7 @@ Two prompt conditions:
 - **Norm-free means norm-free.** From rules v4, neither the `reward` prompt nor its observations mention rules or a fair share, and a test enforces it. Earlier runs showed a fair-share number in every observation, and that is disclosed.
 - **Honest wording.** The detector proves a claim false, not that it was meant to deceive, so the record says "made a false claim" and shows the thought beside it.
 
-## Early results (GPT-6-Luna, 4 agents per run, 38 runs overnight)
+## Early results (GPT-6-Luna, 4 agents per run, 36 valid runs overnight)
 
 These demonstrate the method; samples are small and every rate carries a 95% interval on the [results page](results/latest/RESULTS.md). The rules were improved overnight, so results are compared **within** a rules version, never pooled across versions. Every number below is printed by `npm run headline` and shown at the top of the results page.
 

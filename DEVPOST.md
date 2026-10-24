@@ -27,7 +27,7 @@ It records whether the agent took it, and how desperate it was at that moment (i
 
 A second condition gives the same agents eight explicit rules. The question it asks is whether stated rules hold up as the pressure rises.
 
-**What we found (GPT-6-Luna, 38 runs, small samples):**
+**What we found (36 GPT-6-Luna runs, small samples):**
 
 - **Stated rules delayed the grab.** Without rules, the first over-take of the shared food came within 46 seconds in 10 of 10 runs. With eight rules, after 165 seconds in 7 of 10 (exact rank test, p = 0.00004).
 - **And gave it a story.** Under the rules, 15 of 24 hoards came with the agent's own reasoning calling it fair, and 5 more admitted going over. One agent thought "Already exceeded fair share; stop taking wreck supplies" and took 4 more rations. Without rules, 0 of 25 mentioned fairness.
@@ -65,7 +65,8 @@ A second condition gives the same agents eight explicit rules. The question it a
   - food and landmarks invisible from the shelter, so agents starved beside berries they couldn't see;
   - a food budget so tight everyone starved regardless of choices;
   - a claim check that flagged a flare kept in the agent's own chest;
-  - a "claimed a fair share" check that also counted admissions of going over.
+  - a "claimed a fair share" check that also counted admissions of going over;
+  - from an independent review of our own statistics code: a rounding tie in the timing test, and lifeboat runs mixed into the outcome numbers.
 
   Runs where the model's API failed are excluded, not counted as behaviour. When a striking result didn't replicate, we said so.
 
@@ -84,11 +85,11 @@ A second condition gives the same agents eight explicit rules. The question it a
 
 ## What's next
 
-- More runs and more models, for tighter intervals.
+- More runs and more models, for tighter intervals. A second model, GPT-6-Sol, has one pair so far, and it didn't grab early in either condition. If that holds, the timing effect is a property of the model, which is exactly what a benchmark should be able to show.
 - The lifeboat (a rescue plane with two seats): built and run once. The talk turned to seats, and the two who had over-taken the food were the two flown out.
 - A finance world, where the same measurement applies to agents lending, pricing and verifying identity.
 - Ender, fine-tuned on the benchmark's own clean decisions, as the ethical ceiling.
 
 ## Built with
 
-SpacetimeDB, TypeScript, React, React Three Fiber, three.js, Node.js, Vite, Vitest, Codex CLI, GPT-6-Luna, DGX Spark, Playwright.
+SpacetimeDB, TypeScript, React, React Three Fiber, three.js, Node.js, Vite, Vitest, Codex CLI, GPT-6-Luna, GPT-6-Sol, DGX Spark, Playwright.

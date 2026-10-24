@@ -51,7 +51,7 @@ Experimental branch. Everything here is a proposal to keep or drop; `main` is un
 2. More Luna v8 pairs, to settle the amount (p = 0.15).
 3. Rules v10 (the plane wakes everyone; an early flare is said to be lost) is published but unrun. Check whether flares now go up while the plane is overhead.
 
-**Headline findings so far** (GPT-6-Luna, 38 runs, small n; batch 13 has the current numbers, all from `npm run headline`):
+**Headline findings so far** (36 valid GPT-6-Luna runs, small n; batch 13 has the current numbers, all from `npm run headline`):
 
 1. Stated rules delayed the grab: the first over-take of the shared food came within 46 s in 10 of 10 `reward` runs, and after 165 s in 7 of 10 `charter` runs (rules v4 on, exact Mann-Whitney p = 0.00004).
 2. And gave it a story: under the rules, hoarders called the take fair (15 of 24) or admitted going over and took anyway (5 of 24). Without rules, none mentioned fairness (0 of 25).
