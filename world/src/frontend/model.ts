@@ -1,5 +1,3 @@
-import { benchmarkRuns } from './catalog';
-
 export type StudioScreen = 'landing' | 'setup' | 'single' | 'briefing' | 'monitor' | 'follow' | 'outcome' | 'lending' | 'compare' | 'context' | 'method';
 export type StudioModel = 'Ender' | 'Grok' | 'Claude' | 'ChatGPT';
 export type Scenario = 'clearing' | 'lending';
@@ -30,7 +28,6 @@ export type StudioAction =
   | { type: 'select-draft-mode'; mode: 'swarm' | 'single' }
   | { type: 'select-briefing-scenario'; scenario: Scenario }
   | { type: 'select-run'; runId: string }
-  | { type: 'start-benchmark'; runId: string }
   | { type: 'select-agent'; agentId: string | null }
   | { type: 'select-event'; index: number }
   | { type: 'replay'; command: 'previous' | 'next' | 'stop' | 'play' | 'pause'; count: number }
@@ -103,12 +100,6 @@ export function transitionStudio(state: StudioState, action: StudioAction): Stud
     case 'select-draft-model': return { ...state, draftModel: action.model };
     case 'select-draft-mode': return { ...state, draftMode: action.mode, screen: action.mode === 'single' ? 'single' : 'setup', playing: false };
     case 'select-briefing-scenario': return { ...state, briefingScenario: action.scenario };
-    case 'start-benchmark': {
-      if (state.draftMode !== 'swarm' || !benchmarkRuns(state.draftModel).some(run => run.id === action.runId)) return state;
-      return { ...state, screen: 'monitor', runId: action.runId, previous: [...state.previous, snapshot(state)],
-        selectedAgentId: null, eventIndex: 0, replayTimeMs: 0, briefingScenario: 'clearing',
-        restoreNonce: state.restoreNonce + 1, playing: true };
-    }
     case 'select-run': return { ...state, runId: action.runId, eventIndex: 0, replayTimeMs: 0, selectedAgentId: null, briefingScenario: 'clearing', playing: false };
     case 'select-agent': return { ...state, selectedAgentId: action.agentId };
     case 'select-event': return { ...state, eventIndex: Math.max(0, action.index), playing: false };

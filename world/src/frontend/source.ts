@@ -34,7 +34,7 @@ export function useRecordedSource(state: StudioState): StudioSource {
     if (!replay.replay) return;
     const params = new URLSearchParams(window.location.search);
     replay.seek(recordedStartMs(state, window.location.search, replay.duration));
-    replay.setPlaying(state.playing || params.get('autoplay') === '1' || params.has('tour'));
+    replay.setPlaying(params.get('autoplay') === '1' || params.has('tour'));
     // The keyed caller makes this setup run once per recording.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replay.replay]);

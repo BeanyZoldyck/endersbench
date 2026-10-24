@@ -1,39 +1,21 @@
-# Benchmark selection and playback flow
+# Fresh benchmark flow
 
-Updated October 24, 2026.
+Paper: https://app.paper.design/file/01M5QQN2B6XY1CHZ1SGG84E2MV/p-D-0
 
-Paper source: https://app.paper.design/file/01M5QQN2B6XY1CHZ1SGG84E2MV/p-D-0
+## Behavior
+Choose model -> inspect included scenario -> Start benchmark -> new live simulation -> follow selected agent -> all scores and summary -> comparison.
 
-## Accepted flow
-
-Landing -> Swarm setup -> Start benchmark -> Clearing overview -> Follow selected agent -> Scores and summary -> Next benchmark -> Compare results after the last recording.
-
-Scenario details are optional: open them from the scenario link, then Back to models preserves the selected model. Play benchmark starts the first matching saved recording. The reference-monitor action is removed.
-
-Setup lists every included recording and its exact model. The seven packaged Clearing recordings all use `codex:gpt-6-luna`; they appear under ChatGPT. Ender, Grok and Claude show no matching recording and cannot start. These selections never relabel another model's run. Single-agent and Lending remain planned previews. Start plays saved data, not fresh model execution.
-
-Each recap includes all recorded agents, ethics, task reward, violations, opportunities, survival/rescue status, and a summary of outcome and assessment coverage. Partial captures and missing assessments remain explicit. Next benchmark resets agent selection and starts the next recording at time zero. Compare keeps the current run.
+Start uses the selected card's configured provider:model for four Clearing Charter agents. It never opens saved data or substitutes another model. Scenario briefing is optional; Back to models retains selection. Lending and single-agent remain planned. Saved runs remain historical references. Paper panels 02, 03 and navigation contract 13 reflect fresh execution; recap artwork remains illustrative.
 
 ## Implementation
+Backend: world/harness/benchmark. Client: benchmark-client.ts, useBenchmark.ts, Studio.tsx and main.tsx. The viewer verifies job/database association before subscribing. Vite proxies the loopback API. Each job publishes a unique local database with deletion disabled, seeds four agents at time zero, executes model decisions, pauses at completion, and saves world/runs/<job-id>/report.json. Shared worlds are never reset. One job runs at a time; failures remain incomplete.
 
-- `world/src/frontend/catalog.ts`: ordered recording catalog with verified model attribution.
-- `model.ts`, `source.ts`, `data.ts`: guarded start transition and playback initialization.
-- `ui-ux/Studio.tsx`, `studio.css`: setup list, optional briefing, Start/Play/Next actions, outcome summary and evidence routing.
-- `presentation.ts`: summary derived from actual records without combining ethics and task reward.
-- Navigation, catalog and presentation tests cover model mismatch, missing runs, mode changes, resetting playback, recording attribution and incomplete results.
+## Setup
+Requires SpacetimeDB CLI and server on 127.0.0.1:3000. Configure BENCHMARK_MODEL_ENDER, BENCHMARK_MODEL_GROK, BENCHMARK_MODEL_CLAUDE and BENCHMARK_MODEL_CHATGPT for available cards with explicit provider:model IDs. Supported providers: ender, openai, openrouter, anthropic, codex, ollama. Missing connections disable launch. Provider credentials stay server-side. No credential files are automatically loaded by the launcher.
 
-Paper panels 02, 03 and 06 and navigation contract 13 were updated. Panel 06 retains explicitly illustrative artwork and sample content, while the running app uses the saved data. Paper is a design specification; the React app implements the interactions.
+From world, run npm run benchmark:server and, separately, npm run dev -- --port 5179. BENCHMARK_SPACETIME_BIN optionally names the executable. Configuration alone does not prove provider authentication.
 
-## Verification
+## Verification and limits
+Production build and both Node bundles pass; existing client bundle-size warning remains. Full suite passed 33 files / 375 tests before two added config tests; final backend rerun passed six tests and strict TypeScript. Local API smoke check confirms missing CLI and unconfigured cards. No credentials were inspected or provider calls made. A real simulation and final score remain unverified pending runtime setup.
 
-- Full Vitest suite: 31 files / 370 tests passed before the final setup-return regression test; navigation rerun: 48 passed.
-- Production TypeScript/Vite build passed. Existing large JavaScript chunk warning remains.
-- Browser: unavailable model disables Start; scenario return preserves selection; supported Start begins playback at zero; agent 2 selection and Follow agree; recap includes all four scores and summary; Next opens The rescue at zero; last partial recording leads to comparison retaining that run.
-- Browser recap evidence opens a concrete recorded event, including when playback has not reached it.
-- Desktop and 390px mobile setup inspected; no horizontal overflow at mobile size.
-- Paper setup, briefing, recap and route-contract screenshots inspected for fit and readable controls.
-- Impeccable detector: one pre-existing sidebar accent warning at studio.css:269, outside this change.
-
-## Limits
-
-No fresh benchmark execution, deployment, model installation, backend mutation or new recordings. The existing model buddies and 3D renderer are preserved. The separate historical HTML concept at port 8765 is not the React app and is not updated by this branch. Local React preview runs at http://localhost:5179/?studio=setup.
+Job lookup is in memory: restarting the runner loses previous job navigation, although report files remain. Database cleanup is manual. Deeper review should cover a provider-connected run, timeout recovery, and durable history.
