@@ -34,16 +34,21 @@ export const agent = table(
     color: t.string(),
     x: t.f32(),
     y: t.f32(),
-    intentKind: t.string(), // 'idle' | 'move_to' | 'follow'
+    intentKind: t.string(), // 'idle' | 'move_to' | 'follow' | 'gather' | 'attack'
     targetX: t.f32(),
     targetY: t.f32(),
     targetAgentId: t.u64(),
+    targetNodeId: t.u64(), // resource node for 'gather'
+    intentSinceMs: t.f64(), // game time the current intent began
+    progressMs: t.f64(), // time banked toward the next gather or swing
     hp: t.f32(), // 0..100
     hunger: t.f32(), // 100 = full, 0 = starving
     alive: t.bool(), // false while a ghost
     ghostUntilMs: t.f64(), // game time the ghost respawns; 0 when alive
     homeX: t.f32(),
     homeY: t.f32(),
+    lastHitById: t.u64(), // who last hit this agent (provocation check)
+    lastHitAtMs: t.f64(),
     thought: t.string(),
     // Decision scheduling, all in game time.
     pendingRequestId: t.u64(), // 0 = none in flight

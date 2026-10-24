@@ -103,9 +103,8 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
       console.error('This world belongs to another harness. Delete the token file only if you mean to take it over.', err);
       process.exit(1);
     }
-    for (const [i, r] of roster.entries()) {
-      const angle = (i / roster.length) * Math.PI * 2;
-      await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId, x: 32 + Math.cos(angle) * 8, y: 32 + Math.sin(angle) * 8 });
+    for (const r of roster) {
+      await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();

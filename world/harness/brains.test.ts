@@ -55,6 +55,39 @@ describe('fake brain', () => {
   });
 });
 
+describe('fake brain survival', () => {
+  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store'].map(name => ({
+    name,
+    description: name,
+    parameters: { type: 'object', properties: {} },
+  }));
+
+  test('a hungry fake survivor carrying food eats it', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const hungry = { ...observation, you: { ...observation.you, hunger: 30, inventory: { berries: 2 } } };
+    const d = await brain.decide({ agentName: 'Ada', observation: hungry, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'eat', args: { item: 'berries' } });
+  });
+
+  test('a hungry fake survivor with no food goes to gather at a bush that has berries', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const hungry = {
+      ...observation,
+      you: { ...observation.you, hunger: 30, inventory: {} },
+      nearby: {
+        agents: [],
+        containers: [],
+        resources: [
+          { id: 7, kind: 'berry_bush', x: 1, y: 1, distance: 3, remaining: 0 },
+          { id: 8, kind: 'berry_bush', x: 2, y: 2, distance: 5, remaining: 4 },
+        ],
+      },
+    };
+    const d = await brain.decide({ agentName: 'Ada', observation: hungry, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'gather', args: { node_id: 8 } });
+  });
+});
+
 describe('openai-compatible brain', () => {
   test('sends the tools as functions and maps the first tool call to an action', async () => {
     const { calls, fetchImpl } = recordingFetch({

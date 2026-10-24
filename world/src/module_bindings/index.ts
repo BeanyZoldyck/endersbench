@@ -36,6 +36,7 @@ import {
 // Import all reducer arg schemas
 import ClaimHarnessReducer from "./claim_harness_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
+import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
 import HumanSayReducer from "./human_say_reducer";
 import JoinAsHumanReducer from "./join_as_human_reducer";
@@ -245,6 +246,7 @@ const tablesSchema = __schema({
 const reducersSchema = __reducers(
   __reducerSchema("claim_harness", ClaimHarnessReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),
+  __reducerSchema("human_act", HumanActReducer),
   __reducerSchema("human_move_to", HumanMoveToReducer),
   __reducerSchema("human_say", HumanSayReducer),
   __reducerSchema("join_as_human", JoinAsHumanReducer),
