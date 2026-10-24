@@ -1,0 +1,32 @@
+{
+  "persona": "P03",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "JASMINE",
+      "last": "REYES",
+      "ssn": "666-70-1003",
+      "dob": "06-21-2004",
+      "zip": "94704"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "b8a37992-7e73-42e8-8f9f-260b34f87c3a",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "REYES,JASMINE"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

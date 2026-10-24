@@ -1,0 +1,32 @@
+{
+  "persona": "P02",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "DANIEL",
+      "last": "WHITFIELD",
+      "ssn": "666-70-1002",
+      "dob": "11-02-1972",
+      "zip": "78746"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "9d711b4c-d4ef-4888-bdf7-58a1aa1a1d96",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "WHITFIELD,DANIEL"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

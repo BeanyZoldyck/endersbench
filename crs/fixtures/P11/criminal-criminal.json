@@ -1,0 +1,32 @@
+{
+  "persona": "P11",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "BRANDON",
+      "last": "SZABO",
+      "ssn": "666-70-1011",
+      "dob": "05-15-1995",
+      "zip": "91950"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "24f465c8-ee98-4c4f-b5d9-e8b2eb842944",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "SZABO,BRANDON"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

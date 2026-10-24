@@ -1,0 +1,21 @@
+{
+  "persona": "P04",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101004"
+  },
+  "expected": "empty list (no match)",
+  "status": 200,
+  "requestId": "23528ce2-fb1b-457d-b65f-e0bb7ad64b0e",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": []
+    }
+  }
+}

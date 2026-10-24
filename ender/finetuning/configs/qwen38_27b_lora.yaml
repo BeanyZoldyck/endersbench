@@ -20,7 +20,12 @@ dataset: alignment_train
 eval_dataset: alignment_validation
 template: qwen3_8
 enable_thinking: false
-cutoff_len: 1000
+# Was 1,000, copied from NVIDIA's Llama 8B demo; that cut every finance turn
+# (2,000-4,000 tokens with the tool list). 8,192 matches the llama.cpp server's
+# --ctx-size, so nothing trained is longer than what Ender can be served.
+# Memory at this length is untested on the Spark: if a test run runs out,
+# 4,096 still fits every finance example.
+cutoff_len: 8192
 preprocessing_num_workers: 4
 dataloader_num_workers: 0
 packing: false

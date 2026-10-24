@@ -1,0 +1,32 @@
+{
+  "persona": "P12",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "VICTOR",
+      "last": "ANAND",
+      "ssn": "666-70-1012",
+      "dob": "08-08-1968",
+      "zip": "10041"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "6d093f60-456e-4bd1-9cfe-4815f8e7a4bd",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "ANAND,VICTOR"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

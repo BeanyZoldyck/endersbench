@@ -1,0 +1,32 @@
+{
+  "persona": "P14",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "HAROLD",
+      "last": "PETTIGREW",
+      "ssn": "666-70-1014",
+      "dob": "01-19-1948",
+      "zip": "45402"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "4a52b69f-be3e-48e2-b640-30e4eb5dc3d0",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "PETTIGREW,HAROLD"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

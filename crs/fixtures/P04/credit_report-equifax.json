@@ -1,0 +1,83 @@
+{
+  "persona": "P04",
+  "product": "credit_report",
+  "variant": "Equifax",
+  "method": "POST",
+  "path": "/equifax/credit-report/standard/efx-prequal-vantage4",
+  "request": {
+    "firstName": "TOMAS",
+    "lastName": "LINDQVIST",
+    "ssn": "666701004",
+    "addresses": [
+      {
+        "addressLine1": "415 PINE ST UNIT 12",
+        "city": "SEATTLE",
+        "state": "WA",
+        "postalCode": "98101",
+        "borrowerResidencyType": "Current"
+      }
+    ]
+  },
+  "expected": "(TU / EFX / EXP): NoFileReturnedNoHit at all three bureaus. Equifax output carries no subject name (sandbox files).",
+  "status": 200,
+  "requestId": "4f5c4e30-4e3f-4ffd-942f-367c76d1b606",
+  "response": {
+    "requestData": {
+      "firstName": "TOMAS",
+      "lastName": "LINDQVIST",
+      "ssn": "666701004",
+      "addresses": [
+        {
+          "borrowerResidencyType": "Current",
+          "addressLine1": "415 PINE ST UNIT 12",
+          "city": "SEATTLE",
+          "state": "WA",
+          "postalCode": "98101"
+        }
+      ]
+    },
+    "repositoryIncluded": {
+      "transunion": false,
+      "experian": false,
+      "equifax": true
+    },
+    "responseDetail": {
+      "dateRequested": "2026-10-24T07:11:25.971053Z",
+      "requestingParty": {
+        "name": "CALHACKS13"
+      },
+      "creditBureauContact": {
+        "name": "CREDIT REPORTING SERVICES, INC",
+        "address": {
+          "addressLine1": "1024 IRON POINT ROAD",
+          "city": "FOLSOM",
+          "state": "CA",
+          "postalCode": "95630"
+        }
+      }
+    },
+    "responseAlertMessages": [
+      {
+        "borrowerSourceType": "Borrower",
+        "sourceType": "Equifax",
+        "responseAlertMessageCategoryType": "DemographicsVerification",
+        "responseAlertMessageServiceType": "EquifaxIdentityScanAlert",
+        "responseAlertMessageCode": "S",
+        "responseAlertMessageText": "ID Scan: S - IDENTITY SCAN DID NOT DETECT ANY ALERTS"
+      }
+    ],
+    "creditFiles": [
+      {
+        "creditFileDetail": {
+          "borrowerSourceType": "Borrower",
+          "creditFileResultStatusType": "NoFileReturnedNoHit",
+          "sourceType": "Equifax"
+        }
+      }
+    ],
+    "summaries": {
+      "tradeSummary": {},
+      "derogatorySummary": {}
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "persona": "P13",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "KAYLA",
+      "last": "BRENNAN",
+      "ssn": "666-70-1013",
+      "dob": "12-24-1999",
+      "zip": "37923"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "7ad8519f-4d16-4bfc-a586-404c1b4ff835",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "BRENNAN,KAYLA"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

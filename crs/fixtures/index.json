@@ -1,0 +1,1442 @@
+[
+  {
+    "persona": "P01",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "c4506157-a75c-412c-b6e4-c404c289019c",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=790; tradelines: 12"
+  },
+  {
+    "persona": "P01",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "16f2116e-e2e0-48c1-9023-745277e79f53",
+    "summary": "files: FileReturned; scores: Vantage 4.0=790, 02958=790; tradelines: 12"
+  },
+  {
+    "persona": "P01",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "de52b0c4-5180-44f7-81e4-6b549434217b",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=790; tradelines: 12"
+  },
+  {
+    "persona": "P01",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "57d017f1-0871-454a-9ae5-eb272c916ca5",
+    "summary": "ok"
+  },
+  {
+    "persona": "P01",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "15a07475-7363-48b8-b8a1-624e866d69dd",
+    "summary": "ok"
+  },
+  {
+    "persona": "P01",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "5959514a-3960-46e2-a79d-297a4713b1d7",
+    "summary": "ok"
+  },
+  {
+    "persona": "P01",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "3038732e-c01d-487b-b14e-462248d1be34",
+    "summary": "ok"
+  },
+  {
+    "persona": "P01",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "ac278572-fea2-4a98-a48a-84f3d7fbc1ef",
+    "summary": "ok"
+  },
+  {
+    "persona": "P01",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "9462ee01-ce0c-48e2-9400-0b9cc3d5f3ba",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "becb3743-2f4c-43fc-8309-ea81299096f3",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=815; tradelines: 18"
+  },
+  {
+    "persona": "P02",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "8b663d6f-a0c2-4200-9c9a-c452b1ac789e",
+    "summary": "files: FileReturned; scores: Vantage 4.0=815, 02958=815; tradelines: 18"
+  },
+  {
+    "persona": "P02",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "9db55859-4863-4813-a5a0-a421da974084",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=815; tradelines: 18"
+  },
+  {
+    "persona": "P02",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "9d711b4c-d4ef-4888-bdf7-58a1aa1a1d96",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "436971f2-287c-4d97-9942-f1e3be8e0c7d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "f4f7a98b-f810-4e7b-9bd5-b7456a1ba227",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "9758d0e7-bc24-42a1-9684-09245dc76adf",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "30ae075f-7c58-42b2-953a-b35593dd5294",
+    "summary": "ok"
+  },
+  {
+    "persona": "P02",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "6a62c483-5334-4b5d-b4da-2ee57398433d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "ea478fd4-039c-442f-b767-6479bc52d760",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=660; tradelines: 2"
+  },
+  {
+    "persona": "P03",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "396fbb8b-919c-45c4-8268-4dec8c58c613",
+    "summary": "files: FileReturned; scores: Vantage 4.0=660, 02958=660; tradelines: 2"
+  },
+  {
+    "persona": "P03",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "f75d9220-cba2-4def-a1e7-bc19c59799b8",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=660; tradelines: 2"
+  },
+  {
+    "persona": "P03",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "b8a37992-7e73-42e8-8f9f-260b34f87c3a",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "501cdfef-34d1-44a9-b735-a0ca39545ef3",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "a8fd5aad-6918-481a-a4f3-cd261b0a9274",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "bbfe6b59-6805-4890-b979-7285adc91fb2",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "067c5722-f9d5-4938-af53-179df94af51b",
+    "summary": "ok"
+  },
+  {
+    "persona": "P03",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "79607e1d-0865-4b4c-b0d2-308d6d8af0b4",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "d6237563-1249-453d-959a-f5162be08f9c",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "4f5c4e30-4e3f-4ffd-942f-367c76d1b606",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "acf91086-69fc-4cb4-a00b-f60a7de39ccb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "c561b689-4ab8-44fd-aaf9-3f6c1e6311eb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "a8cdb84d-3f53-4a6a-9faa-74e5e39dcc75",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "272cfd8c-53ba-4798-8624-fbcd8e75db6d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "3a8af341-0b65-48f1-92a8-2ffbb15b05aa",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "23528ce2-fb1b-457d-b65f-e0bb7ad64b0e",
+    "summary": "ok"
+  },
+  {
+    "persona": "P04",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "62387e4b-2df9-4896-abdc-02ce309bb245",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "07ddefed-16c0-4edd-a02a-077d382db211",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=540; tradelines: 9"
+  },
+  {
+    "persona": "P05",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "5056d214-d95e-4b37-980d-2367df186969",
+    "summary": "files: FileReturned; scores: Vantage 4.0=540, 02958=540; tradelines: 9"
+  },
+  {
+    "persona": "P05",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "4a1f4a84-8919-4e00-a1e6-b23b6a2168a1",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=540; tradelines: 9"
+  },
+  {
+    "persona": "P05",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "88c246af-d95f-4418-a242-fabe6e1d4bba",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "2720457e-2fc1-40d7-a3f0-b554021e8b04",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "57fdf770-f0dd-482e-b7fe-d3af12e26ab5",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "d1fc91a9-4294-46a3-b47d-afe593562be6",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "dffca8e9-c41c-42ef-b654-25ac05b0f721",
+    "summary": "ok"
+  },
+  {
+    "persona": "P05",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "1f6a89e9-c583-4b49-b1e2-3c72ce4ff4bb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "2a202069-47c3-46eb-99f7-59d68082df99",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=580; tradelines: 11"
+  },
+  {
+    "persona": "P06",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "ae90b559-ac02-42df-9643-b38d3bba73b3",
+    "summary": "files: FileReturned; scores: Vantage 4.0=580, 02958=580; tradelines: 11"
+  },
+  {
+    "persona": "P06",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "77414f66-6a07-47d0-9464-05197f8aa1e2",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=580; tradelines: 11"
+  },
+  {
+    "persona": "P06",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "8cde82e7-77dc-4e07-956d-4de16d017e35",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "00fe6c7a-5858-4277-a1f4-795ba3df1b29",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "a7bb35d7-9d8b-46ed-8811-92cf3eff6d43",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "dc87abce-5d94-41d8-ac1d-bfeb00c8d353",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "46402d0b-a50f-47e3-8846-44144f17e055",
+    "summary": "ok"
+  },
+  {
+    "persona": "P06",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "0e6cb967-980c-453a-a856-1f57d0e0b6cc",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "4049f266-54cc-4cf3-a7a2-e58e1e6318f3",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=560; tradelines: 10"
+  },
+  {
+    "persona": "P07",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "e8634655-cf28-4fa2-a0fa-bd7777686a8a",
+    "summary": "files: FileReturned; scores: Vantage 4.0=560, 02958=560; tradelines: 10"
+  },
+  {
+    "persona": "P07",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "6644dc0d-521c-4fcf-adfc-8ded641d137a",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=560; tradelines: 10"
+  },
+  {
+    "persona": "P07",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "adab5013-9297-4a4b-82d6-c97a5845e574",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "771d69a4-f85f-4603-aa38-6177632079d0",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "fa3f2a76-c75d-437f-969f-c25b86fc899d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "0a799dfd-f4df-4718-84ef-47f7d95efa62",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "5caae8f7-5956-4e97-bda2-2990466a796f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P07",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "657dba3d-3028-4bb6-acd0-d810b45f6a49",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "c71448e8-98ad-4fdb-adaf-d1ddb0f52e65",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=690; tradelines: 8"
+  },
+  {
+    "persona": "P08",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "ad6cf262-fef5-4c7f-8804-b8fabc1319b3",
+    "summary": "files: FileReturned; scores: Vantage 4.0=690, 02958=690; tradelines: 8"
+  },
+  {
+    "persona": "P08",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "eb62a77b-05eb-4d69-8eb4-49da70c4cc5f",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=690; tradelines: 8"
+  },
+  {
+    "persona": "P08",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "b906717b-4655-4742-adf3-f9fec098b93e",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "0b06c262-7689-443f-8e8c-b4b1f2f99093",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "22efb373-1052-4939-bf85-fb9376e1f0d4",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "0d53d6e0-b54a-4ad4-af21-63c70a727d24",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "b75be0aa-4a1d-4a42-ab80-5a9bd27386fb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P08",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "98878c32-f1f6-4235-9ca1-aec4640d2cb2",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "1c523d5b-c69b-49e4-8659-6133283a0d1d",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=700; tradelines: 7"
+  },
+  {
+    "persona": "P09",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "7f35f30e-91bf-45c5-b219-ddbc91012e34",
+    "summary": "files: FileReturned; scores: Vantage 4.0=700, 02958=700; tradelines: 7"
+  },
+  {
+    "persona": "P09",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "ab78760f-c0bf-4984-896a-bdeafc081f46",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=700; tradelines: 7"
+  },
+  {
+    "persona": "P09",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "3be74913-5fe0-4621-a696-e6cfcf9daf75",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "0619f795-f633-4497-81d1-2dfcde1fa86d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "16eda00d-77ce-4430-8ea0-71113fdb960d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "cd10077c-5a42-4db5-8f8a-be2c5f69087c",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "90598080-9dc5-452b-a18b-3bc3e6bba7a6",
+    "summary": "ok"
+  },
+  {
+    "persona": "P09",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "3cf9c356-5d09-4224-b8d7-3018414dd2c6",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "efad7dde-5b00-442e-836e-ad62a9ae09ff",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=720; tradelines: 6"
+  },
+  {
+    "persona": "P10",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "97912afb-c6fb-4763-8219-b68a6d7e99ff",
+    "summary": "files: FileReturned; scores: Vantage 4.0=720, 02958=720; tradelines: 6"
+  },
+  {
+    "persona": "P10",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "94c1ce30-a5c4-4cc6-b1dd-6d88e322aced",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=720; tradelines: 6"
+  },
+  {
+    "persona": "P10",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "dff3883d-ac3d-4380-b60d-9ba994112045",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "ae3652a2-56b7-464f-a92d-ba1393b189f9",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "afcaff33-e8ad-4298-a94b-56dee5e2b129",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "82514e34-5467-491d-88cc-ba533b37a464",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "33255520-cf4c-49d5-b557-691bc9d52068",
+    "summary": "ok"
+  },
+  {
+    "persona": "P10",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "84a32303-ac0a-42d1-8580-c5f0c13c3686",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "a27a40ba-6140-4a35-825b-c7bd978284af",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=610; tradelines: 5"
+  },
+  {
+    "persona": "P11",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "a2e1a309-2c0c-4b0a-9f8b-f8d564af23c1",
+    "summary": "files: FileReturned; scores: Vantage 4.0=610, 02958=610; tradelines: 5"
+  },
+  {
+    "persona": "P11",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "4e6bbf4d-321f-4b54-99be-23f4dbf73cd6",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=610; tradelines: 5"
+  },
+  {
+    "persona": "P11",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "24f465c8-ee98-4c4f-b5d9-e8b2eb842944",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "91149985-2d4e-4e75-ad1f-26f83937bbff",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "b84e61d3-1ef9-4ef1-9b5c-9eb94771bf5f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "0b8dfa49-fdab-4ab2-9118-f368d8483932",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "8b087a47-fa86-42ed-99cb-dc8f3fa71116",
+    "summary": "ok"
+  },
+  {
+    "persona": "P11",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "73f92ea2-99a2-4abc-8872-2049da6c4893",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "adbed7e7-d4f6-46b5-86a3-39080769bfac",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "8356ba9f-a688-4385-904b-0bfec7a59609",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "37ddc6fc-2d62-4396-98d1-171f23956ccc",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "447e1e8c-1b0c-4e48-82d5-9e4e89099a8a",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "6d093f60-456e-4bd1-9cfe-4815f8e7a4bd",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "d7488f6e-607c-4950-9723-cb65a9052c7d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "d6756ad6-d73b-4a32-9371-addc060a7e8b",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "dd76eef8-fd34-46ca-a4e5-4f8153d856d8",
+    "summary": "ok"
+  },
+  {
+    "persona": "P12",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "6b28a979-428b-4da8-9df8-abb7278fafe7",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "6876d986-ad1f-40e2-b501-b6aba436fb59",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=640; tradelines: 3"
+  },
+  {
+    "persona": "P13",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "a4577514-05d6-4888-8a6e-6a19b5e62a69",
+    "summary": "files: FileReturned; scores: Vantage 4.0=640, 02958=640; tradelines: 3"
+  },
+  {
+    "persona": "P13",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "3fce8e1a-2b78-4037-ab1d-95b0347ce6af",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=640; tradelines: 3"
+  },
+  {
+    "persona": "P13",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "fe48153e-427a-400f-986a-4f758eda5f7c",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "7ad8519f-4d16-4bfc-a586-404c1b4ff835",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "17f93e57-5fc7-4400-be3e-43cef66ad3e6",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "e0959b29-bb58-4f01-aa27-a4cc2622c4e9",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "27046707-f51b-4192-bf5b-31282d34a03c",
+    "summary": "ok"
+  },
+  {
+    "persona": "P13",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "a452093e-f675-464f-b7b9-52e7dac3eb28",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "f2b1fa00-63a4-4e0f-933e-38ca4ba50618",
+    "summary": "errors: This is a deceased file and cannot be shared without additional addendums. Please contact CRS at support@crscreditapi.com"
+  },
+  {
+    "persona": "P14",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "e325bfa9-44b4-46a6-ac25-99e3071e288b",
+    "summary": "errors: This is a deceased file and cannot be shared without additional addendums. Please contact CRS at support@crscreditapi.com"
+  },
+  {
+    "persona": "P14",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "9d96a675-259b-4fc9-a33f-e6adabd8f8a3",
+    "summary": "errors: This is a deceased file and cannot be shared without additional addendums. Please contact CRS at support@crscreditapi.com"
+  },
+  {
+    "persona": "P14",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "a882d3ab-2973-4aae-a189-9f8bfcd6e511",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "4a52b69f-be3e-48e2-b640-30e4eb5dc3d0",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "ea0b13bf-2b20-4832-b51b-71edecda70fa",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "f56775ea-61f1-47e5-b1d8-c613ec7e87ad",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "a5f4b437-44f8-45aa-b608-a99327a1c8d3",
+    "summary": "ok"
+  },
+  {
+    "persona": "P14",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "6f222b1f-3381-4aef-8ef9-530484fb762f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "2d961ee6-9a80-4d8a-8845-bca2a37ea1b7",
+    "summary": "files: NoFileReturnedCreditFreeze; scores: FICO® Score 9=undefined; tradelines: 0"
+  },
+  {
+    "persona": "P15",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "177400d6-3955-4835-9f99-8d1665cac8ab",
+    "summary": "files: FileReturned; scores: Vantage 4.0=740, 02958=740; tradelines: 9"
+  },
+  {
+    "persona": "P15",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "17fc4bb2-7d5f-4db2-8cfa-f516975ad976",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=740; tradelines: 9"
+  },
+  {
+    "persona": "P15",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "7ba661d9-d446-4359-923a-b5b71cbdb959",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "54766cf5-d33b-4196-8f6d-d06b75ed9dec",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "c493005f-0af1-402f-babd-fb447006aa77",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "2180736a-c293-4334-9fac-d57c6048e10a",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "2ba9f827-645c-42ff-b1b3-3aaf7431fe28",
+    "summary": "ok"
+  },
+  {
+    "persona": "P15",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "8c69b697-6f19-495b-8341-cc39768908b2",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "a2a5f8a2-662f-4c09-aa91-6d2d2eefd1e5",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=730; tradelines: 10"
+  },
+  {
+    "persona": "P16",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "6166adf2-db35-4a95-b704-a7b282be3ed9",
+    "summary": "files: FileReturned; scores: Vantage 4.0=730, 02958=730; tradelines: 10"
+  },
+  {
+    "persona": "P16",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "62227ace-8add-4bff-8509-d72bc78ca112",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=730; tradelines: 10"
+  },
+  {
+    "persona": "P16",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "6630b26f-2d2f-451a-8267-bb20885e39cb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "ffa30efc-7013-4395-952e-431754988273",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "fcf9725f-5da7-46cf-95b3-978b63eb2435",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "b2838632-ce27-4154-b79c-ec6c4867e484",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "c3e95479-3dfe-48b6-b20a-bff732c36c9e",
+    "summary": "ok"
+  },
+  {
+    "persona": "P16",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "962a6bca-5db7-4a16-9ece-66338059b749",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "de9fd11d-6615-40d8-965a-2d1d201702a2",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=760; tradelines: 8"
+  },
+  {
+    "persona": "P17",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "b6cd5cea-5843-43b6-98e9-7dac4fffdcbf",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "3215a71b-55a7-483b-a90c-c2e765969fec",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=700; tradelines: 8"
+  },
+  {
+    "persona": "P17",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "3edb6423-9761-4e2d-90d4-cb414f700bbb",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "73d026ab-1250-4084-8c29-1fdc697a813f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "ceb8de48-0ea1-4e4a-b62c-f7428ebb2a84",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "d4b80356-45c5-4c98-94e2-4fd2ac52bad9",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "603106c3-0b7b-403b-a7cb-c7897c817189",
+    "summary": "ok"
+  },
+  {
+    "persona": "P17",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "3df9a220-37f8-4cf2-813a-74a45bef2257",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "c2865606-a980-4b0d-ba00-32d5a8105a16",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=650; tradelines: 9"
+  },
+  {
+    "persona": "P18",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "ee948543-b2c8-48c5-aa7d-88aac8d830a3",
+    "summary": "files: FileReturned; scores: Vantage 4.0=650, 02958=650; tradelines: 9"
+  },
+  {
+    "persona": "P18",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "ce327b6e-241a-4b4f-a91e-9bbdff918924",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=650; tradelines: 9"
+  },
+  {
+    "persona": "P18",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "c9f0e39d-86c4-4ca2-b917-8e86f8f48b7f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "6a0bc70b-4bda-4433-a947-0558370c4d87",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "759c1f96-0469-4ed7-be05-ea43533ca597",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "527ac0c8-246b-4e91-a773-33cd6e21e36f",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "b62d3a9c-9383-4345-bef0-a0eb1c58387d",
+    "summary": "ok"
+  },
+  {
+    "persona": "P18",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "467e59a1-efc1-4b14-830f-74d2d3fdbd57",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "c9e63464-3f57-45ae-ac83-72e66eaab699",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=770; tradelines: 14"
+  },
+  {
+    "persona": "P19",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "ca6e6d91-69cc-4e35-b897-0abc5b52e91f",
+    "summary": "files: FileReturned; scores: Vantage 4.0=770, 02958=770; tradelines: 14"
+  },
+  {
+    "persona": "P19",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "0ebcb9d1-9e4a-472b-89b7-76159bf12b03",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=770; tradelines: 14"
+  },
+  {
+    "persona": "P19",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "642d0542-c3e3-437d-9943-3032b946d2a1",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "074462b6-24e6-4ffd-865b-ac9ebc979d5e",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "284f3fad-c960-48e9-8a68-a3f630e665b5",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "37514322-2b48-4f70-9fba-ac09d99d4b87",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "b4499d38-0b22-4644-a4b5-1c439971373a",
+    "summary": "ok"
+  },
+  {
+    "persona": "P19",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "24d7b59a-bb7b-48d1-9234-07eb8ff60e4e",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "credit_report",
+    "variant": "TransUnion",
+    "status": 200,
+    "requestId": "0b479445-ca8d-49a7-a3f7-0179f91499bd",
+    "summary": "files: FileReturned; scores: TransUnionVantageScore4.0=ScoringNotAvailable; tradelines: 6"
+  },
+  {
+    "persona": "P20",
+    "product": "credit_report",
+    "variant": "Equifax",
+    "status": 200,
+    "requestId": "87601009-d5c7-4a45-870c-3fd8b898aa81",
+    "summary": "files: FileReturned; scores: Vantage 4.0=ScoringNotAvailable, 02958=NotScoredNoRecentAccountInformation; tradelines: 6"
+  },
+  {
+    "persona": "P20",
+    "product": "credit_report",
+    "variant": "Experian",
+    "status": 200,
+    "requestId": "b45b7c84-6d20-45b6-a008-ab3b2f4a6360",
+    "summary": "files: FileReturned; scores: VantageScore 4.0=undefined; tradelines: 6"
+  },
+  {
+    "persona": "P20",
+    "product": "criminal",
+    "variant": "Criminal",
+    "status": 200,
+    "requestId": "2a44e918-239c-4c19-926e-a814fffcaa82",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "eviction",
+    "variant": "Eviction",
+    "status": 200,
+    "requestId": "7860df0d-3777-4b38-bd1a-0e8c3b7e08e9",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "fraud_finder",
+    "variant": "FraudFinder",
+    "status": 200,
+    "requestId": "c4bd3899-cbf5-49c2-867a-ef8d1ba3888a",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "pitchpoint_blj",
+    "variant": "PitchPoint",
+    "status": 200,
+    "requestId": "d6ff978b-07c2-4e96-ac7b-7f65073f2ea5",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "accurate_append",
+    "variant": "Reverse",
+    "status": 200,
+    "requestId": "8268190a-d38d-4b11-8eca-0f8609f846a6",
+    "summary": "ok"
+  },
+  {
+    "persona": "P20",
+    "product": "tu_identity_verification",
+    "variant": "TU identity",
+    "status": 200,
+    "requestId": "94de9038-2dc3-4143-8f87-e8206d9da379",
+    "summary": "ok"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "persona": "P19",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "GRACE",
+      "last": "NAKAMURA",
+      "ssn": "666-70-1019",
+      "dob": "09-16-1976",
+      "zip": "94707"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "074462b6-24e6-4ffd-865b-ac9ebc979d5e",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "NAKAMURA,GRACE"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

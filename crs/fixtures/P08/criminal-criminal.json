@@ -1,0 +1,32 @@
+{
+  "persona": "P08",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "PRIYA",
+      "last": "VENKATESAN",
+      "ssn": "666-70-1008",
+      "dob": "07-27-1981",
+      "zip": "60657"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "b906717b-4655-4742-adf3-f9fec098b93e",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "VENKATESAN,PRIYA"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

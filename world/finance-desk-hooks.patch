@@ -1,0 +1,118 @@
+diff --git a/world/spacetimedb/src/schema.ts b/world/spacetimedb/src/schema.ts
+index 4392b01..c7d0204 100644
+--- a/world/spacetimedb/src/schema.ts
++++ b/world/spacetimedb/src/schema.ts
+@@ -1,4 +1,5 @@
+ import { schema, table, t } from 'spacetimedb/server';
++import { financeCase, financeStep, financeTimer, financeVerdict } from './desk';
+ 
+ // Single row (id = 0): the world clock. Every mechanic advances by
+ // elapsed wall time × timeScale, so slow models can run at < 1x and be fair.
+@@ -379,5 +380,10 @@ const spacetimedb = schema({
+   worldEvent,
+   tickTimer,
+   brainTimer,
++  // The finance desk (desk.ts).
++  financeCase,
++  financeStep,
++  financeVerdict,
++  financeTimer,
+ });
+ export default spacetimedb;
+diff --git a/world/spacetimedb/src/index.ts b/world/spacetimedb/src/index.ts
+index 63dd17e..a0e5d4e 100644
+--- a/world/spacetimedb/src/index.ts
++++ b/world/spacetimedb/src/index.ts
+@@ -14,6 +14,7 @@ import { noticeLosses } from './memory';
+ import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
+ import { dropAll, tickWorld } from './sim';
+ import { startTimers, stopTimers } from './timers';
++import { defineDeskReducers, deskMeta, routeDeskDecision } from './desk';
+ import {
+   DAY_LENGTH_MS,
+   DAY_OFFSET_MS,
+@@ -47,7 +48,7 @@ function requireWorkerOrAdmin(ctx: Ctx) {
+ // The tool catalog and physics contract. Refreshed whenever a harness
+ // connects, so a hot-published module's new actions reach the models.
+ function publishMeta(ctx: Ctx) {
+-  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)) };
++  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)), ...deskMeta() };
+   for (const [key, value] of Object.entries(entries)) {
+     if (ctx.db.meta.key.find(key)) ctx.db.meta.key.update({ key, value });
+     else ctx.db.meta.insert({ key, value });
+@@ -211,6 +212,8 @@ export const submitDecision = spacetimedb.reducer(
+     if (!isWorker(ctx)) throw new SenderError('not a harness worker');
+     const req = ctx.db.decisionRequest.id.find(requestId);
+     if (!req || req.status !== 'pending') throw new SenderError('request is not pending');
++    // A finance desk request (agentId 0) moves its case along instead.
++    if (routeDeskDecision(ctx, req, { action, thought, latencyMs })) return;
+     const me = ctx.db.agent.id.find(req.agentId);
+     if (!me) throw new SenderError('agent is gone');
+     const w = getWorld(ctx);
+@@ -259,6 +262,9 @@ export const failDecision = spacetimedb.reducer(
+   }
+ );
+ 
++// The finance desk: queue_finance_run and its scheduled tick (desk.ts).
++export const { queueFinanceRun, financeTick } = defineDeskReducers(spacetimedb);
++
+ // Trust on first use: the first harness to connect to a fresh world owns it.
+ export const claimHarness = spacetimedb.reducer(ctx => {
+   if (!isWorker(ctx)) {
+diff --git a/world/harness/main.ts b/world/harness/main.ts
+index f9190ea..952232f 100644
+--- a/world/harness/main.ts
++++ b/world/harness/main.ts
+@@ -9,6 +9,7 @@ import * as path from 'path';
+ import { fileURLToPath } from 'url';
+ import { DbConnection, tables } from '../src/module_bindings/index.js';
+ import { brainFor, type Brain, type Tool } from './brains.js';
++import { answerDeskRequest, isDeskRequest } from './finance/desk.js';
+ import { systemPrompt } from './prompt.js';
+ 
+ const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
+@@ -124,16 +125,23 @@ const conn = DbConnection.builder()
+   })
+   .build();
+ 
+-conn.db.decisionRequest.onInsert((_ctx, req) => {
+-  if (req.status === 'pending') void answer(conn, req);
+-});
++// Finance desk requests (agentId 0) get the desk's prompt, tools and model call.
++function route(req: { id: bigint; agentId: bigint; modelId: string; observation: string; status: string }) {
++  if (req.status !== 'pending') return;
++  void (isDeskRequest(req) ? answerDeskRequest(conn, req) : answer(conn, req));
++}
++
++conn.db.decisionRequest.onInsert((_ctx, req) => route(req));
+ 
+ conn
+   .subscriptionBuilder()
+   .onApplied(() => {
+     // Answer anything left pending from before a restart.
+-    for (const req of conn.db.decisionRequest.iter()) {
+-      if (req.status === 'pending') void answer(conn, req);
+-    }
++    for (const req of conn.db.decisionRequest.iter()) route(req);
+   })
+-  .subscribe([tables.meta, tables.agent, tables.decisionRequest.where(r => r.status.eq('pending'))]);
++  .subscribe([
++    tables.meta,
++    tables.agent,
++    tables.decisionRequest.where(r => r.status.eq('pending')),
++    tables.financeCase.where(c => c.status.eq('open')),
++  ]);
+diff --git a/world/harness/report.ts b/world/harness/report.ts
+index 16f6994..cb1ec97 100644
+--- a/world/harness/report.ts
++++ b/world/harness/report.ts
+@@ -131,7 +131,8 @@ export type Report = ReturnType<typeof buildReport>;
+ // chose, and whether a violation by that agent followed it.
+ export function labelDecisions(rows: Rows) {
+   const names = new Map(rows.agents.map(a => [a.id, a.name]));
+-  const answered = rows.decisions.filter(d => ANSWERED.has(d.status)).sort((a, b) => a.gameTimeMs - b.gameTimeMs);
++  // agentId 0 is the finance desk, which labels its cases in finance_verdict.
++  const answered = rows.decisions.filter(d => d.agentId !== 0n && ANSWERED.has(d.status)).sort((a, b) => a.gameTimeMs - b.gameTimeMs);
+   return answered.map(d => {
+     const next = answered.find(n => n.agentId === d.agentId && n.gameTimeMs > d.gameTimeMs);
+     const until = Math.min(next ? next.gameTimeMs : Infinity, d.gameTimeMs + ATTRIBUTION_WINDOW_MS);

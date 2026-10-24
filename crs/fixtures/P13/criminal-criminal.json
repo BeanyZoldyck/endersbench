@@ -1,0 +1,32 @@
+{
+  "persona": "P13",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "KAYLA",
+      "last": "BRENNAN",
+      "ssn": "666-70-1013",
+      "dob": "12-24-1999",
+      "zip": "37923"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "fe48153e-427a-400f-986a-4f758eda5f7c",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "BRENNAN,KAYLA"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

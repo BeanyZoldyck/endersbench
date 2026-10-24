@@ -1,0 +1,69 @@
+{
+  "persona": "P09",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "DEREK",
+      "last": "HOLLOWAY",
+      "ssn": "666-70-1009",
+      "dob": "02-11-1986",
+      "zip": "80204"
+    }
+  },
+  "expected": "1 FELONY burglary 2nd degree, Denver, CONVICTED 2021",
+  "status": 200,
+  "requestId": "3be74913-5fe0-4621-a696-e6cfcf9daf75",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9109",
+      "name": "HOLLOWAY,DEREK"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "candidate": [
+          {
+            "offenses": {
+              "count": "1",
+              "offense": [
+                {
+                  "caseType": "FELONY",
+                  "description": "BURGLARY 2ND DEGREE - CLASS 4 FELONY",
+                  "arrestDate": "11/16/2020",
+                  "sentenceLength": "3 YEARS PROBATION",
+                  "statute": "18-4-203",
+                  "filingDate": "12/02/2020",
+                  "disposition": "CONVICTED",
+                  "dispositionDate": "06/15/2021",
+                  "offenseDate": "11/14/2020",
+                  "offenseCode": "18-4-203",
+                  "convictionDate": "06/15/2021",
+                  "convictionLocation": "DENVER COUNTY, CO",
+                  "probationSentenceLength": "3 YEARS",
+                  "court": "DENVER COUNTY DISTRICT COURT",
+                  "plea": "GUILTY"
+                }
+              ]
+            },
+            "subject": {
+              "category": "CRIMINAL",
+              "address": "4875 W COLFAX AVE",
+              "comments": "CLASS 4 FELONY",
+              "sex": "MALE",
+              "source": "CO DENVER COUNTY DISTRICT COURT",
+              "jurisdiction": "DENVER COUNTY",
+              "dob": "02/11/1986",
+              "state": "CO",
+              "fullName": "DEREK S HOLLOWAY",
+              "caseNumber": "20CR04417"
+            }
+          }
+        ],
+        "count": "1"
+      }
+    }
+  }
+}
