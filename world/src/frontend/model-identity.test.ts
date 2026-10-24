@@ -29,7 +29,7 @@ describe('model identity presentation', () => {
   });
   it('maps only recognized model families to branded buddies', () => {
     expect(modelAvatarPath('codex:gpt-6-luna')).toBe('/studio/avatars/chatgpt.png');
-    expect(modelAvatarPath('Qwen')).toBe('/studio/avatars/qwen.png');
+    expect(modelAvatarPath('Grok')).toBe('/studio/avatars/grok.png');
     expect(modelAvatarPath('Claude')).toBe('/studio/avatars/claude.png');
     expect(modelAvatarPath('Ender')).toBe('/studio/avatars/ender.png');
     expect(modelAvatarPath('other:model')).toBeNull();

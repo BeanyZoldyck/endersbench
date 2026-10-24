@@ -102,7 +102,7 @@
 .model-logo{height:45px;width:45px;border:1px solid #aaa;border-radius:10px;display:grid;place-items:center;font-size:1.25rem;font-weight:800}
 .studio .model-logo img,.studio .avatar img{display:block;width:100%;height:100%;object-fit:contain}
 .model-ender{color:var(--gold);border-color:var(--gold)}
-.model-qwen{color:#b5a1de;border-color:#b5a1de}
+.model-grok{color:#b5a1de;border-color:#b5a1de}
 .model-claude{color:#c48f73;border-color:#c48f73}
 .model-chatgpt{color:#99c9b5;border-color:#99c9b5}
 .mode-switch{display:flex;border-top:1px solid var(--line);margin-top:35px}

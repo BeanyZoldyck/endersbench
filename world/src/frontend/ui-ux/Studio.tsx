@@ -13,7 +13,7 @@ import '../studio.css';
 import { withModelNames } from '../model-identity';
 import { ModelBuddy } from './ModelBuddy';
 
-const MODELS: StudioModel[] = ['Ender', 'Qwen', 'Claude', 'ChatGPT'];
+const MODELS: StudioModel[] = ['Ender', 'Grok', 'Claude', 'ChatGPT'];
 const playbackIcon = { previous: '/studio/f7bee.svg', play: '/studio/fbfe3.svg', stop: '/studio/4660a.svg', next: '/studio/aff88.svg' };
 
 export default function Studio() {
@@ -201,7 +201,7 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
           {state.selectedAgentId && selected && <div className="agent-focus" role="status">Following {selected.name}</div>}
           {!source.live && <ReplayDock source={source} current={visibleEvent} onCommand={replayCommand} />}
         </div>
-        {source.ready && source.data?.world && <details className="studio-disclosure studio-spotlight" onToggle={event => { const open = event.currentTarget.open; setSpotlightExpanded(open); if (!open) setSpotlitId(null); }}><summary>Event spotlight</summary><Spotlight events={presentation.beats} agents={source.data.agents} gameTimeMs={source.data.world.gameTimeMs} promptVariant={presentation.promptVariant} systemPrompt={presentation.systemPrompt} onShow={onSpotlight} /></details>}
+        {source.ready && source.data?.world && <details className="studio-disclosure studio-spotlight" open={spotlightExpanded} onToggle={event => { const open = event.currentTarget.open; setSpotlightExpanded(open); if (!open) setSpotlitId(null); }}><summary>Event spotlight</summary><Spotlight events={presentation.beats} agents={source.data.agents} gameTimeMs={source.data.world.gameTimeMs} promptVariant={presentation.promptVariant} systemPrompt={presentation.systemPrompt} onShow={onSpotlight} /></details>}
         <div className="scene-caption"><span className="accent">{state.selectedAgentId && !inspectorEvent ? 'No event for this agent yet' : inspectorEvent?.kind.replace(/_/g, ' ') ?? 'Observing'}</span><span>{state.screen === 'follow' ? `Following ${selected?.name ?? 'agent'}` : 'Select an agent to follow'}</span><button className="camera-reset" disabled={!state.selectedAgentId && camera === 'audience' && spotlitId === null} onClick={() => { selectAgent(null); if (state.screen === 'follow') nav('monitor'); }}>Reset camera</button></div>
         {presentation.narration && <p className="scene-narration" role="status">{presentation.narration}</p>}
         {!source.live && source.replay && <details className="recording-details"><summary>Recording details</summary><p className="recording-provenance">{run.label} · {results.condition ?? 'Condition not recorded'} · {results.modelId ?? 'Model not recorded'}</p><p className="recording-provenance">Recorded from {source.replay.db} · {new Date(source.replay.recordedAt).toLocaleString()}</p></details>}

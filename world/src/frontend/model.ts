@@ -1,5 +1,5 @@
 export type StudioScreen = 'landing' | 'setup' | 'single' | 'briefing' | 'monitor' | 'follow' | 'outcome' | 'lending' | 'compare' | 'context' | 'method';
-export type StudioModel = 'Ender' | 'Qwen' | 'Claude' | 'ChatGPT';
+export type StudioModel = 'Ender' | 'Grok' | 'Claude' | 'ChatGPT';
 export type Scenario = 'clearing' | 'lending';
 export type StudioSnapshot = Pick<StudioState, 'screen' | 'runId' | 'selectedAgentId' | 'eventIndex' | 'replayTimeMs' | 'briefingScenario' | 'contextTab' | 'compareScenario' | 'comparePair'>;
 export type StudioState = {
@@ -65,7 +65,7 @@ export function initialStudioState(search: string): StudioState {
     runId: params.get('run') || replayName || 'clearing-charter-v8-admission', selectedAgentId: null,
     eventIndex: 0, replayTimeMs: 0, restoreNonce: 0, playing: false,
     contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',
-    comparePair: ['Ender', 'Qwen'], pendingComparePair: null, landingSection: 'top', previewTab: 'clearing',
+    comparePair: ['Ender', 'Grok'], pendingComparePair: null, landingSection: 'top', previewTab: 'clearing',
   };
 }
 
