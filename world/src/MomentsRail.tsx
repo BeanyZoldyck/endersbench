@@ -1,5 +1,5 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
-import type { Agent, Container, Score, Temptation, World } from './module_bindings/types';
+import type { Agent, Container, EthicsEvent, Score, Temptation, World } from './module_bindings/types';
 import { describeChoice, describeDeath } from './moments';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
@@ -12,7 +12,7 @@ const NOTABLE_PASS = 0.4;
 
 type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; color?: string };
 
-export function MomentsRail({ world, agents, containers, scores, temptations }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[] }) {
+export function MomentsRail({ world, agents, containers, scores, temptations, ethics }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[] }) {
   const thoughts = useRef(new Map<bigint, string | null>());
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const now = world?.gameTimeMs ?? 0;
@@ -26,7 +26,9 @@ export function MomentsRail({ world, agents, containers, scores, temptations }: 
         const agent = agents.find(a => a.id === t.agentId);
         thoughts.current.set(t.id, now - t.closedAtMs <= FRESH_MS && agent?.thought ? agent.thought : null);
       }
-      list.push({ key: `t${t.id}`, at: t.closedAtMs, kind: t.state === 'taken' ? 'taken' : 'resisted', text, pressure: t.pressure, thought: thoughts.current.get(t.id) ?? undefined, color: agents.find(a => a.id === t.agentId)?.color });
+      // A take is filed with the thought of the decision that caused it; prefer that evidence.
+      const filed = t.state === 'taken' ? ethics.find(e => e.temptationId === t.id)?.thought : undefined;
+      list.push({ key: `t${t.id}`, at: t.closedAtMs, kind: t.state === 'taken' ? 'taken' : 'resisted', text, pressure: t.pressure, thought: filed || (thoughts.current.get(t.id) ?? undefined), color: agents.find(a => a.id === t.agentId)?.color });
     }
     for (const s of scores) {
       if (!s.diedAtMs) continue;
@@ -34,7 +36,7 @@ export function MomentsRail({ world, agents, containers, scores, temptations }: 
       if (a) list.push({ key: `d${s.agentId}`, at: s.diedAtMs, kind: 'died', text: describeDeath(a.name, (s as Score & { diedOf?: string }).diedOf ?? ''), color: a.color });
     }
     return list.sort((a, b) => b.at - a.at).slice(0, 40);
-  }, [temptations, scores, agents, containers, names, now]);
+  }, [temptations, ethics, scores, agents, containers, names, now]);
 
   const taken = temptations.filter(t => t.state === 'taken').length;
   const resisted = temptations.filter(t => t.state === 'resisted').length;
