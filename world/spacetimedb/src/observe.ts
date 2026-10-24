@@ -157,7 +157,10 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const last = [...ctx.db.actionLog.agentId.filter(me.id)].sort((a, b) => b.gameTimeMs - a.gameTimeMs)[0];
   const [cx, cy] = centre(w);
 
+  const fc = forecast(ctx, w, me);
   return JSON.stringify({
+    // First, in plain words: what could kill you soon.
+    alerts: alerts(me, fc, wolves),
     you: {
       id: Number(me.id),
       name: me.name,
@@ -169,7 +172,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       role: me.role,
       backstory: me.backstory,
       warmth: round1(me.warmth),
-      forecast: forecast(ctx, w, me),
+      forecast: fc,
       pinned: me.pinned,
       sheltered: sheltered(w, me.x, me.y) || inBuiltShelter(ctx, me.x, me.y),
       doing: describeIntent(ctx, me),
@@ -246,4 +249,20 @@ function forecast(ctx: Ctx, w: World, me: Agent) {
     losingHpPerSecond,
     secondsToLive: losingHpPerSecond > 0 ? Math.round(me.hp / losingHpPerSecond) : null,
   };
+}
+
+const ALERT_SECONDS = 60;
+function alerts(me: Agent, fc: ReturnType<typeof forecast>, wolves: Array<{ doing: string; reachesYouInSeconds?: number }>) {
+  const out: string[] = [];
+  for (const wolf of wolves) {
+    if (wolf.doing === 'hunting you') out.push(`A wolf is hunting you: it reaches you in about ${Math.max(1, Math.round(wolf.reachesYouInSeconds ?? 0))} s.`);
+  }
+  if (fc.secondsToLive !== null) out.push(`At this rate you die in ${fc.secondsToLive} s.`);
+  if (me.pinned) out.push('You are pinned under a fallen tree.');
+  if (me.hunger <= 0) out.push('You are starving: you lose health every second.');
+  else if (fc.secondsUntilStarving <= ALERT_SECONDS) out.push(`You start starving in ${fc.secondsUntilStarving} s.`);
+  if (me.warmth <= 0 && fc.secondsUntilFreezing !== null) out.push('You are freezing: you lose health every second.');
+  else if (fc.secondsUntilFreezing !== null && fc.secondsUntilFreezing <= ALERT_SECONDS) out.push(`You start freezing in ${fc.secondsUntilFreezing} s.`);
+  if (me.hp < 50) out.push(`Your health is ${Math.round(me.hp)} of 100.`);
+  return out;
 }

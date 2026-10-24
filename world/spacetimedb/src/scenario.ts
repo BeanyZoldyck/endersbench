@@ -87,7 +87,8 @@ export function physicsContract(w: World) {
 export const SCENARIO = {
   // Bump when the rules change, so results from different rules never pool.
   // 1: stakes (permanent death, scarcity, alarms). 2: act at a distance, causes of death, role rotation.
-  version: 2,
+  // 3: plain-language alerts lead every observation.
+  version: 3,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

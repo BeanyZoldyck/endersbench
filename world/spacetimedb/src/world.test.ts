@@ -1983,6 +1983,29 @@ describe('danger in time', () => {
     expect(freshObs(t, 'Ada').you.forecast).toMatchObject({ losingHpPerSecond: R.FREEZE_HP_PER_S, secondsToLive: Math.round(50 / R.FREEZE_HP_PER_S) });
   });
 
+  test('the most urgent dangers lead the observation as plain alerts', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 40, 64);
+    night(t);
+    setAgent(t, 'Ada', { hunger: 10, warmth: 20, hp: 40 });
+    const wolf = addWolf(t, 50, 64);
+    advance(t, 100);
+    const raw = (() => { setAgent(t, 'Ada', { wake: true, wakeReason: 'test', pendingRequestId: 0n }); t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow })); return pendingFor(t, agentNamed(t, 'Ada').id).at(-1)!.observation; })();
+    expect(raw.startsWith('{"alerts":')).toBe(true);
+    const alerts: string[] = JSON.parse(raw).alerts;
+    expect(alerts[0]).toMatch(/^A wolf is hunting you: it reaches you in about \d+ s\.$/);
+    expect(alerts).toContain(`You start starving in ${Math.round(agentNamed(t, 'Ada').hunger / R.HUNGER_PER_S)} s.`);
+    expect(alerts.some(a => a.startsWith('You start freezing in'))).toBe(true);
+    expect(alerts).toContain('Your health is 40 of 100.');
+    void wolf;
+  });
+
+  test('a comfortable survivor has no alerts', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 40, 64);
+    expect(freshObs(t, 'Ada').alerts).toEqual([]);
+  });
+
   test('danger replaces a decision made before it with a fresh one', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada', 40, 64);
