@@ -1,6 +1,17 @@
 # Qwen3.8-27B on the Spark
 
+## Ender post-training smoke test
+
+See [SPARK_DEMO.md](SPARK_DEMO.md) for the BF16 LoRA training demo using clearly
+labeled synthetic alignment/reward-hacking examples, live training throughput,
+and separately timed base/adapter inference decoding. Demo data is unreviewed
+and does not bypass the production preparation script's review requirement.
+
 ## 8-bit local inference
+
+The Q8_0 model was removed from Spark at the user's request on 2026-10-24.
+BF16 remains selected; the following script is an optional rebuild workflow,
+not a description of the currently deployed weights.
 
 `setup_q8.py` builds `llama-quantize` from the existing checkout and creates
 `models/Qwen3.8-27B-Q8_0.gguf` from the pinned BF16 GGUF. It retains BF16 GGUF and
@@ -42,7 +53,7 @@ raw per-request usage are saved under `openrouter-continuation-20261024T13455891
 - Host: `asus@172.20.13.192` (`gx10-b29c`).
 - Remote directory: `/home/asus/endersbench-finetune`.
 - Model: `Qwen/Qwen3.8-27B`, Apache-2.0, BF16 base weights.
-- Inference: llama.cpp CUDA; Q8_0 is selected by the 8-bit setup above. Historical baselines used BF16 GGUF.
+- Inference: llama.cpp CUDA with BF16 GGUF. Q8_0 can be rebuilt explicitly with the optional setup above.
 - Method: supervised fine-tuning (SFT) with low-rank adaptation (LoRA).
 - Output: a LoRA adapter. The export configuration can merge the adapter into a BF16 checkpoint.
 - No automatic training, model publication, or external experiment reports.
