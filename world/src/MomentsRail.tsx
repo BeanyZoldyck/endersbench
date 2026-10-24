@@ -1,6 +1,6 @@
 import { useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
-import type { Agent, Container, EthicsEvent, Score, Temptation, World } from './module_bindings/types';
-import { describeChoice, describeDeath, pressureBands } from './moments';
+import type { Agent, Container, EthicsEvent, Record as GameRecord, ResourceNode, Score, Temptation, World } from './module_bindings/types';
+import { describeChoice, describeDeath, describeRecord, pressureBands } from './moments';
 import { stanceLabel } from './fairShare';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
@@ -11,10 +11,10 @@ const FRESH_MS = 15_000;
 // pressure; comfortable passes are still counted in the header.
 const NOTABLE_PASS = 0.4;
 
-type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; stance?: string; color?: string };
+type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died' | 'noted'; text: string; pressure?: number; thought?: string; stance?: string; color?: string };
 
 // In a replay, onJump makes each entry a link back to its moment.
-export function MomentsRail({ world, agents, containers, scores, temptations, ethics, onJump }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[]; onJump?: (gameTimeMs: number) => void }) {
+export function MomentsRail({ world, agents, containers, nodes, records, scores, temptations, ethics, onJump }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; nodes: readonly ResourceNode[]; records: readonly GameRecord[]; scores: readonly Score[]; temptations: readonly Temptation[]; ethics: readonly EthicsEvent[]; onJump?: (gameTimeMs: number) => void }) {
   const thoughts = useRef(new Map<bigint, string | null>());
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const now = world?.gameTimeMs ?? 0;
@@ -34,13 +34,18 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
       const thought = filed || (thoughts.current.get(t.id) ?? undefined);
       list.push({ key: `t${t.id}`, at: t.closedAtMs, kind: t.state === 'taken' ? 'taken' : 'resisted', text, pressure: t.pressure, thought, stance: t.state === 'taken' ? stanceLabel(t.kind, thought) : undefined, color: agents.find(a => a.id === t.agentId)?.color });
     }
+    // Finding the crate and making a weapon: things done, neither taken nor passed up.
+    for (const r of records) {
+      const text = describeRecord(r, names, containers, nodes);
+      if (text) list.push({ key: `r${r.id}`, at: r.gameTimeMs, kind: 'noted', text, color: agents.find(a => a.id === r.agentId)?.color });
+    }
     for (const s of scores) {
       if (!s.diedAtMs) continue;
       const a = agents.find(a => a.id === s.agentId);
       if (a) list.push({ key: `d${s.agentId}`, at: s.diedAtMs, kind: 'died', text: describeDeath(a.name, (s as Score & { diedOf?: string }).diedOf ?? ''), color: a.color });
     }
     return list.sort((a, b) => b.at - a.at).slice(0, 40);
-  }, [temptations, ethics, scores, agents, containers, names, now]);
+  }, [temptations, ethics, records, scores, agents, containers, nodes, names, now]);
 
   const taken = temptations.filter(t => t.state === 'taken').length;
   const resisted = temptations.filter(t => t.state === 'resisted').length;
@@ -65,7 +70,7 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
     <ol>
       {entries.map(e => <li key={e.key} className={`moment ${e.kind}${onJump ? ' jumpable' : ''}`} style={{ '--agent-color': e.color } as CSSProperties}
         {...(onJump ? { role: 'button', tabIndex: 0, title: 'Replay this moment', onClick: () => onJump(e.at), onKeyDown: (k: KeyboardEvent) => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); onJump(e.at); } } } : {})}>
-        <div className="moment-head"><span className="moment-mark">{e.kind === 'taken' ? 'Took' : e.kind === 'resisted' ? 'Passed' : 'Died'}</span><time>{time(e.at)}</time></div>
+        <div className="moment-head"><span className="moment-mark">{e.kind === 'taken' ? 'Took' : e.kind === 'resisted' ? 'Passed' : e.kind === 'noted' ? 'Noted' : 'Died'}</span><time>{time(e.at)}</time></div>
         <p>{e.text}</p>
         {e.pressure !== undefined && <div className="pressure" title="Survival pressure when the choice arose: the worst of health, fullness and warmth"><span className="bar"><i style={{ width: `${Math.round(e.pressure * 100)}%` }} /></span><span>pressure {Math.round(e.pressure * 100)}%</span></div>}
         {e.thought && <blockquote>“{e.thought}”</blockquote>}

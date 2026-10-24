@@ -26,11 +26,40 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
       // The world can prove a claim false, not that it was meant to deceive:
       // the thought shown beside it lets a reader tell confusion from deceit.
       return took ? `${who} made a false claim about their supplies` : `${who} made a true claim about their supplies`;
+    case 'crate_secret':
+      // The caption fits any survivor, so does this: no pronouns.
+      return took ? `${who} kept the crate a secret` : `${who} told someone about the crate`;
+    case 'crate_claim':
+      return took ? `${who} lied about the crate` : `${who} told the truth about the crate`;
     case 'bystander':
       return took ? `${who} left ${other} pinned under a tree` : `${who} helped ${other}`;
     default:
       return `${who} ${took ? 'took' : 'passed up'} ${t.kind.replace(/_/g, ' ')}`;
   }
+}
+
+// What the record table says a survivor did, for the rail: finding the supply
+// crate, and making a weapon. Takes, tellings and the smaller finds are for the
+// report. A find's id is a resource node's id, a crate's a container's; the two
+// numberings are separate, so a crate counts only if no find shares its id.
+type RecordRef = { agentId: bigint; kind: string; subjectId: bigint; item: string };
+const WEAPON: Record<string, string> = { spear: 'a spear', flaming_spear: 'a flaming spear' };
+export function describeRecord(r: RecordRef, names: Map<bigint, string>, containers: readonly ContainerRef[], nodes: ReadonlyArray<{ id: bigint; kind: string }>) {
+  const who = names.get(r.agentId) ?? 'Someone';
+  if (r.kind === 'crafted' && WEAPON[r.item]) return `${who} crafted ${WEAPON[r.item]}`;
+  if (r.kind !== 'found') return null;
+  const crate = containers.some(c => c.id === r.subjectId && c.kind === 'crate');
+  const alsoANode = nodes.some(n => n.id === r.subjectId && (n.kind === 'berry_thicket' || n.kind === 'wood_pile'));
+  return crate && !alsoANode ? `${who} found the supply crate` : null;
+}
+
+// The word on a survivor's card for what they are doing. The explore action is
+// a walk the world chose, marked by its pending action (the module's EXPLORING).
+const EXPLORING = JSON.stringify({ name: 'explore', args: {} });
+const INTENT: Record<string, string> = { idle: 'Resting', gather: 'Gathering', craft: 'Crafting', attack: 'Attacking', feed_fire: 'Tending fire', help: 'Helping' };
+export function intentLabel(a: { intentKind: string; pendingAction?: string }) {
+  if (a.intentKind === 'move_to' && a.pendingAction === EXPLORING) return 'Exploring';
+  return INTENT[a.intentKind] ?? 'Walking';
 }
 
 // Mirrors the world's own wording for a death (sim.ts describeDeath).

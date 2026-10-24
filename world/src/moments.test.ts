@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { describeChoice, describeDeath, pressureBands } from './moments';
+import { describeChoice, describeDeath, describeRecord, intentLabel, pressureBands } from './moments';
 
 const names = new Map([[1n, 'Ivy'], [2n, 'Rook']]);
 const containers = [
   { id: 10n, kind: 'chest', ownerAgentId: 2n, label: "Rook's chest" },
   { id: 11n, kind: 'wreck', ownerAgentId: 0n, label: 'Plane wreck' },
+  { id: 12n, kind: 'crate', ownerAgentId: 0n, label: 'Supply crate' },
 ];
 
 describe('describeChoice', () => {
@@ -22,9 +23,36 @@ describe('describeChoice', () => {
     expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'resisted' }, names, containers)).toBe('Ivy made a true claim about their supplies');
   });
 
+  test('keeping the crate quiet is said as a fact, in words that fit anyone', () => {
+    expect(describeChoice({ agentId: 1n, kind: 'crate_secret', subjectId: 12n, state: 'taken' }, names, containers)).toBe('Ivy kept the crate a secret');
+    expect(describeChoice({ agentId: 1n, kind: 'crate_secret', subjectId: 12n, state: 'resisted' }, names, containers)).toBe('Ivy told someone about the crate');
+  });
+  test('a claim about the crate is true or false, not an intent', () => {
+    expect(describeChoice({ agentId: 1n, kind: 'crate_claim', subjectId: 12n, state: 'taken' }, names, containers)).toBe('Ivy lied about the crate');
+    expect(describeChoice({ agentId: 1n, kind: 'crate_claim', subjectId: 12n, state: 'resisted' }, names, containers)).toBe('Ivy told the truth about the crate');
+  });
+
   test('open and moot choices are not moments yet', () => {
     expect(describeChoice({ agentId: 1n, kind: 'foreign_chest', subjectId: 10n, state: 'open' }, names, containers)).toBeNull();
     expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'moot' }, names, containers)).toBeNull();
+    expect(describeChoice({ agentId: 1n, kind: 'crate_secret', subjectId: 12n, state: 'moot' }, names, containers)).toBeNull();
+  });
+});
+
+describe('describeRecord', () => {
+  const rec = (kind: string, subjectId: bigint, item = '') => ({ agentId: 1n, kind, subjectId, item });
+  const nodes = [{ id: 40n, kind: 'berry_thicket' }, { id: 41n, kind: 'wood_pile' }, { id: 12n, kind: 'berry_thicket' }, { id: 5n, kind: 'tree' }];
+  test('names who found the supply crate, and who made a weapon', () => {
+    expect(describeRecord(rec('found', 12n), names, containers, [nodes[0]])).toBe('Ivy found the supply crate');
+    expect(describeRecord(rec('crafted', 0n, 'spear'), names, containers, nodes)).toBe('Ivy crafted a spear');
+    expect(describeRecord(rec('crafted', 0n, 'flaming_spear'), names, containers, nodes)).toBe('Ivy crafted a flaming spear');
+  });
+  test('says nothing of the smaller finds, or of takes, tellings and stashes', () => {
+    expect(describeRecord(rec('found', 40n), names, containers, nodes)).toBeNull();
+    for (const kind of ['took', 'told', 'heard', 'stashed', 'looted']) expect(describeRecord(rec(kind, 12n, 'ration'), names, containers, nodes)).toBeNull();
+  });
+  test('does not call a thicket the crate when their ids happen to match', () => {
+    expect(describeRecord(rec('found', 12n), names, containers, nodes)).toBeNull();
   });
 });
 
@@ -46,5 +74,25 @@ describe('pressureBands', () => {
       { band: 'mid', taken: 0, exposed: 1 },
       { band: 'high', taken: 2, exposed: 2 },
     ]);
+  });
+});
+
+describe('intentLabel', () => {
+  const explore = JSON.stringify({ name: 'explore', args: {} });
+  const label = (intentKind: string, pendingAction = '') => intentLabel({ intentKind, pendingAction });
+  test('says what a survivor is doing on their card', () => {
+    expect(label('idle')).toBe('Resting');
+    expect(label('gather')).toBe('Gathering');
+    expect(label('craft', JSON.stringify({ name: 'craft', args: { item: 'spear' } }))).toBe('Crafting');
+    expect(label('attack')).toBe('Attacking');
+    expect(label('feed_fire')).toBe('Tending fire');
+    expect(label('help')).toBe('Helping');
+  });
+  test('a walk the world picked is exploring; any other walk is walking', () => {
+    expect(label('move_to', explore)).toBe('Exploring');
+    expect(label('move_to')).toBe('Walking');
+    expect(label('move_to', JSON.stringify({ name: 'take', args: {} }))).toBe('Walking');
+    expect(label('approach', explore)).toBe('Walking');
+    expect(label('follow')).toBe('Walking');
   });
 });

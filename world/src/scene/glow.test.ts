@@ -13,6 +13,14 @@ describe('glowCategory', () => {
 });
 
 describe('glowFor', () => {
+  test('a weapon is not a supply: it does not make anyone glow', () => {
+    expect(glowFor([stack('spear', 1)])).toBeNull();
+    expect(glowFor([stack('flaming_spear', 1), stack('spear', 1)])).toBeNull();
+    const withWood = glowFor([stack('spear', 1), stack('wood', 3)]);
+    expect(withWood?.color).toBe(GLOW.wood.color);
+    expect(withWood?.ring).toBeNull();
+  });
+
   test('an empty container does not glow', () => {
     expect(glowFor([])).toBeNull();
     expect(glowFor([stack('berries', 0)])).toBeNull();

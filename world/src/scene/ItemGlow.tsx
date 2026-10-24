@@ -64,8 +64,8 @@ export function ContainerGlows({ world, containers, items, physics }: { world: W
     const glow = glowFor(items.filter(i => i.containerId === c.id));
     if (!glow) return null;
     const [x, z] = toScene(world, c.x, c.y);
-    const radius = c.kind === 'wreck' ? 0.9 : c.kind === 'chest' ? physics.chestRadius : 0.55;
-    const height = c.kind === 'wreck' ? 1.3 : c.kind === 'chest' ? physics.chestRadius * 2.2 : 0.7;
+    const radius = c.kind === 'wreck' ? 0.9 : c.kind === 'chest' ? physics.chestRadius : c.kind === 'crate' ? 2.1 : 0.55;
+    const height = c.kind === 'wreck' ? 1.3 : c.kind === 'chest' ? physics.chestRadius * 2.2 : c.kind === 'crate' ? 3 : 0.7;
     return <Glow key={String(c.id)} x={x} z={z} radius={radius} height={height} {...glow} phase={Number(c.id % 97n) * 0.7} />;
   })}</group>;
 }

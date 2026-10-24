@@ -5,10 +5,11 @@ import type { OrbitControls as Controls } from 'three-stdlib';
 import * as THREE from 'three';
 import type { Agent, Message, World, ResourceNode, Container, Item, Structure, Mob, Hazard } from '../module_bindings/types';
 import { Environment } from './Environment';
+import { River } from './River';
 import { Critter, Grave } from './Critter';
 import { EventEffects, momentPriority, type Moment } from './SceneEvents';
 
-import type { Physics } from './contract';
+import { heldWeapons, type Physics } from './contract';
 import { useGameClock } from './useGameClock';
 import { FrameCounter, PERF, QUALITY, sceneRenders } from './FrameCounter';
 import { Atmosphere } from './Atmosphere';
@@ -44,14 +45,16 @@ export function WorldScene(props: SceneProps) {
     }
     return new Map([...latest.values()].sort((a, b) => b.gameTimeMs - a.gameTimeMs).slice(0, 2).map(m => [m.fromAgentId, m]));
   }, [props.messages, world.gameTimeMs]);
+  const weapons = useMemo(() => heldWeapons(props.items), [props.items]);
   return <div className="world" aria-label="Live forest world. Drag to explore, scroll to zoom, select a survivor to follow.">
     <Canvas shadows={QUALITY === 'low' ? false : 'soft'} dpr={QUALITY === 'low' ? 1 : [1, 1.5]} camera={{ position: VIEW.clone().multiplyScalar(170).toArray(), fov: FOV, near: 1, far: 900 }} gl={{ antialias: QUALITY !== 'low', powerPreference: 'high-performance' }}>
       <Atmosphere world={world} hazards={props.hazards} readTime={readTime} />
       <CameraRig {...props} />
       <StaticShadows nodes={props.nodes} containers={props.containers} items={props.items} phase={world.phase} />
       <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} physics={props.physics} onClickTile={props.onClickTile} />
+      {props.physics.river && <River river={props.physics.river} world={world} />}
       {agents.filter(a => !a.alive).map(a => <Grave key={`grave-${a.id}`} agent={a} world={world} />)}
-      {agents.filter(a => a.alive).map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} card={a.id === selectedId ? props.selectedCard : undefined} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
+      {agents.filter(a => a.alive).map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} weapon={weapons.get(a.id)} readTime={readTime} connected={props.connected} card={a.id === selectedId ? props.selectedCard : undefined} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
       <ContainerGlows world={world} containers={props.containers} items={props.items} physics={props.physics} />
       <CarriedGlows world={world} agents={agents} items={props.items} physics={props.physics} />
       <WreckTitle world={world} physics={props.physics} />

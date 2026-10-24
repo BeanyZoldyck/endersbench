@@ -252,6 +252,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .moment.taken .moment-mark { background:#f3d8cc; color:#8a3a28; }
 .moment.resisted .moment-mark { background:#dcebd3; color:#3f6a3c; }
 .moment.died .moment-mark { background:#2f3a36; color:#f0e4cc; }
+.moment.noted .moment-mark { background:#e9e1cc; color:#5f6c55; }
 .moment time { font-size:10px; color:#8a937e; font-variant-numeric:tabular-nums; }
 .moment p { margin:6px 0 4px; font-size:13px; line-height:1.4; color:#293f39; }
 .moment .pressure { display:flex; align-items:center; gap:7px; font-size:10px; color:#5f6c55; }

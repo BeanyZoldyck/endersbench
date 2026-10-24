@@ -6,13 +6,14 @@ import * as THREE from 'three';
 import type { Agent, Message, World } from '../module_bindings/types';
 import type { ReadGameTime } from './useGameClock';
 import { toScene } from './Environment';
+import type { Weapon } from './contract';
 
 // Survivors are drawn larger than their collision circle so they read at a
 // distance; the physics radius is unchanged.
 export const CRITTER_SCALE = 1.35;
 
-export function Critter({ agent, world, selected, said, addressedTo, radius: bodyRadius, readTime, connected, onSelect, card }: {
-  agent: Agent; world: World; selected: boolean; said?: Message; addressedTo?: Agent; radius: number; readTime: ReadGameTime; connected: boolean; onSelect: (id: bigint) => void;
+export function Critter({ agent, world, selected, said, addressedTo, radius: bodyRadius, weapon, readTime, connected, onSelect, card }: {
+  agent: Agent; world: World; selected: boolean; said?: Message; addressedTo?: Agent; radius: number; weapon?: Weapon; readTime: ReadGameTime; connected: boolean; onSelect: (id: bigint) => void;
   card?: ReactNode;
 }) {
   const radius = bodyRadius * CRITTER_SCALE;
@@ -105,6 +106,7 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
       <mesh position={[0, -0.47, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.89, 0.105, 6, 24]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
       <mesh position={[0.57, -0.67, 0.57]} rotation={[0.12, 0, -0.2]} scale={[0.22, 0.55, 0.12]}><sphereGeometry args={[1, 10, 8]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
       <mesh position={[-0.72, -0.5, -0.4]} rotation={[0, 0, -0.3]} scale={[0.24, 0.35, 0.2]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#b8a583" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
+      {weapon && <Spear flaming={weapon === 'flaming_spear'} attacking={agent.intentKind === 'attack'} phase={phase} />}
     </group>
     {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent opacity={0.85} /></mesh>}
     {card && <Html position={[0, radius * 1.2, 0]} zIndexRange={[30, 20]}>
@@ -117,6 +119,46 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
         <div className="mini-needs" aria-label={`Health ${Math.round(agent.hp)}, food ${Math.round(agent.hunger)}, warmth ${Math.round(agent.warmth)}`}><i style={{ width: `${Math.max(0, Math.min(100, agent.hp))}%` }} /><i style={{ width: `${Math.max(0, Math.min(100, agent.hunger))}%` }} /><i style={{ width: `${Math.max(0, Math.min(100, agent.warmth))}%` }} /></div>
       </div>
     </Html>
+  </group>;
+}
+
+// A spear in the survivor's near hand, standing a little outward and above their
+// head so it reads from the default camera. Drawn in the body's own units, so it
+// turns with them. A flaming spear carries a small flame at its tip. Someone
+// attacking levels it and jabs.
+function Spear({ flaming, attacking, phase }: { flaming: boolean; attacking: boolean; phase: number }) {
+  const root = useRef<THREE.Group>(null), flame = useRef<THREE.Group>(null), sparks = useRef<THREE.Group>(null);
+  const jab = useRef(attacking); jab.current = attacking;
+  useFrame(({ clock }, delta) => {
+    const dt = Math.min(delta, 0.1), t = clock.elapsedTime + phase;
+    if (root.current) {
+      root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, jab.current ? 1.1 + Math.sin(t * 13) * 0.14 : 0.08, 10, dt);
+      root.current.rotation.z = THREE.MathUtils.damp(root.current.rotation.z, jab.current ? -0.04 : -0.5, 10, dt);
+    }
+    if (flame.current) {
+      flame.current.scale.set(1.35 + Math.sin(t * 9) * 0.13, 1.35 + Math.sin(t * 11) * 0.19 + Math.sin(t * 17) * 0.07, 1.35 + Math.sin(t * 9 + 1) * 0.13);
+      flame.current.rotation.z = Math.sin(t * 6) * 0.08;
+    }
+    sparks.current?.children.forEach((spark, i) => {
+      const h = (t * 0.7 + i / 3) % 1;
+      spark.position.set(Math.sin(h * 6 + i * 2) * 0.16, 0.3 + h * 1.1, Math.cos(h * 5 + i) * 0.1);
+      spark.scale.setScalar(Math.max(0.01, (1 - h) * 0.05));
+    });
+  });
+  const wood = '#8a6a4c';
+  return <group ref={root} position={[0.78, -0.62, 0.5]} rotation={[0.08, 0, -0.5]} name={flaming ? 'flaming-spear' : 'spear'}>
+    <mesh position={[0, 1.05, 0]} castShadow><cylinderGeometry args={[0.075, 0.09, 3.3, 6]} /><meshStandardMaterial {...boundaryFog} color={wood} roughness={1} flatShading /></mesh>
+    <mesh position={[0, 2.45, 0]}><cylinderGeometry args={[0.11, 0.11, 0.18, 6]} /><meshStandardMaterial {...boundaryFog} color="#c9b98a" roughness={1} flatShading /></mesh>
+    <mesh position={[0, 3.05, 0]} rotation={[0, Math.PI / 4, 0]} scale={[0.6, 1, 1]}><coneGeometry args={[0.26, 0.8, 4]} /><meshStandardMaterial {...boundaryFog} color={flaming ? '#4a3f36' : '#d3d6cb'} roughness={flaming ? 1 : 0.5} flatShading /></mesh>
+    {flaming && <group position={[0, 3.35, 0]} name="spear-flame">
+      <group ref={flame}>
+        <mesh position={[0, 0.36, 0]}><coneGeometry args={[0.26, 0.9, 6]} /><meshBasicMaterial {...boundaryFog} color="#e9782c" transparent opacity={0.95} toneMapped={false} /></mesh>
+        {[-1, 1].map(side => <mesh key={side} position={[side * 0.17, 0.22, 0]} rotation={[0, 0, -side * 0.4]}><coneGeometry args={[0.13, 0.55, 5]} /><meshBasicMaterial {...boundaryFog} color="#ee9a3c" transparent opacity={0.95} toneMapped={false} /></mesh>)}
+        <mesh position={[0, 0.26, 0.02]} scale={[0.55, 0.62, 0.55]}><coneGeometry args={[0.26, 0.9, 6]} /><meshBasicMaterial {...boundaryFog} color="#fbd27d" toneMapped={false} /></mesh>
+      </group>
+      <mesh position={[0, 0.4, 0]} scale={[0.75, 0.95, 0.75]}><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial color="#f08a3a" transparent opacity={0.22} depthWrite={false} toneMapped={false} /></mesh>
+      <group ref={sparks}>{[0, 1, 2].map(i => <mesh key={i}><icosahedronGeometry args={[1, 0]} /><meshBasicMaterial color="#f7c27a" /></mesh>)}</group>
+    </group>}
   </group>;
 }
 

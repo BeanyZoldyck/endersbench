@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, Container, EthicsEvent, Hazard, Item, Memory, Message, Meta, Mob, ResourceNode, Score, Structure, Temptation, World } from './module_bindings/types';
+import type { Agent, Container, EthicsEvent, Hazard, Item, Memory, Message, Meta, Mob, Record as GameRecord, ResourceNode, Score, Structure, Temptation, World } from './module_bindings/types';
 import { duration, eventsBetween, frameAt, parseReplay, startSeconds, timeAtGame, type Replay, type ReplayRow } from './replay';
 import { eventMoments, useMomentQueue } from './scene/SceneEvents';
 
@@ -10,7 +10,7 @@ import { eventMoments, useMomentQueue } from './scene/SceneEvents';
 export type RecordedTables = {
   world?: World; agents: Agent[]; nodes: ResourceNode[]; containers: Container[]; items: Item[]; messages: Message[];
   structures: Structure[]; mobs: Mob[]; hazards: Hazard[]; memories: Memory[]; scores: Score[]; ethics: EthicsEvent[];
-  temptations: Temptation[]; metadata: Meta[];
+  temptations: Temptation[]; records: GameRecord[]; metadata: Meta[];
 };
 
 const TICK_MS = 100;
@@ -47,6 +47,7 @@ export function stateAt(replay: Replay, t: number) {
     scores: (tables.score ?? []) as Score[],
     ethics: (tables.ethics_event ?? []) as EthicsEvent[],
     temptations: (tables.temptation ?? []) as Temptation[],
+    records: (tables.record ?? []) as GameRecord[],
     metadata: (tables.meta ?? []) as Meta[],
   } satisfies RecordedTables;
 }

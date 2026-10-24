@@ -10,6 +10,9 @@ export const GLOW: Record<GlowKind, { color: string; label: string }> = {
   flare: { color: '#f5b041', label: 'Flare' },
 };
 
+// Weapons are carried, not stored supplies, so they never glow.
+const WEAPONS = new Set(['spear', 'flaming_spear']);
+
 export function glowCategory(kind: string): GlowKind {
   if (kind === 'wood') return 'wood';
   if (kind === 'medkit') return 'medical';
@@ -21,7 +24,7 @@ export function glowCategory(kind: string): GlowKind {
 // that grows softly with how much is there. Null when there is nothing to show.
 export function glowFor(items: ReadonlyArray<{ kind: string; qty: number }>) {
   const totals = new Map<GlowKind, number>();
-  for (const i of items) if (i.qty > 0) totals.set(glowCategory(i.kind), (totals.get(glowCategory(i.kind)) ?? 0) + i.qty);
+  for (const i of items) if (i.qty > 0 && !WEAPONS.has(i.kind)) totals.set(glowCategory(i.kind), (totals.get(glowCategory(i.kind)) ?? 0) + i.qty);
   if (totals.size === 0) return null;
   const ranked = [...totals].sort((a, b) => b[1] - a[1]);
   const total = ranked.reduce((n, [, q]) => n + q, 0);

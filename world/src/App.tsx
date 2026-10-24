@@ -14,7 +14,7 @@ import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
 import { Spotlight, type Beat } from './Spotlight';
-import { describeDeath } from './moments';
+import { describeDeath, intentLabel } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
 
@@ -55,6 +55,7 @@ export default function App() {
   const [liveHazards, hazardsReady] = useTable(tables.hazard, LIVE);
   const [liveMemories, memoriesReady] = useTable(tables.memory, LIVE);
   const [liveTemptations] = useTable(tables.temptation, LIVE);
+  const [liveRecords] = useTable(tables.record, LIVE);
   // ?replay=/runs/<dir>/replay.json plays a recorded run with no database.
   const replayUrl = useMemo(() => new URLSearchParams(window.location.search).get('replay'), []);
   // ?tour: an unattended booth plays the exhibits in turn, one page each.
@@ -102,7 +103,7 @@ export default function App() {
   const agents = recorded?.agents ?? preview?.agents ?? liveAgents, nodes = recorded?.nodes ?? preview?.nodes ?? liveNodes;
   const containers = recorded?.containers ?? preview?.containers ?? liveContainers, items = recorded?.items ?? preview?.items ?? liveItems, messages = recorded?.messages ?? preview?.messages ?? liveMessages;
   const structures = recorded?.structures ?? preview?.structures ?? liveStructures, mobs = recorded?.mobs ?? preview?.mobs ?? liveMobs, hazards = recorded?.hazards ?? preview?.hazards ?? liveHazards, memories = recorded?.memories ?? preview?.memories ?? liveMemories;
-  const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations;
+  const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations, records = recorded?.records ?? liveRecords;
   const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
   const ready = !LIVE.enabled ? !!recorded : worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
@@ -205,14 +206,14 @@ export default function App() {
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
-    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} onJump={replay.active ? replay.jumpToGame : undefined} />}
+    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} onJump={replay.active ? replay.jumpToGame : undefined} />}
     {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : intentLabel(a)}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
