@@ -46,6 +46,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     x: round1(o.x),
     y: round1(o.y),
     distance: round1(d),
+    role: o.role,
     health: healthBand(o.hp),
     doing: describeIntent(ctx, o),
     // A full satchel is visible; what is in it is not.
@@ -127,6 +128,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       y: round1(me.y),
       hp: round1(me.hp),
       hunger: round1(me.hunger),
+      role: me.role,
+      backstory: me.backstory,
       warmth: round1(me.warmth),
       sheltered: sheltered(w, me.x, me.y),
       doing: describeIntent(ctx, me),
@@ -141,6 +144,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       next: untilChange(w),
       winterInSeconds: Math.max(0, round1((w.winterAtMs - w.gameTimeMs) / 1000)),
     },
+    rescue: rescueKnowledge(me, w),
     rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken },
     map: { centre: { x: cx, y: cy }, radius: w.radius },
     wakeReason: reason,
@@ -150,4 +154,12 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     people,
     lastAction: last ? { action: JSON.parse(last.action), ok: last.ok, error: last.error } : null,
   });
+}
+
+// Everyone knows planes search at night; only the pilot knows when this one is due.
+function rescueKnowledge(me: Agent, w: World) {
+  const note = 'Search planes fly over at night. A burning signal fire, or a flare fired while one is overhead, can be seen.';
+  if (w.rescueState !== 'waiting') return { note, state: w.rescueState };
+  if (me.role !== 'pilot') return { note };
+  return { note, planeInSeconds: Math.max(0, round1((w.rescueAtMs - w.gameTimeMs) / 1000)) };
 }

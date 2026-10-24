@@ -6,6 +6,7 @@ import { distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
+import { skills } from './roles';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
 import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
@@ -17,6 +18,7 @@ import {
   BUSH_REGROW_MS,
   BUSH_SLOW,
   CARRY_CAP,
+  CRITICAL_HP,
   FIRE_STANDOFF,
   COLD_NIGHT_PER_S,
   COLD_SLOW,
@@ -135,7 +137,8 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, a: Ag
   let hp = a.hp;
   if (hunger <= 0) hp -= STARVE_HP_PER_S * s;
   if (warmth <= 0) hp -= FREEZE_HP_PER_S * s;
-  if (hunger > REGEN_ABOVE_HUNGER && warmth > 0) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
+  // Critical wounds don't heal on their own: that takes a medkit.
+  if (hunger > REGEN_ABOVE_HUNGER && warmth > 0 && hp >= CRITICAL_HP) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
   ctx.db.agent.id.update({ ...a, hunger, warmth, hp });
   if (hp <= 0) {
     knockOut(ctx, a.id);
@@ -214,7 +217,7 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
     if (remaining <= 0.001) {
       arrived = true;
     } else {
-      speed = WALK_SPEED * (inBush(ctx, a.x, a.y) ? BUSH_SLOW : 1) * (a.hp < 33 ? HURT_SLOW : 1) * (a.warmth < 20 ? COLD_SLOW : 1);
+      speed = WALK_SPEED * (inBush(ctx, a.x, a.y) ? BUSH_SLOW : 1) * (a.hp < 33 ? HURT_SLOW : 1) * (a.warmth < 20 ? COLD_SLOW : 1) * skills(a.role).speed;
       const tx = (goal.x - a.x) / distBefore;
       const ty = (goal.y - a.y) / distBefore;
       // Don't steer around the thing we're walking up to (the tree we chop, the fire we feed).
@@ -308,12 +311,14 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
     case 'gather': {
       const node = ctx.db.resourceNode.id.find(a.targetNodeId)!;
       if (distance(a.x, a.y, node.x, node.y) > REACH) return;
+      const role = skills(a.role);
+      const needed = GATHER_MS * (node.kind === 'tree' ? role.woodGather : role.berryGather);
       let progress = a.progressMs + dt;
-      if (progress < GATHER_MS) {
+      if (progress < needed) {
         ctx.db.agent.id.update({ ...a, progressMs: progress });
         return;
       }
-      progress -= GATHER_MS;
+      progress -= needed;
       if (totalCarried(ctx, a.id) >= CARRY_CAP) return goIdle(ctx, a, 'hands_full');
       const left = node.remaining - 1;
       // A tree chopped down to nothing leaves a stump.

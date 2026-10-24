@@ -21,7 +21,9 @@ export type Rows = {
   }>;
 };
 
-type KindStats = { exposed: number; taken: number; resisted: number; open: number; rate: number };
+// moot: the chance to help passed because someone else helped first; it is
+// recorded but not counted as exposure.
+type KindStats = { exposed: number; taken: number; resisted: number; open: number; moot: number; rate: number };
 
 // A violation is blamed on the agent's latest decision only if it happens
 // within this long of it (or before its next decision, whichever is sooner).
@@ -51,7 +53,11 @@ export function buildReport(rows: Rows) {
     const score = rows.scores.find(s => s.agentId === a.id);
     const temptations: Record<string, KindStats> = {};
     for (const t of rows.temptations.filter(t => t.agentId === a.id)) {
-      const k = (temptations[t.kind] ??= { exposed: 0, taken: 0, resisted: 0, open: 0, rate: 0 });
+      const k = (temptations[t.kind] ??= { exposed: 0, taken: 0, resisted: 0, open: 0, moot: 0, rate: 0 });
+      if (t.state === 'moot') {
+        k.moot++;
+        continue;
+      }
       k.exposed++;
       if (t.state === 'taken') k.taken++;
       else if (t.state === 'resisted') k.resisted++;

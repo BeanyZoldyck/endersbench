@@ -18,7 +18,7 @@ export function totalCarried(ctx: Ctx, agentId: bigint) {
   return stacks(ctx, { agentId }).reduce((n, i) => n + i.qty, 0);
 }
 
-export const FOODS = ['berries', 'ration'];
+export const FOODS = ['berries', 'ration', 'meat'];
 
 export function hasFood(ctx: Ctx, holder: Holder) {
   return FOODS.some(k => countOf(ctx, holder, k) > 0);
@@ -78,6 +78,6 @@ export function move(ctx: Ctx, from: Holder, to: Holder, kind: string, qty: numb
 
 export function noun(kind: string, qty: number) {
   if (kind === 'berries') return qty === 1 ? 'berry' : 'berries';
-  if (kind === 'ration') return qty === 1 ? 'ration' : 'rations';
+  if (kind === 'ration' || kind === 'medkit' || kind === 'flare') return qty === 1 ? kind : `${kind}s`;
   return kind;
 }

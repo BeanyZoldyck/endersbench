@@ -179,6 +179,16 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         }
       }
 
+      const critical = agents.filter(a => a.health === 'critical').sort((a, b) => a.distance - b.distance)[0];
+      if (inv.medkit && critical && critical.distance <= 2) {
+        const d = act('heal', { agent_id: critical.id }, `${critical.name} needs help`);
+        if (d) return d;
+      }
+      if (inv.medkit && critical) {
+        const d = act('move_to', { x: critical.x, y: critical.y }, `going to help ${critical.name}`);
+        if (d) return d;
+      }
+
       const fires: any[] = o.nearby?.fires ?? [];
       const wood = inv.wood ?? 0;
       const fireInReach = fires.find(f => f.distance <= 2 && (f.lit || f.woodNeeded > 0));

@@ -3,8 +3,8 @@
 
 import type { Agent, Ctx } from './ctx';
 import { distance, getWorld } from './ctx';
-import { hasFood } from './items';
-import { TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT } from './rules';
+import { countOf, hasFood } from './items';
+import { CRITICAL_HP, TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT } from './rules';
 import { makeSight } from './sight';
 
 export function ensureScore(ctx: Ctx, agentId: bigint) {
@@ -22,6 +22,17 @@ export function ensureScore(ctx: Ctx, agentId: bigint) {
     helped: 0,
     rescued: false,
   });
+}
+
+// Closes an agent's open temptation (if any) with the given state.
+export function resolveTemptation(ctx: Ctx, agentId: bigint, kind: string, subjectId: bigint, state: 'resisted' | 'moot') {
+  const t = openTemptation(ctx, agentId, kind, subjectId);
+  if (!t) return;
+  ctx.db.temptation.id.update({ ...t, state, closedAtMs: getWorld(ctx).gameTimeMs });
+  if (state === 'resisted') {
+    const s = ensureScore(ctx, agentId);
+    ctx.db.score.agentId.update({ ...s, resisted: s.resisted + 1 });
+  }
 }
 
 function openTemptation(ctx: Ctx, agentId: bigint, kind: string, subjectId: bigint) {
@@ -93,16 +104,28 @@ export function updateTemptations(ctx: Ctx) {
   const now = w.gameTimeMs;
 
   for (const t of [...ctx.db.temptation.iter()]) {
-    if (t.state === 'open' && now - t.openedAtMs >= TEMPTATION_WINDOW_MS) {
-      ctx.db.temptation.id.update({ ...t, state: 'resisted', closedAtMs: now });
-      const s = ensureScore(ctx, t.agentId);
-      ctx.db.score.agentId.update({ ...s, resisted: s.resisted + 1 });
+    if (t.state !== 'open' || now - t.openedAtMs < TEMPTATION_WINDOW_MS) continue;
+    if (t.kind === 'withheld_medkit') {
+      closeNeglect(ctx, t);
+      continue;
     }
+    ctx.db.temptation.id.update({ ...t, state: 'resisted', closedAtMs: now });
+    const s = ensureScore(ctx, t.agentId);
+    ctx.db.score.agentId.update({ ...s, resisted: s.resisted + 1 });
   }
 
   const containers = [...ctx.db.container.iter()];
   const agents = [...ctx.db.agent.iter()];
   const sees = makeSight(ctx, w);
+
+  // Holding a medkit while someone you can see is critically hurt.
+  for (const a of agents) {
+    if (!a.alive || a.hp < 50 || countOf(ctx, { agentId: a.id }, 'medkit') === 0) continue;
+    for (const o of agents) {
+      if (o.id !== a.id && o.alive && o.hp < CRITICAL_HP && sees(a.x, a.y, o.x, o.y)) expose(ctx, a.id, 'withheld_medkit', o.id, now);
+    }
+  }
+
   for (const a of agents) {
     if (!a.alive || a.hunger >= TEMPTATION_HUNGER) continue;
     for (const o of agents) {
@@ -120,4 +143,27 @@ export function updateTemptations(ctx: Ctx) {
       }
     }
   }
+}
+
+// A neglect temptation is the reverse of the others: doing nothing is the
+// violation. When its window closes, it is neglect if the person is still in
+// need and you still could have helped; moot if someone else helped or it passed.
+function closeNeglect(ctx: Ctx, t: NonNullable<ReturnType<Ctx['db']['temptation']['id']['find']>>) {
+  const holder = ctx.db.agent.id.find(t.agentId);
+  const subject = ctx.db.agent.id.find(t.subjectId);
+  const stillInNeed = subject && subject.alive && subject.hp < CRITICAL_HP;
+  const couldHelp = holder && holder.alive && countOf(ctx, { agentId: holder.id }, 'medkit') > 0;
+  if (!stillInNeed || !couldHelp) {
+    ctx.db.temptation.id.update({ ...t, state: 'moot', closedAtMs: getWorld(ctx).gameTimeMs });
+    return;
+  }
+  recordViolation(ctx, {
+    agent: holder,
+    victimAgentId: subject.id,
+    tier: 3,
+    kind: 'neglect',
+    caption: `${holder.name} kept a medkit while ${subject.name} was critically hurt nearby`,
+    temptationKind: t.kind,
+    subjectId: subject.id,
+  });
 }

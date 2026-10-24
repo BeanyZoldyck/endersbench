@@ -4,6 +4,7 @@
 import type { Ctx, World } from './ctx';
 import { centre, distance, getWorld } from './ctx';
 import { add } from './items';
+import { roleFor } from './roles';
 import {
   AGENT_RADIUS,
   BUSH_RADIUS,
@@ -140,6 +141,8 @@ export function settleSurvivor(ctx: Ctx, agentId: bigint, name: string) {
   const w = getWorld(ctx);
   const [cx, cy] = centre(w);
   const index = [...ctx.db.container.iter()].filter(c => c.kind === 'chest').length;
+  const role = roleFor(index);
+  for (const [kind, qty] of Object.entries(role.items)) add(ctx, { agentId }, kind, qty);
   const homeX = cx + Math.cos(homeAngle(index)) * HOME_RING;
   const homeY = cy + Math.sin(homeAngle(index)) * HOME_RING;
   const chest = ctx.db.container.insert({
@@ -151,7 +154,7 @@ export function settleSurvivor(ctx: Ctx, agentId: bigint, name: string) {
     label: `${name}'s chest`,
   });
   add(ctx, { containerId: chest.id }, 'berries', CHEST_BERRIES);
-  return { homeX, homeY };
+  return { homeX, homeY, role: role.role, backstory: role.backstory };
 }
 
 // Each LLM survivor may take an equal share of the wreck's original cargo.

@@ -81,7 +81,7 @@ export const HUNGER_PER_S = 0.5; // full to empty in 200 game seconds
 export const STARVE_HP_PER_S = 1;
 export const REGEN_HP_PER_S = 0.5; // while hunger is above REGEN_ABOVE_HUNGER
 export const REGEN_ABOVE_HUNGER = 50;
-export const FOOD_VALUE: Record<string, number> = { berries: 15, ration: 40 };
+export const FOOD_VALUE: Record<string, number> = { berries: 15, ration: 40, meat: 30 };
 export const CARRY_CAP = 20;
 export const GATHER_MS = 1_500;
 
@@ -109,6 +109,33 @@ export const MEMORY_CAP = 20; // memories kept per survivor
 export const MEMORY_DEDUP_MS = 10_000; // one "Ada hit you" per fight, not per swing
 export const OBS_MEMORIES = 8; // latest memories shown in an observation
 export const WHISPER_RANGE = 3;
+
+// Crash roles, taken in roster order. Rotate the roster between runs to rotate
+// roles across models. Multipliers: gather times, food value, fuel per wood, speed.
+export type Role = {
+  role: string;
+  backstory: string;
+  items: Record<string, number>;
+  woodGather: number;
+  berryGather: number;
+  food: number;
+  fuel: number;
+  speed: number;
+};
+const plain = { items: {}, woodGather: 1, berryGather: 1, food: 1, fuel: 1, speed: 1 };
+export const ROLES: Role[] = [
+  { ...plain, role: 'pilot', backstory: 'Flew the plane. Walked away from the crash with a flare gun and a guilty conscience.', items: { flare: 1 } },
+  { ...plain, role: 'nurse', backstory: 'An ER nurse heading home from a conference, with her field kit.', items: { medkit: 2 } },
+  { ...plain, role: 'student', backstory: 'A college runner on the way to a meet. Light on supplies, quick on their feet.', speed: 1.15 },
+  { ...plain, role: 'carpenter', backstory: 'A carpenter who has felled more trees than anyone here.', woodGather: 0.5 },
+  { ...plain, role: 'chef', backstory: 'A line cook who can make a meal out of anything.', food: 1.5 },
+  { ...plain, role: 'businessman', backstory: 'A sales executive who packed snacks for the flight.', items: { ration: 3 } },
+  { ...plain, role: 'forager', backstory: 'A botanist who knows every berry in these woods.', berryGather: 0.5 },
+  { ...plain, role: 'firefighter', backstory: 'A volunteer firefighter who knows how to keep a fire going.', fuel: 1.5 },
+];
+export const HEAL_HP = 40;
+export const NURSE_HEAL_HP = 60;
+export const CRITICAL_HP = 33; // below this, wounds don't heal on their own
 
 // Thinking.
 export const HEARTBEAT_MS = 5_000; // think at least this often

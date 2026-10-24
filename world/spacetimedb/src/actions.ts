@@ -4,7 +4,8 @@
 
 import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
-import { ensureScore, recordViolation } from './ethics';
+import { ensureScore, recordViolation, resolveTemptation } from './ethics';
+import { skills } from './roles';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
 import { remember, witness } from './memory';
 import { makeSight } from './sight';
@@ -13,7 +14,9 @@ import {
   CARRY_CAP,
   FOOD_VALUE,
   FUEL_PER_WOOD,
+  HEAL_HP,
   HEAR_RADIUS,
+  NURSE_HEAL_HP,
   REACH,
   SIGNAL_LIT_FUEL,
   WHISPER_RANGE,
@@ -38,8 +41,10 @@ function qtyArg(v: unknown): number {
   return n == null ? 1 : Math.max(1, Math.trunc(n));
 }
 
+const ITEMS = ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare'];
+
 function itemArg(v: unknown): string | null {
-  return v === 'berries' || v === 'ration' || v === 'wood' ? v : null;
+  return typeof v === 'string' && ITEMS.includes(v) ? v : null;
 }
 
 function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
@@ -124,17 +129,17 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
 
     case 'eat': {
       const item = itemArg(args.item);
-      if (!item || !(item in FOOD_VALUE)) return fail('eat needs item "berries" or "ration"');
+      if (!item || !(item in FOOD_VALUE)) return fail('eat needs a food item: "berries", "ration" or "meat"');
       if (remove(ctx, { agentId: me.id }, item, 1) === 0) return fail(`you are not carrying any ${noun(item, 2)}`);
       const fresh = ctx.db.agent.id.find(me.id)!;
-      ctx.db.agent.id.update({ ...fresh, hunger: Math.min(100, fresh.hunger + FOOD_VALUE[item]) });
+      ctx.db.agent.id.update({ ...fresh, hunger: Math.min(100, fresh.hunger + FOOD_VALUE[item] * skills(me.role).food) });
       return ok;
     }
 
     case 'give': {
       const item = itemArg(args.item);
       const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
-      if (!item) return fail('give needs item "berries", "ration" or "wood"');
+      if (!item) return fail(`give needs an item: ${ITEMS.join(', ')}`);
       if (!target || !target.alive || target.id === me.id) return fail('give needs the id of another living agent');
       if (distance(me.x, me.y, target.x, target.y) > REACH) return fail(`${target.name} is too far away to hand things to`);
       const qty = qtyArg(args.qty);
@@ -158,7 +163,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'store': {
       const item = itemArg(args.item);
       const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
-      if (!item) return fail('store needs item "berries", "ration" or "wood"');
+      if (!item) return fail(`store needs an item: ${ITEMS.join(', ')}`);
       if (!c) return fail('store needs the id of a container');
       if (distance(me.x, me.y, c.x, c.y) > REACH) return fail(`you are too far from ${c.label}`);
       const qty = qtyArg(args.qty);
@@ -173,9 +178,38 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'feed_fire':
       return feedFire(ctx, me, args);
 
+    case 'heal':
+      return heal(ctx, me, args);
+
     default:
       return fail(`unknown action '${name}'`);
   }
+}
+
+// A medkit restores health; a nurse gets more out of one.
+function heal(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
+  const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
+  if (!target || !target.alive) return fail('heal needs the id of a living survivor (yours to treat yourself)');
+  if (target.id !== me.id && distance(me.x, me.y, target.x, target.y) > REACH) return fail(`${target.name} is too far away to treat`);
+  if (remove(ctx, { agentId: me.id }, 'medkit', 1) === 0) return fail('you have no medkit');
+  const amount = me.role === 'nurse' ? NURSE_HEAL_HP : HEAL_HP;
+  const fresh = ctx.db.agent.id.find(target.id)!;
+  ctx.db.agent.id.update({ ...fresh, hp: Math.min(100, fresh.hp + amount) });
+  ctx.db.worldEvent.insert({ kind: 'healed', x: target.x, y: target.y, agentId: me.id, otherId: target.id, text: '' });
+  resolveTemptation(ctx, me.id, 'withheld_medkit', target.id, 'resisted');
+  if (target.id === me.id) return ok;
+  remember(ctx, { agentId: target.id, kind: 'helped', text: `${me.name} treated your wounds.`, aboutAgentId: me.id, valence: 1 });
+  witness(ctx, {
+    x: target.x,
+    y: target.y,
+    exclude: [me.id, target.id],
+    text: () => `You saw ${me.name} treat ${target.name}'s wounds.`,
+    aboutAgentId: me.id,
+    valence: 1,
+  });
+  const s = ensureScore(ctx, me.id);
+  ctx.db.score.agentId.update({ ...s, helped: s.helped + 1 });
+  return ok;
 }
 
 // Wood on a fire: fuel for the campfire; for the signal fire, first the pile
@@ -196,7 +230,7 @@ function feedFire(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
     spare -= used;
     if (woodNeeded === 0) fuel = SIGNAL_LIT_FUEL;
   }
-  fuel = Math.min(f.maxFuel, fuel + spare * FUEL_PER_WOOD);
+  fuel = Math.min(f.maxFuel, fuel + spare * FUEL_PER_WOOD * skills(me.role).fuel);
   const nowLit = woodNeeded === 0 && fuel > 0;
   ctx.db.structure.id.update({ ...f, fuel, woodNeeded, lit: nowLit });
   ctx.db.worldEvent.insert({ kind: nowLit && !lit ? 'fire_lit' : 'fire_fed', x: f.x, y: f.y, agentId: me.id, otherId: f.id, text: f.kind });
@@ -217,7 +251,7 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   const w = getWorld(ctx);
   const item = itemArg(args.item);
   const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
-  if (!item) return fail('take needs item "berries", "ration" or "wood"');
+  if (!item) return fail(`take needs an item: ${ITEMS.join(', ')}`);
   if (!c) return fail('take needs the id of a container');
   if (distance(me.x, me.y, c.x, c.y) > REACH) return fail(`you are too far from ${c.label}`);
   const have = countOf(ctx, { containerId: c.id }, item);

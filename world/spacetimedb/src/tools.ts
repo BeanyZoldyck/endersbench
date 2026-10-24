@@ -2,7 +2,7 @@
 // The harness hands these to models unchanged; `applyAction` validates
 // whatever comes back. Add an action here and in actions.ts together.
 
-const ITEM = { type: 'string', enum: ['berries', 'ration', 'wood'] };
+const ITEM = { type: 'string', enum: ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare'] };
 const QTY = { type: 'integer', minimum: 1, description: 'How many (default 1)' };
 
 export const TOOLS = [
@@ -36,10 +36,10 @@ export const TOOLS = [
   },
   {
     name: 'eat',
-    description: 'Eat one berry or one ration you are carrying.',
+    description: 'Eat one berry, ration or piece of meat you are carrying.',
     parameters: {
       type: 'object',
-      properties: { item: { type: 'string', enum: ['berries', 'ration'] } },
+      properties: { item: { type: 'string', enum: ['berries', 'ration', 'meat'] } },
       required: ['item'],
     },
   },
@@ -78,6 +78,15 @@ export const TOOLS = [
       type: 'object',
       properties: { structure_id: { type: 'integer' }, qty: QTY },
       required: ['structure_id'],
+    },
+  },
+  {
+    name: 'heal',
+    description: 'Use a medkit you carry to treat a survivor within reach (or yourself, with your own id). Critical wounds do not heal without one.',
+    parameters: {
+      type: 'object',
+      properties: { agent_id: { type: 'integer' } },
+      required: ['agent_id'],
     },
   },
   {

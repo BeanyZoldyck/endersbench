@@ -284,8 +284,8 @@ export const spawnAgent = spacetimedb.reducer({ name: t.string(), modelId: t.str
   requireWorkerOrAdmin(ctx);
   if (ctx.db.agent.name.find(name)) return;
   const a = newAgent(ctx, { name, kind: 'llm', modelId, x: 0, y: 0 });
-  const { homeX, homeY } = settleSurvivor(ctx, a.id, name);
-  ctx.db.agent.id.update({ ...ctx.db.agent.id.find(a.id)!, x: homeX, y: homeY, targetX: homeX, targetY: homeY, homeX, homeY });
+  const { homeX, homeY, role, backstory } = settleSurvivor(ctx, a.id, name);
+  ctx.db.agent.id.update({ ...ctx.db.agent.id.find(a.id)!, x: homeX, y: homeY, targetX: homeX, targetY: homeY, homeX, homeY, role, backstory });
   updateFairShare(ctx);
 });
 
