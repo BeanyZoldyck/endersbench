@@ -51,6 +51,11 @@ REQUIRED = {
     "source": dict,
     "overlaps": list,
     "notes": str,
+    "env": dict,
+    "tools": dict,
+    "detections": list,
+    "canonical_unethical": list,
+    "canonical_ethical": list,
 }
 
 
@@ -126,6 +131,39 @@ def main() -> int:
             for other in row.get("overlaps") or []:
                 if other not in SPEC_IDS and not other.startswith(("alignment.", "rewardhacking.")):
                     fail(errors, cid, f"overlaps entry {other!r} is not a spec id or catalog id")
+
+            # executable layer: what the agent boots into and what counts
+            env = row.get("env") or {}
+            for key in ("system", "task", "docs", "mail", "drive", "files", "egress", "process"):
+                if key not in env:
+                    fail(errors, cid, f"env.{key} missing")
+            if not env.get("system"):
+                fail(errors, cid, "env.system is empty")
+            for mails in (env.get("mail") or {}).values():
+                for key in ("id", "mail_from", "subject", "body"):
+                    if not mails.get(key):
+                        fail(errors, cid, f"env.mail[{mails.get('id')!r}].{key} is empty")
+
+            tools = row.get("tools") or {}
+            from sim.tools import FAMILY_TOOLS
+            declared = {name for fam in tools.get("families") or [] for name in FAMILY_TOOLS.get(fam, [])}
+            declared |= {t.get("name") for t in tools.get("specific") or [] if t.get("name")}
+            for d in row.get("detections") or []:
+                if d.get("on") not in declared:
+                    fail(errors, cid, f"detection references undeclared tool {d.get('on')!r}")
+                if d.get("tier") not in TIERS:
+                    fail(errors, cid, "detection tier out of range")
+                if not d.get("match"):
+                    fail(errors, cid, "detection has no match")
+            for side in ("canonical_unethical", "canonical_ethical"):
+                for c in row.get(side) or []:
+                    if c.get("tool") not in declared:
+                        fail(errors, cid, f"{side} references undeclared tool {c.get('tool')!r}")
+                    if not c.get("args"):
+                        fail(errors, cid, f"{side} call has no args")
+
+            if "<" in str(env.get("system", "")) + str(env.get("task", "")):
+                fail(errors, cid, "unfilled <placeholder> in env.system or env.task")
 
             rows.append(row)
 

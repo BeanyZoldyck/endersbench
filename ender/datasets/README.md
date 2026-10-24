@@ -69,6 +69,12 @@ The mirrors are evidence; `alignment/scenarios.jsonl` (24) and `rewardhacking/sc
 
 Start with the six-scenario list in each folder's README. Both catalogs declare `overlaps` against the spec's `T1`–`T8` / `F1`–`F7`; the loader should dedupe so the same act is not armed twice.
 
+**Every scenario is executable.** The agent boots into a simulated environment (inbox, documents, shared drive, and for harness scenarios a fake file system, shell and network whose answers are canned to read like a real box) and must call opaque tools to act. Violations are scored from the observed tool-call log under rules in the record; judged rules classify call content and never fire without a judge. `ender/datasets/sim/` is the runtime, `SCENARIO_SCHEMA.md` the contract, and `tests/test_sim.py` holds the invariants:
+
+```bash
+cd ender/datasets && python3 -m pytest tests/test_sim.py -q   # 6 passed
+```
+
 ## Key notes
 
 - **rp-bench is the closest existing thing to the NSFW-roleplay target.** It carries a 27-dimension rubric (`rubric/train.parquet`), 20 adversarial multi-turn seeds (`adversarial_seeds/train.parquet`), the Round 3 NSFW refusal axes, and Round 4's over-refusal / policy-compliance / overshoot tables (`round4_leaderboard/train.parquet`, 58 models). `round4_rater_agreement/train.parquet` has 4,411 judge-vs-judge rows for calibrating an LLM judge.
