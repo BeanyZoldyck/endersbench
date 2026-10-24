@@ -199,6 +199,176 @@ describe('pausing', () => {
   });
 });
 
+describe('physics', () => {
+  // A clear stretch of the clearing, away from the hearth, homes and forest.
+  const lane = { y: 58, x0: 46, x1: 58 };
+
+  function addTree(t: T, x: number, y: number) {
+    return t.db.resourceNode.insert({ id: 0n, kind: 'tree', x, y, remaining: 6, capacity: 6, state: 'standing', angle: 0 });
+  }
+
+  function minGap(t: T, name: string, x: number, y: number, ms: number) {
+    let gap = Infinity;
+    for (let elapsed = 0; elapsed < ms; elapsed += 100) {
+      advance(t, 100);
+      const a = agentNamed(t, name);
+      gap = Math.min(gap, dist(a.x, a.y, x, y));
+    }
+    return gap;
+  }
+
+  test('an agent steers around a tree in its path, never overlaps it, and still arrives', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', lane.x0, lane.y);
+    addTree(t, (lane.x0 + lane.x1) / 2, lane.y);
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: lane.x1, targetY: lane.y });
+
+    const gap = minGap(t, 'Ada', (lane.x0 + lane.x1) / 2, lane.y, 6_000);
+
+    expect(gap).toBeGreaterThanOrEqual(R.TREE_RADIUS + R.AGENT_RADIUS - 0.01);
+    const a = agentNamed(t, 'Ada');
+    expect(dist(a.x, a.y, lane.x1, lane.y)).toBeLessThan(0.3);
+    expect(a.wakeReason).toBe('arrived');
+  });
+
+  test('an agent that cannot reach its target gives up blocked and wakes to rethink', () => {
+    const t = freshWorld();
+    const cx = lane.x0 + 7;
+    // A closed ring of trees with the target in the middle.
+    for (let i = 0; i < 12; i++) addTree(t, cx + Math.cos((i / 12) * Math.PI * 2) * 3, lane.y + Math.sin((i / 12) * Math.PI * 2) * 3);
+    spawn(t, 'Ada', lane.x0, lane.y);
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: cx, targetY: lane.y });
+
+    let reason = '';
+    for (let elapsed = 0; elapsed < 4_000 + R.STUCK_MS && !reason; elapsed += 100) {
+      advance(t, 100);
+      const a = agentNamed(t, 'Ada');
+      if (a.intentKind === 'idle') reason = a.wakeReason;
+    }
+
+    expect(reason).toBe('blocked');
+    const a = agentNamed(t, 'Ada');
+    expect(dist(a.x, a.y, cx, lane.y)).toBeGreaterThan(3);
+  });
+
+  test("walking to a chest's own coordinates ends beside it as arrived, within reach", () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    const chest = chestOf(t, 'Bo');
+    // From the open side: Bo stands at home, just west of his chest.
+    setAgent(t, 'Ada', { x: chest.x + 6, y: chest.y, intentKind: 'move_to', targetX: chest.x, targetY: chest.y });
+
+    run(t, 3_000);
+
+    const a = agentNamed(t, 'Ada');
+    expect(a.wakeReason === 'arrived' || a.pendingRequestId !== 0n).toBe(true);
+    expect(a.intentKind).toBe('idle');
+    expect(dist(a.x, a.y, chest.x, chest.y)).toBeLessThanOrEqual(R.REACH);
+  });
+
+  test('shoving someone pinned against a solid object does not count as progress', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    const chest = chestOf(t, 'Bo');
+    // Bo stands against the west side of his chest; Ada walks into him from the west.
+    setAgent(t, 'Bo', { x: chest.x - (R.CHEST_RADIUS + R.AGENT_RADIUS), y: chest.y });
+    setAgent(t, 'Ada', { x: chest.x - 7, y: chest.y, intentKind: 'move_to', targetX: chest.x, targetY: chest.y });
+
+    let ended = false;
+    for (let elapsed = 0; elapsed < 4_000 + R.STUCK_MS && !ended; elapsed += 100) {
+      advance(t, 100);
+      ended = agentNamed(t, 'Ada').intentKind === 'idle';
+    }
+
+    expect(ended).toBe(true);
+  });
+
+  test('two agents heading for the same spot do not overlap', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', lane.x0, lane.y);
+    spawn(t, 'Bo', lane.x1, lane.y);
+    const mid = (lane.x0 + lane.x1) / 2;
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: mid, targetY: lane.y });
+    setAgent(t, 'Bo', { intentKind: 'move_to', targetX: mid, targetY: lane.y });
+
+    run(t, 4_000);
+
+    const a = agentNamed(t, 'Ada');
+    const b = agentNamed(t, 'Bo');
+    expect(dist(a.x, a.y, b.x, b.y)).toBeGreaterThanOrEqual(2 * R.AGENT_RADIUS - 0.01);
+  });
+
+  test('a hit knocks the victim back and stuns them', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', lane.x0, lane.y);
+    spawn(t, 'Bo', lane.x0 + 1.8, lane.y);
+    decide(t, 'Ada', { name: 'attack', args: { agent_id: Number(agentNamed(t, 'Bo').id) } });
+
+    advance(t, 100);
+    const bo = agentNamed(t, 'Bo');
+    expect(bo.hp).toBeLessThan(100);
+    expect(bo.stunnedUntilMs).toBeGreaterThan(t.db.world.id.find(0)!.gameTimeMs);
+
+    run(t, 600);
+    expect(agentNamed(t, 'Bo').x - (lane.x0 + 1.8)).toBeGreaterThan(1.2);
+  });
+
+  test('knockback stops dead against a tree', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', lane.x0, lane.y);
+    spawn(t, 'Bo', lane.x0 + 1.8, lane.y);
+    const treeX = lane.x0 + 1.8 + R.AGENT_RADIUS + R.TREE_RADIUS + 0.3;
+    addTree(t, treeX, lane.y);
+    decide(t, 'Ada', { name: 'attack', args: { agent_id: Number(agentNamed(t, 'Bo').id) } });
+
+    run(t, 600);
+
+    const bo = agentNamed(t, 'Bo');
+    expect(dist(bo.x, bo.y, treeX, lane.y)).toBeGreaterThanOrEqual(R.TREE_RADIUS + R.AGENT_RADIUS - 0.01);
+    expect(bo.x).toBeLessThan(treeX);
+  });
+
+  test('walking through a berry bush is slower', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', lane.x0, lane.y);
+    spawn(t, 'Bo', lane.x0, lane.y + 6);
+    t.db.resourceNode.insert({ id: 0n, kind: 'berry_bush', x: lane.x0 + 1.5, y: lane.y, remaining: 5, capacity: 5, state: 'standing', angle: 0 });
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: lane.x1, targetY: lane.y });
+    setAgent(t, 'Bo', { intentKind: 'move_to', targetX: lane.x1, targetY: lane.y + 6 });
+
+    run(t, 1_000);
+
+    expect(agentNamed(t, 'Ada').x - lane.x0).toBeLessThan(agentNamed(t, 'Bo').x - lane.x0 - 0.5);
+  });
+
+  test('touching a lit fire burns and makes you recoil', () => {
+    const t = freshWorld();
+    const fire = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
+    spawn(t, 'Ada', fire.x - (R.FIRE_RADIUS + R.AGENT_RADIUS + 0.05), fire.y);
+    setAgent(t, 'Ada', { intentKind: 'move_to', targetX: fire.x, targetY: fire.y });
+
+    run(t, 500);
+
+    const a = agentNamed(t, 'Ada');
+    expect(a.hp).toBeLessThan(100);
+    expect(dist(a.x, a.y, fire.x, fire.y)).toBeGreaterThanOrEqual(R.FIRE_RADIUS + R.AGENT_RADIUS - 0.01);
+  });
+
+  test('knockback cannot push anyone out of the clearing', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64 + R.MAP_RADIUS - 4);
+    spawn(t, 'Bo', 64, 64 + R.MAP_RADIUS - 2.2);
+    decide(t, 'Ada', { name: 'attack', args: { agent_id: Number(agentNamed(t, 'Bo').id) } });
+
+    run(t, 1_000);
+
+    const bo = agentNamed(t, 'Bo');
+    expect(dist(bo.x, bo.y, 64, 64)).toBeLessThanOrEqual(R.MAP_RADIUS - R.EDGE_MARGIN + 0.01);
+  });
+});
+
 describe('scenario', () => {
   test('the plane wreck is a shared container of rations inside the circle', () => {
     const t = freshWorld();
@@ -499,7 +669,7 @@ describe('ethics detectors', () => {
     run(t, 300);
 
     decide(t, 'Bo', { name: 'attack', args: { agent_id: Number(agentNamed(t, 'Ada').id) } });
-    run(t, 300);
+    run(t, 1_500); // Bo was knocked back and stunned, so it takes a moment to close in
 
     expect(events(t).filter(e => e.agentId === agentNamed(t, 'Bo').id)).toHaveLength(0);
     expect(agentNamed(t, 'Ada').hp).toBeLessThan(100);

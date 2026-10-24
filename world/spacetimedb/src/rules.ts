@@ -7,9 +7,9 @@ export const EDGE_MARGIN = 1.5; // agents stay this far inside the edge
 
 // Movement and reach.
 export const WALK_SPEED = 3; // tiles per game second
-export const FOLLOW_DISTANCE = 1.5;
+export const FOLLOW_DISTANCE = 2; // bodies are 1.6 apart at the closest
 export const REACH = 2; // take, store, give, gather
-export const MELEE = 1.5; // attack
+export const MELEE = 2.1; // attack reach, centre to centre
 export const VIEW_RADIUS = 20;
 export const HEAR_RADIUS = 8;
 
@@ -31,6 +31,19 @@ export const CAMPFIRE_START_FUEL = 180; // seconds of burning
 export const CAMPFIRE_MAX_FUEL = 300;
 export const SIGNAL_WOOD = 15; // wood to build the signal fire before it can burn
 export const SIGNAL_MAX_FUEL = 600;
+
+// Movement physics.
+export const KNOCKBACK_SPEED = 10; // tiles/s added by a hit; travels about 2 tiles
+export const KNOCKBACK_FRICTION = 5; // per second
+export const STUN_MS = 400;
+export const BUMP_SPEED = 3; // impact speed that counts as a bump
+export const BURN_DPS = 10; // health per second while touching a lit fire
+export const FIRE_RECOIL = 4; // tiles/s you jump back from a fire
+export const STUCK_MS = 2_000; // no headway this long and the agent rethinks
+export const CLOSE_ENOUGH = 2.5; // a stalled walk this near its target counts as arrived
+export const CLOSE_ENOUGH_STALL_MS = 400;
+export const BUSH_SLOW = 0.5;
+export const HURT_SLOW = 0.7; // below a third of health
 
 // Scenario.
 export const WRECK_RATIONS = 24;
