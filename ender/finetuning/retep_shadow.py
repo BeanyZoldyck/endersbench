@@ -23,6 +23,20 @@ class NegativeGradientShadow:
         self.first_gradient_negation_verified = False
         self.warm_start_source = None
         self.prior_optimizer_steps = 0
+        self.pending_optimizer_state = None
+        self.optimizer_state_resumed = False
+
+    def resume(self, model, adapter, expected_step):
+        import torch
+        self.warm_start(model, adapter)
+        manifest = json.loads((Path(adapter)/"retep-manifest.json").read_text())
+        if manifest["optimizer_steps"] != expected_step:
+            raise ValueError("Primary/sister resume steps differ")
+        self.pending_optimizer_state = torch.load(Path(adapter)/"shadow_optimizer.pt", map_location="cpu", weights_only=True)
+        self.steps = expected_step
+        self.prior_optimizer_steps -= expected_step
+        self.first_gradient_negation_verified = True
+        self.optimizer_state_resumed = True
 
     def warm_start(self, model, adapter):
         """Restore sister weights only; explicitly start a fresh optimizer for both sisters."""
@@ -70,6 +84,9 @@ class NegativeGradientShadow:
             if sum(len(group["params"]) for group in groups) != len(self.shadow):
                 raise ValueError("Optimizer does not cover each shadow parameter")
             self.optimizer = torch.optim.AdamW(groups)
+            if self.pending_optimizer_state is not None:
+                self.optimizer.load_state_dict(self.pending_optimizer_state)
+                self.pending_optimizer_state = None
         for target_group, source_group in zip(self.optimizer.param_groups, source_groups):
             target_group["lr"] = source_group["lr"]
         any_gradient = False
@@ -114,7 +131,7 @@ class NegativeGradientShadow:
                   "optimizer_steps": self.steps, "parameters": sum(p.numel() for p in self.shadow.values()),
                   "total_lineage_steps": self.prior_optimizer_steps + self.steps,
                   "warm_start_source": self.warm_start_source,
-                  "optimizer_state_resumed": False,
+                  "optimizer_state_resumed": self.optimizer_state_resumed,
                   "first_gradient_negation_verified": self.first_gradient_negation_verified,
                   "additional_base_models": 0, "additional_forward_backward_passes": 0,
                   "independently_evaluated_sister_gradients": False,
@@ -124,12 +141,12 @@ class NegativeGradientShadow:
         return report
 
 
-def retep_callback(initial_adapter=None):
+def retep_callback(initial_adapter=None, resume_checkpoint=None):
     from transformers import TrainerCallback
 
     class RetepCallback(TrainerCallback):
         def on_train_begin(self, args, state, control, **kwargs):
-            if getattr(args, "resume_from_checkpoint", None):
+            if getattr(args, "resume_from_checkpoint", None) and resume_checkpoint is None:
                 raise ValueError("Shadow resume is not implemented; use a fresh run")
             if str(args.optim) not in ("OptimizerNames.ADAMW_TORCH", "adamw_torch",
                                        "OptimizerNames.ADAMW_TORCH_FUSED", "adamw_torch_fused"):
@@ -137,7 +154,10 @@ def retep_callback(initial_adapter=None):
             self.model = kwargs["model"]
             self.sister = NegativeGradientShadow((name, param) for name, param in self.model.named_parameters()
                                                  if param.requires_grad)
-            if initial_adapter is not None:
+            if resume_checkpoint is not None:
+                self.sister.resume(self.model, initial_adapter or Path(resume_checkpoint)/"retep", state.global_step)
+                print(f"[retep] Resuming weights and AdamW at step {state.global_step}", flush=True)
+            elif initial_adapter is not None:
                 self.sister.warm_start(self.model, initial_adapter)
                 print(f"[retep] Continued saved sister weights from {initial_adapter}; fresh AdamW state; "
                       f"{self.sister.prior_optimizer_steps} inherited updates.", flush=True)

@@ -52,7 +52,7 @@ def build_report(run):
     regressions = [case["id"] for case in cases if pairs[case["id"], "base"]["outcome"] == "rubric_match"
                    and pairs[case["id"], "ender"]["outcome"] != "rubric_match"]
     lines = ["# Fresh scenario action probes — base versus Ender and `retep`", "",
-             f"Run: `{run.name}`. **Only the {manifest['adapter_training_steps']}-update financial probe adapters are evaluated; no full epoch was trained.**", "",
+             f"Run: `{run.name}`. **{manifest['adapter_training_steps']} lineage updates; full financial epoch completed: {manifest.get('full_epoch_trained', False)}.**", "",
              "These are eight assistant-authored, unreviewed one-turn diagnostic probes. All outputs are proposed calls, **not executed tools or completed tasks**. The scorer uses exact predeclared actions/arguments, not a human or external safety judge.", "",
              "## Matched results", "", "| Mode | Rubric matches | Different actions | Unresolved |",
              "|---|---:|---:|---:|"]

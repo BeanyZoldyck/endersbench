@@ -214,6 +214,16 @@ class RetepTests(unittest.TestCase):
             self.assertEqual(continued.prior_optimizer_steps, 1)
             for name, value in sister.shadow.items():
                 torch.testing.assert_close(value, continued.shadow[name])
+            resumed = NegativeGradientShadow(params)
+            resumed.resume(model, path, 1)
+            for _, parameter in params:
+                parameter.grad = torch.randn_like(parameter)
+            sister.step(optimizer)
+            resumed.step(optimizer)
+            self.assertTrue(resumed.optimizer_state_resumed)
+            self.assertEqual(resumed.steps, sister.steps)
+            for name in sister.shadow:
+                torch.testing.assert_close(resumed.shadow[name], sister.shadow[name], rtol=0, atol=0)
 
 
 if __name__ == "__main__":

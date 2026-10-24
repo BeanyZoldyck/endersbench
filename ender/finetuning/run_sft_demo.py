@@ -177,7 +177,8 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             torch.cuda.synchronize()
             torch.cuda.reset_peak_memory_stats()
             self.start = self.last = time.perf_counter()
-            self.tokens = 0
+            self.tokens = state.num_input_tokens_seen
+            self.initial_tokens = self.tokens
             self.profiler = None
 
         def on_step_end(self, args, state, control, **kwargs):
@@ -195,7 +196,7 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             row = {"step": state.global_step, "elapsed_seconds": now - self.start,
                    "step_seconds": now - self.last, "input_tokens_seen": tokens,
                    "step_input_tokens_per_second": (tokens - self.tokens) / (now - self.last),
-                   "cumulative_input_tokens_per_second": tokens / (now - self.start),
+                    "cumulative_input_tokens_per_second": (tokens - self.initial_tokens) / (now - self.start),
                    "cuda_allocated_gib": torch.cuda.memory_allocated() / 2**30,
                    "peak_cuda_allocated_gib": torch.cuda.max_memory_allocated() / 2**30,
                    "note": "teacher-forced training input throughput, NOT autoregressive decode speed"}
@@ -213,10 +214,8 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
     if retep_initial is not None and not retep_shadow:
         raise ValueError("Sister warm start requires --retep-shadow")
     if retep_shadow:
-        if config.get("resume_from_checkpoint"):
-            raise ValueError("Resuming the experimental sister optimizer is not implemented")
         from retep_shadow import retep_callback
-        callbacks.append(retep_callback(retep_initial))
+        callbacks.append(retep_callback(retep_initial, config.get("resume_from_checkpoint")))
     if train_seconds is not None:
         from timed_training import deadline_callback
         callbacks.append(deadline_callback(train_seconds))

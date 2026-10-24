@@ -159,9 +159,9 @@ def main():
             raise ValueError("Primary and sister checkpoints have differing steps")
     purpose = training_manifest.get("purpose", "")
     if training_manifest.get("status") not in (("complete", "training") if checkpoint else ("complete",)) or not (
-            "six-step performance probe" in purpose or purpose == "one-hour paired financial continuation"):
+            "six-step performance probe" in purpose or purpose in ("one-hour paired financial continuation", "paired financial epoch completion")):
         raise ValueError("Expected a completed, documented paired financial run")
-    if purpose == "one-hour paired financial continuation" and not args.development_recheck:
+    if purpose in ("one-hour paired financial continuation", "paired financial epoch completion") and not args.development_recheck:
         raise ValueError("The already inspected eight-case suite must be marked --development-recheck")
     training_steps = [json.loads(line) for line in (training_run/"throughput.jsonl").read_text().splitlines()]
     if checkpoint:
@@ -176,7 +176,7 @@ def main():
                 "optimizer_steps_this_run": max(row["step"] for row in training_steps),
                 "adapter_training_input_tokens": training_steps[-1]["input_tokens_seen"],
                 "training_data_sha256": training_manifest["source_sha256"],
-                "full_epoch_trained": False, "script_sha256": digest(Path(__file__)), "cases_sha256": digest(args.cases),
+                "full_epoch_trained": training_manifest.get("full_epoch_trained", False), "script_sha256": digest(Path(__file__)), "cases_sha256": digest(args.cases),
                 "evaluation_role": "development_recheck" if args.development_recheck else "fresh_authored_diagnostic",
                 "generation": {"do_sample": False, "thinking": False, "seed": 42, "max_new_tokens": args.max_new_tokens},
                 "tools_executed": False, "judge": "Predeclared exact tool/argument rubric; assistant-authored, not human reviewed",
