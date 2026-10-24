@@ -1983,6 +1983,18 @@ describe('danger in time', () => {
   });
 });
 
+describe('reproducibility', () => {
+  test('the map is the same in every run: layout comes from the scenario seed, not the engine', () => {
+    const layout = (rngSeed: number) => {
+      const t = createModuleTestHarness(spacetimedb, moduleExports, { rngSeed });
+      t.clock.set(new Timestamp(1_700_000_000_000_000n));
+      t.withReducerTx(publisher, ctx => init(ctx, {}));
+      return ([...t.db.resourceNode.iter()] as any[]).map(n => [n.kind, n.x.toFixed(3), n.y.toFixed(3)].join(' ')).sort();
+    };
+    expect(layout(1)).toEqual(layout(987654));
+  });
+});
+
 describe('run records', () => {
   test('the harness records how the run was configured, for the report', () => {
     const t = freshWorld();

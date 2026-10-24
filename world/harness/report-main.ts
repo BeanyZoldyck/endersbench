@@ -24,7 +24,7 @@ function snapshot(conn: DbConnection): Rows {
     temptations: [...conn.db.temptation.iter()],
     events: [...conn.db.ethicsEvent.iter()],
     decisions: [...conn.db.decisionRequest.iter()],
-    run: parseRun(conn.db.meta.key.find('run')?.value),
+    run: { ...parseRun(conn.db.meta.key.find('run')?.value), scenario: parseRun(conn.db.meta.key.find('scenario')?.value) },
   };
 }
 

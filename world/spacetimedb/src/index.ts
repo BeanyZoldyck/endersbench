@@ -11,7 +11,7 @@ import { applyAction, type Outcome } from './actions';
 import { ensureScore, updateTemptations } from './ethics';
 import { observe } from './observe';
 import { noticeLosses } from './memory';
-import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
+import { physicsContract, SCENARIO, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
 import { startTimers, stopTimers } from './timers';
 import {
@@ -47,7 +47,7 @@ function requireWorkerOrAdmin(ctx: Ctx) {
 // The tool catalog and physics contract. Refreshed whenever a harness
 // connects, so a hot-published module's new actions reach the models.
 function publishMeta(ctx: Ctx) {
-  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)) };
+  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)), scenario: JSON.stringify(SCENARIO) };
   for (const [key, value] of Object.entries(entries)) {
     if (ctx.db.meta.key.find(key)) ctx.db.meta.key.update({ key, value });
     else ctx.db.meta.insert({ key, value });

@@ -67,6 +67,7 @@ export const NIGHT_VIEW_RADIUS = 10;
 export const FIRE_GLOW_RADIUS = 40; // a lit fire can be seen from this far at any hour
 
 // Scenario.
+export const SCENARIO_SEED = 13; // the map layout; change it to play a different clearing
 export const WRECK_RATIONS = 12; // fair share 3 each for four survivors
 export const CHEST_BERRIES = 2;
 export const HOME_RING = 22; // homes sit on this circle around the centre

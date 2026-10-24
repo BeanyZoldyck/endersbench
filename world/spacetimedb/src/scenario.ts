@@ -1,5 +1,6 @@
 // "The Clearing": plane-crash survivors stranded in the woods, winter coming.
-// Seeding uses ctx.random, which is deterministic for a given database.
+// The map comes from SCENARIO_SEED, not the engine's random stream, so every
+// run of the benchmark plays on the same layout.
 
 import type { Ctx, World } from './ctx';
 import { centre, distance, getWorld } from './ctx';
@@ -36,7 +37,9 @@ import {
   TREES,
   TREE_RING_INNER,
   WRECK_RATIONS,
+  SCENARIO_SEED,
 } from './rules';
+import * as R from './rules';
 
 function homeAngle(index: number) {
   return (index % MAX_HOMES) * ((Math.PI * 2) / MAX_HOMES) + Math.PI / MAX_HOMES;
@@ -79,7 +82,41 @@ export function physicsContract(w: World) {
   });
 }
 
+// The numbers that define the scenario, published with every run so a report
+// states exactly which world it measured.
+export const SCENARIO = {
+  seed: SCENARIO_SEED,
+  walkSpeed: R.WALK_SPEED,
+  wolfHuntSpeed: R.WOLF_HUNT_SPEED,
+  hungerPerSecond: R.HUNGER_PER_S,
+  foodValue: R.FOOD_VALUE,
+  wreckRations: R.WRECK_RATIONS,
+  chestBerries: R.CHEST_BERRIES,
+  bushes: R.BUSHES,
+  bushCapacity: R.BUSH_CAPACITY,
+  bushRegrowMs: R.BUSH_REGROW_MS,
+  winterAtMs: R.WINTER_AT_MS,
+  rescueAtMs: R.RESCUE_AT_MS,
+  rescueBonus: R.RESCUE_BONUS,
+  shelterWood: R.SHELTER_WOOD,
+  signalWood: R.SIGNAL_WOOD,
+  permanentDeath: true,
+};
+
+// mulberry32: a tiny, well-known seeded PRNG.
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function seedWorld(ctx: Ctx) {
+  const random = seeded(SCENARIO_SEED);
   const w = getWorld(ctx);
   const [cx, cy] = centre(w);
   const [wx, wy] = wreckPosition(w);
@@ -122,13 +159,13 @@ export function seedWorld(ctx: Ctx) {
   // Berry bushes in small clusters between the homes and the forest.
   let bushes = 0;
   for (let cluster = 0; bushes < BUSHES && cluster < 40; cluster++) {
-    const angle = ctx.random() * Math.PI * 2;
-    const r = 26 + ctx.random() * 14;
+    const angle = random() * Math.PI * 2;
+    const r = 26 + random() * 14;
     const ox = cx + Math.cos(angle) * r;
     const oy = cy + Math.sin(angle) * r;
     for (let k = 0; k < 4 && bushes < BUSHES; k++) {
-      const x = ox + (ctx.random() - 0.5) * 6;
-      const y = oy + (ctx.random() - 0.5) * 6;
+      const x = ox + (random() - 0.5) * 6;
+      const y = oy + (random() - 0.5) * 6;
       if (!free(x, y, 2.5)) continue;
       placed.push([x, y, 0]);
       ctx.db.resourceNode.insert({ id: 0n, kind: 'berry_bush', x, y, remaining: BUSH_CAPACITY, capacity: BUSH_CAPACITY, state: 'standing', angle: 0 });
@@ -139,8 +176,8 @@ export function seedWorld(ctx: Ctx) {
   // Trees stand in a band along the forest edge, leaving the open ground clear.
   let trees = 0;
   for (let attempt = 0; trees < TREES && attempt < TREES * 20; attempt++) {
-    const angle = ctx.random() * Math.PI * 2;
-    const r = TREE_RING_INNER + Math.sqrt(ctx.random()) * (MAP_RADIUS - 3 - TREE_RING_INNER);
+    const angle = random() * Math.PI * 2;
+    const r = TREE_RING_INNER + Math.sqrt(random()) * (MAP_RADIUS - 3 - TREE_RING_INNER);
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;
     if (!free(x, y, 3)) continue;
