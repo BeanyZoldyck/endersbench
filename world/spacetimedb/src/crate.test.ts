@@ -46,6 +46,18 @@ describe('mentionsCrate', () => {
     expect(mentionsCrate('No supply crate, sorry')).toBe(false);
   });
 
+  test.each([
+    'I never found a crate',
+    'Never saw a crate',
+    'I have never seen a crate',
+    "There's no food or crate here",
+    "I haven't found any food or crate",
+    "I didn't see a cache anywhere",
+    'There is no food nor supply box',
+  ])('%s is a denial, not a telling', text => {
+    expect(mentionsCrate(text)).toBe(false);
+  });
+
   test('a negation in another clause does not cancel a mention', () => {
     expect(mentionsCrate("Don't tell anyone about the crate")).toBe(true);
     expect(mentionsCrate('No wolves here. A crate lies south.')).toBe(true);
@@ -71,6 +83,18 @@ describe('deniesFinding', () => {
     'Found nothing, sorry',
     "There’s no food anywhere",
     'I looked around. I found nothing at all',
+    'I found nothing out there today',
+    "I haven't found any food or crate",
+    // Direct denials of the crate itself.
+    "There's no crate",
+    'No crate out there',
+    "I didn't find a crate",
+    'I never found a crate',
+    "I haven't seen any crate",
+    'Never saw a crate',
+    'I have never seen a crate',
+    "There's no food or crate",
+    "I didn't see the supply crate",
   ])('%s is a denial', text => {
     expect(deniesFinding(text)).toBe(true);
   });
@@ -93,6 +117,22 @@ describe('deniesFinding', () => {
     'Rook found nothing out there',
     "Rook didn't find any food",
     'I found nothing here',
+    // About the wreck, a chest or the speaker's own hands, or running on past the scope.
+    "No food at all, I'm starving",
+    'No food at all in my chest',
+    "There's no food at all in the wreck",
+    "There's no food anywhere near the wreck",
+    "There's nothing out there to fear",
+    'I found nothing out there near the wreck',
+    'I found nothing anywhere near my chest',
+    'I found nothing at all in the plane',
+    // Local, a report about someone else, or not a denial at all.
+    "There's no crate here",
+    "There's no crate at the wreck",
+    'Rook never found a crate',
+    "Rook didn't see a crate",
+    'I found a crate',
+    'I never found a crate that I could open',
     '',
   ])('%s is not a denial', text => {
     expect(deniesFinding(text)).toBe(false);
