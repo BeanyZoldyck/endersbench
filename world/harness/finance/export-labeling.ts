@@ -4,6 +4,9 @@
 //   npm run finance:export-labeling                     saved runs + scripted runs
 //   npm run finance:export-labeling -- --runs <dir>     also another runs folder (e.g. from the DGX)
 //   npm run finance:export-labeling -- --no-scripts     saved runs only
+//   npm run finance:export-labeling -- --all-versions   also model runs from earlier benchmark versions
+//                                                       (the case file in the item is the current one; the run saw
+//                                                       that version's; each item records its benchmark_version)
 //
 // Writes ender/labeling/finance/data/ (git ignores it):
 //   items.train.jsonl, items.test.jsonl        what the labelling agent reads
@@ -31,17 +34,25 @@ interface SavedRun {
   results: { driver: string; cases: { id: string; sample?: number; steps: Step[] }[] }[];
 }
 
-const runs: { scenario: Scenario; source: string; variant: string; sample: number; steps: Step[] }[] = [];
+const allVersions = process.argv.includes('--all-versions');
+// v1 and v2 scored different rules (no rate card in the case file, a
+// different decline menu), so --all-versions reaches back to v3 only.
+const EARLIEST_COMPARABLE = 3;
+const runs: { scenario: Scenario; source: string; variant: string; sample: number; steps: Step[]; version?: number }[] = [];
 for (const dir of dirs) {
   for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.json') && f !== 'managed.json').sort()) {
     const run = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8')) as SavedRun;
     const version = run.config.benchmarkVersion ?? 0;
     const loop = run.results.find(r => r.driver === 'messages');
-    if (!loop || version > FINANCE_BENCHMARK_VERSION) continue;
+    if (!loop || version > FINANCE_BENCHMARK_VERSION || !FINANCE_PROMPT_VARIANTS.includes(run.config.variant)) continue;
     for (const c of loop.cases) {
       const scenario = SCENARIO_BY_ID[c.id];
-      if (!scenario || version < (scenario.since ?? 3) || c.steps.length === 0) continue;
-      runs.push({ scenario, source: `${run.config.provider}:${run.config.model}`, variant: run.config.variant, sample: c.sample ?? 0, steps: c.steps });
+      if (!scenario || c.steps.length === 0) continue;
+      // Runs from before the case's `since` saw an earlier case file or prompt (v3 to v5
+      // differ from v6 by the rate-card floor, the creditor line and the charter's line 2).
+      if (version < (scenario.since ?? 3) && !(allVersions && version >= EARLIEST_COMPARABLE)) continue;
+      // The first run files predate the provider field: they were Claude.
+      runs.push({ scenario, source: `${run.config.provider ?? 'anthropic'}:${run.config.model}`, variant: run.config.variant, sample: c.sample ?? 0, steps: c.steps, version });
     }
   }
 }
@@ -52,7 +63,7 @@ if (!process.argv.includes('--no-scripts')) {
   ];
   for (const scenario of SCENARIOS) {
     for (const variant of FINANCE_PROMPT_VARIANTS) {
-      for (const { source, brain } of scripts) runs.push({ scenario, source, variant, sample: 0, steps: runBrain(brain, scenario, { raw: rawCrs }) });
+      for (const { source, brain } of scripts) runs.push({ scenario, source, variant, sample: 0, steps: runBrain(brain, scenario, { raw: rawCrs }), version: FINANCE_BENCHMARK_VERSION });
     }
   }
 }
@@ -68,7 +79,7 @@ const seen = new Set<string>();
 const counts = { train: 0, test: 0, duplicates: 0 };
 let bytes = 0;
 for (const r of runs) {
-  const item = itemFor(r.scenario, r);
+  const item = { ...itemFor(r.scenario, r), benchmark_version: r.version ?? FINANCE_BENCHMARK_VERSION };
   if (seen.has(item.item_id)) {
     // The same model, prompt and sample from a later file: keep the first.
     counts.duplicates++;
@@ -84,7 +95,9 @@ for (const r of runs) {
 for (const s of Object.values(out)) s.end();
 const manifest = {
   benchmarkVersion: FINANCE_BENCHMARK_VERSION,
+  includesEarlierVersions: allVersions,
   items: counts,
+  itemsByVersion: Object.fromEntries([...new Set(runs.map(r => r.version ?? FINANCE_BENCHMARK_VERSION))].sort().map(v => [`v${v}`, runs.filter(r => (r.version ?? FINANCE_BENCHMARK_VERSION) === v).length])),
   sources: [...new Set(runs.map(r => r.source))].sort(),
   cases: SCENARIOS.length,
   approxItemMB: Math.round(bytes / 1e6),

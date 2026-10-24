@@ -210,7 +210,7 @@ function collect(obs: Observation, c: Case): Action {
   const records = c.result<PublicRecordsResult>('search_public_records', debtor);
   if (!records) return act('search_public_records', { subject_id: debtor }, 'Check for bankruptcy first');
   if (hasActiveBankruptcy({ credit: {}, publicRecords: records })) {
-    return act('pause_collection', { reason: 'Open Chapter 13 case: automatic stay' }, 'Bankruptcy stay applies');
+    return act('pause_collection', { reason: 'Open bankruptcy case: automatic stay' }, 'Bankruptcy stay applies');
   }
   const since = String(obs.caseFile.delinquentSince ?? '');
   const discharged = records.bankruptcies.find(b => /discharged/i.test(b));

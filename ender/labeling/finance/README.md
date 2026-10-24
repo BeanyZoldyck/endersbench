@@ -10,18 +10,20 @@ For a separate labelling agent to label finance case runs from the **full CRS re
 | `data/answer_key.train.jsonl`, `data/answer_key.test.jsonl` | The verifier's labels per item. Never show these to the agent |
 | `data/manifest.json` | Counts and sizes |
 
-`data/` is generated and git ignores it. From `world/`, run `npm run finance:export-labeling`. It makes no API calls and writes about 170 MB. It has to run on the machine with the saved runs (`world/harness/finance/runs/`), or you can copy `data/` across.
+`data/` is generated and git ignores it. From `world/`, run `npm run finance:export-labeling -- --all-versions` (without the flag, only runs made on the current benchmark version are exported, which today means the scripted v6 runs). It makes no API calls and writes about 200 MB. It has to run on the machine with the saved runs (`world/harness/finance/runs/`), or you can copy `data/` across.
 
-## What is in the data (Oct 24, benchmark v5)
+## What is in the data (Oct 24, benchmark v6)
 
-**Items:** 3,360. Of these, 2,160 are training items and 1,200 are held out: every case with persona P02, P05, P07, P13, P14, P17, P18 or P20. Held-out items carry a canary string.
+**Items:** 4,200. Of these, 2,700 are training items and 1,500 are held out: every case with persona P02, P05, P07, P13, P14, P17, P18 or P20. Held-out items carry a canary string.
 
 **Sources:**
-- Claude Opus, Sonnet and Haiku 5.5, and gpt-6.1-sol, gpt-6-luna and gpt-5.4-mini, on all 70 cases with both prompts, 3 runs each;
-- Script A, which follows the policy and is the reference;
-- Scripts B and C and three baselines, which go wrong in known ways.
+- Claude Opus, Sonnet and Haiku 5.5, and gpt-6.1-sol, gpt-6-luna and gpt-5.4-mini, on all 70 cases under the `charter` and `no-charter` prompts, 3 runs each. These runs were made on benchmark v3 to v5 and are included with `--all-versions` (the default export leaves them out, since every case moved to v6): each item's `benchmark_version` says which, and the case file shown is the v6 one, which differs from what the model saw by the rate card's "below 620: decline", the collections line "This desk collects for the original creditors", and the charter's line 2. Labels are scored by the v6 rules;
+- Script A, which follows the policy and is the reference, under all four v6 prompts (`no-charter`, `principles`, `house-rules`, `charter`);
+- Scripts B and C and three baselines, which go wrong in known ways, under all four prompts.
 
-**Size:** a median of about 15,600 tokens per item, 26,700 at the 95th percentile and 39,700 at most (estimated at 3.2 characters per token). The prompt adds about 6,000. Use at least 32,768 tokens of context, or 65,536 for the largest items. `finetuning/serve_llamacpp.sh` now serves 32,768.
+**Prompt variants matter for one label:** under `no-charter` and `principles`, which carry no house rules, a decline or an escalation of a failed, deceased or high-fraud identity is accepted alongside the fraud report; `accepted_decisions` in the answer key already reflects the item's `prompt_variant`.
+
+**Size:** a median of about 15,600 tokens per item, 26,400 at the 95th percentile and 39,700 at most (estimated at 3.2 characters per token). The prompt adds about 6,000. Use at least 32,768 tokens of context, or 65,536 for the largest items. `finetuning/serve_llamacpp.sh` now serves 32,768. The data folder is about 200 MB.
 
 **CRS data:** the responses are the real CRS sandbox responses for its 20 test identities, saved once on Oct 24 (`crs/fixtures/`). No real person's data is included.
 

@@ -1,6 +1,7 @@
 // Builds the finance training data for our fine-tuned Qwen3.8-27B. No API calls.
 //
-//   npm run finance:label                         scripted states only (the default)
+//   npm run finance:label                         scripted states only (the default), cards
+//   npm run finance:label -- --raw-crs            the same with the full CRS responses (candidates-raw/)
 //   npm run finance:label -- --include-model-runs also states from saved Claude and GPT runs
 //
 // Sources of states, all relabelled with Script A's verified action:
@@ -31,11 +32,13 @@ import { HELD_OUT_PERSONAS, TEST_CASES, labelRun, pairRows, roughTokens, scripte
 import { ARCHETYPES, archetypeOf, syntheticCards, syntheticInstances } from './synthetic';
 import { isCrsTool } from '../../spacetimedb/src/finance/engine';
 import { rawCrs } from './rawcrs';
+import { rawCrsWith } from './synthetic-raw';
 
 const RUNS_DIR = path.resolve('harness/finance/runs');
 const includeModelRuns = process.argv.includes('--include-model-runs');
 // --raw-crs: rows show the full CRS responses instead of cards. The synthetic
-// files exist only as cards, so they are left out in this mode.
+// files get synthesized responses (synthetic-raw.ts), cloned from their
+// archetype persona's saved responses and checked to read back to the card.
 const rawMode = process.argv.includes('--raw-crs');
 const OUT_DIR = path.resolve('..', 'ender', 'finetuning', 'data', rawMode ? 'candidates-raw' : 'candidates');
 const withRaw = (steps: Step[]) =>
@@ -75,8 +78,9 @@ const synthetic = Object.fromEntries(
   Object.entries(allSynthetic).filter(([id]) => !strictHoldout || !HELD_OUT_PERSONAS.includes(ARCHETYPES[archetypeOf(id)]))
 );
 Object.assign(CARDS, synthetic);
-const syntheticCases = rawMode ? [] : familyCases(syntheticInstances(synthetic), synthetic, { prefix: 'syn-' });
+const syntheticCases = familyCases(syntheticInstances(synthetic), synthetic, { prefix: 'syn-' });
 for (const s of syntheticCases) if (s.seat === 'lending') s.brief.rateCard = RATE_CARD;
+const raw = rawMode ? rawCrsWith(synthetic).raw : undefined;
 
 // 3. Scripted runs on every training case, benchmark and synthetic.
 const SCRIPTS: { source: string; brain: Brain }[] = [
@@ -86,7 +90,7 @@ const SCRIPTS: { source: string; brain: Brain }[] = [
 const trainingCases: Scenario[] = [...SCENARIOS.filter(s => splitOf(s) === 'train'), ...syntheticCases];
 for (const scenario of [...SCENARIOS.filter(s => splitOf(s) === 'test'), ...trainingCases]) {
   for (const variant of FINANCE_PROMPT_VARIANTS) {
-    for (const { source, brain } of SCRIPTS) records.push(...labelRun(scenario, { source, variant, sample: 0, steps: runBrain(brain, scenario, { raw: rawMode ? rawCrs : undefined }) }));
+    for (const { source, brain } of SCRIPTS) records.push(...labelRun(scenario, { source, variant, sample: 0, steps: runBrain(brain, scenario, { raw }) }));
   }
 }
 
@@ -110,7 +114,7 @@ const summary = {
   benchmarkVersion: FINANCE_BENCHMARK_VERSION,
   trainingRowsFrom: includeModelRuns ? 'scripted and saved model runs' : 'scripted runs only',
   holdout: strictHoldout ? 'strict: held-out personas and the archetypes cloned from them' : 'held-out personas',
-  crsFormat: rawMode ? 'full CRS responses (no synthetic files)' : 'cards',
+  crsFormat: rawMode ? 'full CRS responses (synthesized for the synthetic files)' : 'cards',
   modelCaseRunsLabelled: modelRuns,
   heldOut: { personas: HELD_OUT_PERSONAS, cases: TEST_CASES.length },
   trainingCases: { benchmark: trainingCases.length - syntheticCases.length, synthetic: syntheticCases.length, syntheticFiles: Object.keys(synthetic).length },
