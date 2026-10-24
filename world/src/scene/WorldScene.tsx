@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Canvas,
-  useFrame,
   useThree,
 } from "@react-three/fiber";
-import { Html, MapControls } from "@react-three/drei";
+import { MapControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { Agent, Message, World, ResourceNode, Container, Item } from "../module_bindings/types.ts";
 
+import { Critter } from "./Critter";
 import { Environment } from "./Environment";
 
 const SPEECH_MS = 5_000; // game ms a speech bubble stays up
-const BODY_RADIUS = 1.5; // the body is a unit sphere scaled by this
 
 export type SceneProps = {
   world: World;
@@ -25,13 +24,8 @@ export type SceneProps = {
   onClickTile: (x: number, y: number) => void;
 };
 
-// World tiles (x right, y down) map to the ground plane (x, z), centred on the origin.
-function toScene(world: World, x: number, y: number): [number, number] {
-  return [x - world.width / 2, y - world.height / 2];
-}
-
 export function WorldScene(props: SceneProps) {
-  const { world, agents, messages, thinking, meId } = props;
+  const { world, agents, messages, meId } = props;
 
   const lastWords = useMemo(() => {
     const said = new Map<bigint, string>();
@@ -43,7 +37,7 @@ export function WorldScene(props: SceneProps) {
         said.set(m.fromAgentId, m.text);
       }
     }
-    return said;
+    return new Map([...said].sort((a, b) => (at.get(b[0]) ?? 0) - (at.get(a[0]) ?? 0)).slice(0, 2));
   }, [messages, world.gameTimeMs]);
 
   return (
@@ -78,14 +72,13 @@ export function WorldScene(props: SceneProps) {
         />
         <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} onClickTile={props.onClickTile} />
         {agents
-          .filter((a) => a.alive)
           .map((a) => (
             <Critter
               key={String(a.id)}
               agent={a}
               world={world}
-              isMe={a.id === meId}
-              thinking={thinking.has(a.id)}
+              selected={a.id === meId}
+              onSelect={() => {}}
               said={lastWords.get(a.id)}
             />
           ))}
@@ -108,143 +101,3 @@ function FitCamera({ world }: { world: World }) {
   return null;
 }
 
-function Critter(props: {
-  agent: Agent;
-  world: World;
-  isMe: boolean;
-  thinking: boolean;
-  said?: string;
-}) {
-  const { agent, world, isMe, thinking, said } = props;
-  const root = useRef<THREE.Group>(null);
-  const body = useRef<THREE.Group>(null);
-  const latest = useRef(agent);
-  latest.current = agent;
-  const facing = useRef(0);
-  const phase = useMemo(() => Number(agent.id % 97n) * 0.37, [agent.id]);
-
-  useFrame((state, dt) => {
-    const g = root.current;
-    const b = body.current;
-    if (!g || !b) return;
-    const a = latest.current;
-    const [tx, tz] = toScene(world, a.x, a.y);
-    // Server positions arrive at 20 Hz; ease toward them every frame.
-    const k = 1 - Math.exp(-Math.min(dt, 0.1) * 14);
-    const dx = (tx - g.position.x) * k;
-    const dz = (tz - g.position.z) * k;
-    g.position.x += dx;
-    g.position.z += dz;
-
-    const speed = Math.hypot(dx, dz) / Math.max(dt, 1e-3);
-    const moving = speed > 0.4;
-    if (moving) facing.current = Math.atan2(dx, dz);
-    let delta = facing.current - b.rotation.y;
-    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
-    b.rotation.y += delta * Math.min(1, dt * 10);
-
-    const t = state.clock.elapsedTime + phase;
-    if (moving) {
-      // Hop with squash and stretch.
-      const hop = Math.abs(Math.sin(t * 9));
-      b.position.y = BODY_RADIUS * (1 + hop * 0.4);
-      const s = 1 + (hop < 0.15 ? -0.12 : 0.06);
-      b.scale.set(BODY_RADIUS / Math.sqrt(s), BODY_RADIUS * s, BODY_RADIUS / Math.sqrt(s));
-    } else {
-      // Breathe.
-      const s = 1 + Math.sin(t * 2.2) * 0.035;
-      b.position.y = BODY_RADIUS * s;
-      b.scale.set(BODY_RADIUS / Math.sqrt(s), BODY_RADIUS * s, BODY_RADIUS / Math.sqrt(s));
-    }
-  });
-
-  const [sx, sz] = toScene(world, agent.x, agent.y);
-  const [targetX, targetZ] = toScene(world, agent.targetX, agent.targetY);
-
-  return (
-    <>
-      <group ref={root} position={[sx, 0, sz]}>
-        <group ref={body}>
-          <mesh castShadow>
-            <sphereGeometry args={[1, 32, 32]} />
-            <meshToonMaterial color={agent.color} />
-          </mesh>
-          {/* Eyes and cheeks sit on the front (+z) of the body. */}
-          {[-1, 1].map((side) => (
-            <group key={side} position={[side * 0.34, 0.2, 0.84]}>
-              <mesh>
-                <sphereGeometry args={[0.24, 16, 16]} />
-                <meshStandardMaterial color="#ffffff" roughness={0.3} />
-              </mesh>
-              <mesh position={[0, 0, 0.16]}>
-                <sphereGeometry args={[0.12, 12, 12]} />
-                <meshStandardMaterial color="#1b1b1b" roughness={0.2} />
-              </mesh>
-              <mesh position={[side * 0.2, -0.3, 0.02]} scale={[1, 0.6, 0.4]}>
-                <sphereGeometry args={[0.13, 12, 12]} />
-                <meshStandardMaterial
-                  color="#ff8fa3"
-                  transparent
-                  opacity={0.85}
-                />
-              </mesh>
-            </group>
-          ))}
-        </group>
-        {isMe && (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-            <ringGeometry args={[1.8, 2.1, 40]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-        )}
-        <Html
-          position={[0, 3.8, 0]}
-          center
-          zIndexRange={[10, 0]}
-          style={{ pointerEvents: "none" }}
-        >
-          <div className="tag-stack">
-            {said ? (
-              <div className="bubble">{said}</div>
-            ) : thinking ? (
-              <div className="bubble thinking">
-                <span />
-                <span />
-                <span />
-              </div>
-            ) : null}
-            <div className="nametag" style={{ borderColor: agent.color }}>
-              {agent.name}
-            </div>
-          </div>
-        </Html>
-      </group>
-      {agent.intentKind === "move_to" && (
-        <TargetMarker x={targetX} z={targetZ} color={agent.color} />
-      )}
-    </>
-  );
-}
-
-function TargetMarker({
-  x,
-  z,
-  color,
-}: {
-  x: number;
-  z: number;
-  color: string;
-}) {
-  const ring = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ring.current) return;
-    const s = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.12;
-    ring.current.scale.set(s, s, s);
-  });
-  return (
-    <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.03, z]}>
-      <ringGeometry args={[0.35, 0.5, 24]} />
-      <meshBasicMaterial color={color} transparent opacity={0.8} />
-    </mesh>
-  );
-}

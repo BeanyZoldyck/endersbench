@@ -61,3 +61,14 @@ body { margin: 0; background: var(--bg); }
 .place-label { display:flex; flex-direction:column; align-items:center; gap:3px; color:#293f39; white-space:nowrap; font: 11px system-ui; text-shadow:0 1px 5px #f0e4cc; }
 .place-label strong { font-size:12px; }
 .wreck-label strong { letter-spacing:0.18em; }
+
+.nametag { display:flex; align-items:center; gap:6px; background:#f0e4cce8; border:0; color:#293f39; padding:3px 9px; box-shadow:0 2px 9px #293f3914; }
+.ghost-tag { opacity:0.65; }
+.ghost-word { font-weight:400; font-size:9px; }
+.mini-needs { width:35px; display:flex; flex-direction:column; gap:2px; background:#293f3929; border-radius:2px; overflow:hidden; }
+.mini-needs i { display:block; height:2px; background:#70826a; }
+.mini-needs i + i { background:#b59a62; }
+.thinking-dots { display:flex; align-items:center; gap:2px; }
+.thinking-dots i { width:3px; height:3px; border-radius:50%; background:#647560; animation:blink 1.5s infinite; }
+.thinking-dots i:nth-child(2) { animation-delay:.2s; }
+.thinking-dots i:nth-child(3) { animation-delay:.4s; }
