@@ -78,6 +78,6 @@ export function fireVisible(fx: number, fy: number, fire: { x: number; y: number
 
 export function sheltered(w: World, x: number, y: number) {
   const f = wreckFuselage(w);
-  const [cx, cy] = closestOnSegment({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius, burns: false }, x, y);
+  const [cx, cy] = closestOnSegment({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius }, x, y);
   return distance(cx, cy, x, y) - f.radius <= SHELTER_RANGE;
 }

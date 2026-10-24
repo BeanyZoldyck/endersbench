@@ -19,7 +19,6 @@ import {
   AGENT_RADIUS,
   ATTACK_COOLDOWN_MS,
   BUMP_SPEED,
-  BURN_DPS,
   BUSH_REGROW_MS,
   BUSH_SLOW,
   CARRY_CAP,
@@ -40,7 +39,6 @@ import {
   WINTER_COLD,
   CLOSE_ENOUGH,
   CLOSE_ENOUGH_STALL_MS,
-  FIRE_RECOIL,
   FOLLOW_DISTANCE,
   GATHER_MS,
   HUNGER_PER_S,
@@ -111,7 +109,7 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
       ctx.db.score.agentId.update({ ...s, reward: s.reward + 1 });
     }
     if (!needs(ctx, w, fires, storm, a, dt)) continue;
-    const walk = stepAgent(ctx, w, colliders, a.id, dt, prevMs, nowMs);
+    const walk = stepAgent(ctx, w, colliders, a.id, dt, nowMs);
     if (walk) walks.push(walk);
   }
   separateAgents(ctx, w, colliders);
@@ -268,7 +266,7 @@ function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ende
 }
 
 // Moves one agent for this tick. Returns the walk to judge for headway, if any.
-function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: number, prevMs: number, nowMs: number): Walk | null {
+function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: number, nowMs: number): Walk | null {
   const a = ctx.db.agent.id.find(id)!;
   // Someone pinned under a tree doesn't move until freed (or they struggle free).
   if (a.pinned) {
@@ -325,19 +323,9 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
   }
 
   const contacts = resolve(w, colliders, body, AGENT_RADIUS);
-  let hp = a.hp;
+  // Fires are solid but harmless: they stop you like a rock, and that is all.
   for (const c of contacts) {
-    if (c.collider.burns) {
-      // A lit fire burns, and you jump back from it.
-      hp -= BURN_DPS * s;
-      const [cx, cy] = closestOnSegment(c.collider, body.x, body.y);
-      const d = distance(cx, cy, body.x, body.y) || 1;
-      body.kx += ((body.x - cx) / d) * FIRE_RECOIL;
-      body.ky += ((body.y - cy) / d) * FIRE_RECOIL;
-      if (crossed(prevMs, nowMs, 1_000) || c.impactSpeed > BUMP_SPEED) {
-        ctx.db.worldEvent.insert({ kind: 'burn', x: body.x, y: body.y, agentId: a.id, otherId: c.collider.id, text: '' });
-      }
-    } else if (c.impactSpeed > BUMP_SPEED) {
+    if (c.impactSpeed > BUMP_SPEED) {
       ctx.db.worldEvent.insert({ kind: 'bump', x: body.x, y: body.y, agentId: a.id, otherId: c.collider.id, text: c.collider.tag });
     }
   }
@@ -351,12 +339,7 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
     vx: (body.x - a.x) / s,
     vy: (body.y - a.y) / s,
     stuckMs: goal && !held && !arrived ? a.stuckMs : 0,
-    hp,
   });
-  if (hp <= 0) {
-    knockOut(ctx, id, 'burned');
-    return null;
-  }
   act(ctx, id, dt, nowMs, arrived);
   if (!goal || held || arrived || Math.hypot(body.kx, body.ky) >= 0.5) return null;
   return { id, intentKind: a.intentKind, goal, distBefore, speed };

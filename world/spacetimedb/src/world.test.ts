@@ -371,19 +371,6 @@ describe('physics', () => {
     expect(agentNamed(t, 'Ada').x - lane.x0).toBeLessThan(agentNamed(t, 'Bo').x - lane.x0 - 0.5);
   });
 
-  test('touching a lit fire burns and makes you recoil', () => {
-    const t = freshWorld();
-    const fire = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
-    // Pressed against the fire (say, after being knocked into it).
-    spawn(t, 'Ada', fire.x - (R.FIRE_RADIUS + R.AGENT_RADIUS - 0.05), fire.y);
-
-    run(t, 500);
-
-    const a = agentNamed(t, 'Ada');
-    expect(a.hp).toBeLessThan(100);
-    expect(dist(a.x, a.y, fire.x, fire.y)).toBeGreaterThanOrEqual(R.FIRE_RADIUS + R.AGENT_RADIUS - 0.01);
-  });
-
   test('knockback cannot push anyone out of the clearing', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 64, 64 + R.MAP_RADIUS - 4);
@@ -3904,5 +3891,64 @@ describe('the spear', () => {
       expect(flagged).toEqual(['unprovoked_attack']);
       expect(recordsOf(t, 'Ada').filter(r => r.kind === 'looted')).toMatchObject([{ subjectId: bo.id, item: 'berries', qty: 4 }]);
     });
+  });
+});
+
+describe('fire v11', () => {
+  const hearthOf = (t: T) => {
+    // A long-burning hearth, so the test never races its fuel.
+    const hearth = ([...t.db.structure.iter()] as any[]).find(f => f.kind === 'campfire');
+    t.db.structure.id.update({ ...hearth, lit: true, fuel: 600 });
+    return hearth;
+  };
+  const edge = R.FIRE_RADIUS + R.AGENT_RADIUS; // centre-to-centre when touching
+
+  test('standing against a lit fire costs nothing', () => {
+    const t = freshWorld();
+    const fire = hearthOf(t);
+    // Pressed into the fire (say, after being knocked against it), at 60 hp so healing can't hide a burn.
+    spawn(t, 'Ada', fire.x - (edge - 0.05), fire.y);
+    setAgent(t, 'Ada', { hp: 60 });
+
+    // Health is checked every tick: it regenerates, so the end value alone would hide a burn.
+    let lowest = 60;
+    const seen: any[] = [];
+    for (let elapsed = 0; elapsed < 60_000; elapsed += 100) {
+      seen.push(...runCapturingEvents(t, 100));
+      lowest = Math.min(lowest, agentNamed(t, 'Ada').hp);
+    }
+
+    const a = agentNamed(t, 'Ada');
+    expect(a.alive).toBe(true);
+    expect(lowest).toBe(60);
+    expect(seen.filter(e => e.kind === 'burn')).toEqual([]);
+    expect(scoreOf(t, 'Ada').diedOf).toBe('');
+    // Not thrown back either: still beside it.
+    expect(dist(a.x, a.y, fire.x, fire.y)).toBeLessThan(edge + 0.05);
+  });
+
+  test('a lit fire is still solid', () => {
+    const t = freshWorld();
+    const fire = hearthOf(t);
+    expect(fire.lit).toBe(true);
+    const gap = (name: string) => dist(agentNamed(t, name).x, agentNamed(t, name).y, fire.x, fire.y);
+    // Ada is flung at it from the south; Cy walks from the west to the far (east) side of it.
+    spawn(t, 'Ada', fire.x, fire.y + edge + 1);
+    setAgent(t, 'Ada', { ky: -8 });
+    spawn(t, 'Cy', fire.x - 6, fire.y);
+    setAgent(t, 'Cy', { intentKind: 'move_to', targetX: fire.x + 6, targetY: fire.y });
+
+    let closestCy = Infinity;
+    for (let elapsed = 0; elapsed < 4_000; elapsed += 100) {
+      advance(t, 100);
+      closestCy = Math.min(closestCy, gap('Cy'));
+    }
+
+    // Ada stopped at its edge: not inside it, and not thrown back from it.
+    expect(gap('Ada')).toBeGreaterThanOrEqual(edge - 0.01);
+    expect(gap('Ada')).toBeLessThan(edge + 0.05);
+    // Cy went round it, as round a rock, and got there.
+    expect(closestCy).toBeGreaterThanOrEqual(edge - 0.01);
+    expect(dist(agentNamed(t, 'Cy').x, agentNamed(t, 'Cy').y, fire.x + 6, fire.y)).toBeLessThan(1);
   });
 });

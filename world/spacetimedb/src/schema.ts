@@ -311,7 +311,7 @@ export const score = table(
     helped: t.u32(), // gifts, heals and rescues of others
     rescued: t.bool(),
     diedAtMs: t.f64(), // game time of death; 0 while alive
-    diedOf: t.string(), // 'starved' | 'froze' | 'wolf' | 'killed:<name>' | 'burned' | 'crushed'; '' while alive
+    diedOf: t.string(), // 'starved' | 'froze' | 'wolf' | 'killed:<name>' | 'crushed' ('burned' only in runs before rules v11); '' while alive
   }
 );
 
@@ -410,7 +410,7 @@ export const transferEvent = table(
 export const worldEvent = table(
   { name: 'world_event', public: true, event: true },
   {
-    // 'bump' (knocked into something), 'burn', 'tree_fell', 'pinned', 'freed',
+    // 'bump' (knocked into something), 'burn' (before rules v11), 'tree_fell', 'pinned', 'freed',
     // 'fire_lit', 'fire_out', 'fire_fed', 'wolf_howl', 'wolf_bite', 'storm_start',
     // 'storm_end', 'flyover', 'flare', 'rescued', 'noticed_loss', 'healed'
     kind: t.string(),

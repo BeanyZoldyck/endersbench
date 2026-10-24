@@ -26,7 +26,6 @@ export type Collider = {
   x2: number; // a circle has x2 = x1, y2 = y1
   y2: number;
   r: number;
-  burns: boolean;
 };
 
 const STEER_CLEARANCE = 0.25;
@@ -43,8 +42,8 @@ export function closestOnSegment(c: Collider, px: number, py: number): [number, 
 // Everything solid in the world this tick. Agents and wolves are handled separately.
 export function staticColliders(ctx: Ctx, w: World): Collider[] {
   const out: Collider[] = [];
-  const circle = (tag: Collider['tag'], id: bigint, x: number, y: number, r: number, burns = false) =>
-    out.push({ tag, id, x1: x, y1: y, x2: x, y2: y, r, burns });
+  const circle = (tag: Collider['tag'], id: bigint, x: number, y: number, r: number) =>
+    out.push({ tag, id, x1: x, y1: y, x2: x, y2: y, r });
 
   for (const n of ctx.db.resourceNode.iter()) {
     if (!isWoody(n.kind)) continue;
@@ -58,16 +57,15 @@ export function staticColliders(ctx: Ctx, w: World): Collider[] {
         x2: n.x + Math.cos(n.angle) * FALLEN_TREE_LENGTH,
         y2: n.y + Math.sin(n.angle) * FALLEN_TREE_LENGTH,
         r: TREE_RADIUS * 0.7,
-        burns: false,
       });
     } else circle('tree', n.id, n.x, n.y, TREE_RADIUS);
   }
   for (const c of ctx.db.container.iter()) {
     if (c.kind === 'chest') circle('chest', c.id, c.x, c.y, CHEST_RADIUS);
   }
-  for (const s of ctx.db.structure.iter()) if (s.kind !== 'shelter') circle('fire', s.id, s.x, s.y, FIRE_RADIUS, s.lit);
+  for (const s of ctx.db.structure.iter()) if (s.kind !== 'shelter') circle('fire', s.id, s.x, s.y, FIRE_RADIUS);
   const f = wreckFuselage(w);
-  out.push({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius, burns: false });
+  out.push({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius });
   return out;
 }
 

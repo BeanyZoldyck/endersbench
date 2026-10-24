@@ -84,7 +84,6 @@ function fellTree(ctx: Ctx) {
     x2: tree.x + Math.cos(angle) * FALLEN_TREE_LENGTH,
     y2: tree.y + Math.sin(angle) * FALLEN_TREE_LENGTH,
     r: TREE_RADIUS * 0.7,
-    burns: false,
   };
   for (const a of people) {
     const [cx, cy] = closestOnSegment(log, a.x, a.y);
