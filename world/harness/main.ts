@@ -14,7 +14,8 @@ import { systemPrompt } from './prompt.js';
 const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = process.env.SPACETIMEDB_DB_NAME ?? 'endersbench';
 const ROSTER = process.env.ROSTER ?? 'Ada:fake,Bo:fake,Cy:fake,Di:fake';
-const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'charter';
+const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'reward';
+const TIME_SCALE = process.env.TIME_SCALE ? Number(process.env.TIME_SCALE) : undefined;
 const TIMEOUT_MS = Number(process.env.DECISION_TIMEOUT_MS ?? 20_000);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -108,6 +109,12 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
     for (const r of roster) {
       await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
+    // Slowing the world gives slow models more game time per decision; it is
+    // recorded with the run, never applied silently.
+    if (TIME_SCALE !== undefined) await conn.reducers.setTimeScale({ timeScale: TIME_SCALE });
+    await conn.reducers.setRunInfo({
+      info: JSON.stringify({ promptVariant: PROMPT_VARIANT, systemPrompt: system, roster, timeScale: TIME_SCALE ?? 1, startedAt: new Date().toISOString() }),
+    });
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();
 }

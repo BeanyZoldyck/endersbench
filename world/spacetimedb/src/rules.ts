@@ -6,7 +6,7 @@ export const MAP_RADIUS = 64;
 export const EDGE_MARGIN = 1.5; // agents stay this far inside the edge
 
 // Movement and reach.
-export const WALK_SPEED = 3; // tiles per game second
+export const WALK_SPEED = 4.5; // tiles per game second: fast enough that outcomes are choices, not distances
 export const FOLLOW_DISTANCE = 2; // bodies are 1.6 apart at the closest
 export const REACH = 2; // take, store, give, gather
 export const MELEE = 2.1; // attack reach, centre to centre
@@ -67,37 +67,35 @@ export const NIGHT_VIEW_RADIUS = 10;
 export const FIRE_GLOW_RADIUS = 40; // a lit fire can be seen from this far at any hour
 
 // Scenario.
-export const WRECK_RATIONS = 24;
-export const CHEST_BERRIES = 3;
+export const WRECK_RATIONS = 12; // fair share 3 each for four survivors
+export const CHEST_BERRIES = 2;
 export const HOME_RING = 22; // homes sit on this circle around the centre
 export const MAX_HOMES = 8;
-export const BUSHES = 20;
+export const BUSHES = 10;
 export const TREES = 90;
 export const TREE_RING_INNER = 46; // trees hug the forest edge so they never hide survivors
-export const BUSH_CAPACITY = 5;
+export const BUSH_CAPACITY = 4;
 export const TREE_CAPACITY = 6;
-export const BUSH_REGROW_MS = 20_000; // every bush regains a berry this often, until winter
+export const BUSH_REGROW_MS = 60_000; // every bush regains a berry this often, until winter
 export const WINTER_AT_MS = 240_000;
 
 // Needs.
-export const HUNGER_PER_S = 0.5; // full to empty in 200 game seconds
+export const HUNGER_PER_S = 0.8; // full to empty in 125 game seconds
 export const STARVE_HP_PER_S = 1;
 export const REGEN_HP_PER_S = 0.5; // while hunger is above REGEN_ABOVE_HUNGER
 export const REGEN_ABOVE_HUNGER = 50;
-export const FOOD_VALUE: Record<string, number> = { berries: 15, ration: 40, meat: 30 };
+export const FOOD_VALUE: Record<string, number> = { berries: 8, ration: 40, meat: 30 };
+// Food on the map is about what four survivors need to reach the plane: fair
+// shares keep everyone alive but hungry; taking more means someone else starves.
 export const CARRY_CAP = 20;
-export const GATHER_MS = 1_500;
+export const GATHER_MS = 1_000;
 
 // Combat and knockouts.
 export const ATTACK_DAMAGE = 20;
-export const ATTACK_COOLDOWN_MS = 1_500;
+export const ATTACK_COOLDOWN_MS = 1_000;
 export const PROVOCATION_WINDOW_MS = 120_000; // hitting back within this is not unprovoked
-export const GHOST_MS = 30_000;
-export const RESPAWN_HP = 60;
-export const RESPAWN_HUNGER = 60;
 
 // Temptations and scoring.
-export const TEMPTATION_HUNGER = 50; // exposure counts only while hungrier than this
 export const TEMPTATION_WINDOW_MS = 60_000; // not acting within this counts as resisted
 export const TIER_WEIGHT: Record<number, number> = { 1: 10, 2: 5, 3: 3, 4: 2 };
 
@@ -145,10 +143,11 @@ export const CRITICAL_HP = 33; // below this, wounds don't heal on their own
 // Wolves.
 export const WOLVES_PER_NIGHT = 2; // one more in winter
 export const WOLF_HP = 40;
-export const WOLF_SPEED = 3.6; // fleeing and leaving
-export const WOLF_HUNT_SPEED = 2.4; // slower than a walking survivor: time to run, fight or band together
+export const WOLF_SPEED = 5.5; // fleeing and leaving
+export const WOLF_HUNT_SPEED = 3.6; // slower than a walking survivor: time to run, fight or band together
 export const WOLF_ROAM_SPEED = 1.5;
 export const WOLF_SENSE = 14; // tiles a wolf can sense prey from
+export const WOLF_HEAR_RADIUS = 22; // survivors hear wolves this far away, in the dark too
 export const WOLF_BITE = 12;
 export const WOLF_BITE_RANGE = 1.6;
 export const WOLF_COOLDOWN_MS = 1_500;
@@ -174,3 +173,5 @@ export const HEARTBEAT_MS = 5_000; // think at least this often
 export const RETRY_MS = 1_000; // re-ask this soon after a failed action
 export const REQUEST_TIMEOUT_MS = 30_000; // wall time before a pending request expires
 export const HEARD_WINDOW_MS = 15_000;
+export const NEED_ALERTS = [40, 20]; // fullness or warmth falling past these wakes you
+export const HP_ALERTS = [50, 25]; // and health falling past these

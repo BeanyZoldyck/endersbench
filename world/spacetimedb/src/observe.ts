@@ -5,9 +5,10 @@ import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
-import { HEAR_RADIUS, HEARD_WINDOW_MS, OBS_MEMORIES, REACH, SHELTER_RADIUS } from './rules';
-import { fireVisible, inBuiltShelter, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
+import { FIRE_WARMTH_PER_S, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, REACH, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
+import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
+import { coldPerSecond } from './sim';
 
 const MAX_RESOURCES = 10;
 const TREELINE_TREES = 3;
@@ -103,13 +104,24 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     }));
 
   // Whispers reach only the two people in them.
-  const wolves = near([...ctx.db.mob.iter()]).map(({ r: m, d }) => ({
-    id: Number(m.id),
-    x: round1(m.x),
-    y: round1(m.y),
-    distance: round1(d),
-    doing: m.state === 'hunt' ? (m.targetAgentId === me.id ? 'hunting you' : 'hunting') : m.state,
-  }));
+  // Wolves are heard before they are seen, and one hunting you is always known.
+  const wolves = [...ctx.db.mob.iter()]
+    .map(m => ({ m, d: distance(me.x, me.y, m.x, m.y), seen: sees(me.x, me.y, m.x, m.y) }))
+    .filter(({ m, d, seen }) => seen || d <= WOLF_HEAR_RADIUS || m.targetAgentId === me.id)
+    .sort((a, b) => a.d - b.d)
+    .map(({ m, d, seen }) => {
+      const huntingYou = m.state === 'hunt' && m.targetAgentId === me.id;
+      return {
+        id: Number(m.id),
+        x: round1(m.x),
+        y: round1(m.y),
+        distance: round1(d),
+        heard: !seen,
+        doing: m.state === 'hunt' ? (huntingYou ? 'hunting you' : 'hunting') : m.state,
+        hp: m.hp,
+        ...(huntingYou ? { reachesYouInSeconds: round1(Math.max(0, d - WOLF_BITE_RANGE) / WOLF_HUNT_SPEED) } : {}),
+      };
+    });
   const storm = stormActive(ctx, w.gameTimeMs);
 
   const heard = [...ctx.db.message.iter()]
@@ -151,6 +163,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       role: me.role,
       backstory: me.backstory,
       warmth: round1(me.warmth),
+      forecast: forecast(ctx, w, me),
       pinned: me.pinned,
       sheltered: sheltered(w, me.x, me.y) || inBuiltShelter(ctx, me.x, me.y),
       doing: describeIntent(ctx, me),
@@ -202,5 +215,23 @@ function shelterView(ctx: Ctx, me: Agent) {
     youAreInside: distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
     // Only a finished shelter keeps out the cold and the wolves.
     protectsYou: s.woodNeeded === 0 && distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
+  };
+}
+
+// How long your fullness, warmth and health last at current rates, using the
+// same rates the simulation applies. null means it is not falling.
+function forecast(ctx: Ctx, w: World, me: Agent) {
+  const fires = litFires(ctx);
+  const warming = inFirelight(fires, me.x, me.y);
+  const cold = warming || inBuiltShelter(ctx, me.x, me.y)
+    ? 0
+    : (coldPerSecond(w) + (stormActive(ctx, w.gameTimeMs) ? STORM_COLD_PER_S : 0)) * (sheltered(w, me.x, me.y) ? SHELTER_FACTOR : 1);
+  const losingHpPerSecond = (me.hunger <= 0 ? STARVE_HP_PER_S : 0) + (me.warmth <= 0 && cold > 0 ? FREEZE_HP_PER_S : 0) + (me.pinned ? PINNED_HP_PER_S : 0);
+  return {
+    secondsUntilStarving: Math.round(me.hunger / HUNGER_PER_S),
+    secondsUntilFreezing: cold > 0 ? Math.round(me.warmth / cold) : null,
+    warmingBy: warming ? FIRE_WARMTH_PER_S : 0,
+    losingHpPerSecond,
+    secondsToLive: losingHpPerSecond > 0 ? Math.round(me.hp / losingHpPerSecond) : null,
   };
 }

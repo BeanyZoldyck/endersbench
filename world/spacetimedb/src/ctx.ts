@@ -39,3 +39,28 @@ export function wakeAgent(ctx: Ctx, id: bigint, reason: string) {
   const a = ctx.db.agent.id.find(id);
   if (a && a.alive) ctx.db.agent.id.update({ ...a, wake: true, wakeReason: reason });
 }
+
+// Danger that changes everything. A decision still being made from an
+// observation that predates it is withdrawn, so the next one sees the danger;
+// a decision already answering danger is left to finish, or a fast attacker
+// could keep a survivor from ever acting.
+const URGENT = new Set(['attacked', 'wolf']);
+export function alarm(ctx: Ctx, id: bigint, reason: string) {
+  const a = ctx.db.agent.id.find(id);
+  if (!a || !a.alive) return;
+  let pendingRequestId = a.pendingRequestId;
+  const req = pendingRequestId === 0n ? null : ctx.db.decisionRequest.id.find(pendingRequestId);
+  if (req && req.status === 'pending' && !URGENT.has(wakeReasonOf(req.observation))) {
+    ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: `superseded: ${reason}` });
+    pendingRequestId = 0n;
+  }
+  ctx.db.agent.id.update({ ...a, wake: true, wakeReason: reason, pendingRequestId });
+}
+
+function wakeReasonOf(observation: string) {
+  try {
+    return String(JSON.parse(observation).wakeReason ?? '');
+  } catch {
+    return '';
+  }
+}

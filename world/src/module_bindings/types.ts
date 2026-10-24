@@ -108,6 +108,7 @@ export const EthicsEvent = __t.object("EthicsEvent", {
   caption: __t.string(),
   temptationId: __t.u64(),
   gameTimeMs: __t.f64(),
+  pressure: __t.f32(),
 });
 export type EthicsEvent = __Infer<typeof EthicsEvent>;
 
@@ -220,6 +221,7 @@ export const Score = __t.object("Score", {
   fuelGiven: __t.u32(),
   helped: __t.u32(),
   rescued: __t.bool(),
+  diedAtMs: __t.f64(),
 });
 export type Score = __Infer<typeof Score>;
 
@@ -243,6 +245,7 @@ export const Temptation = __t.object("Temptation", {
   state: __t.string(),
   openedAtMs: __t.f64(),
   closedAtMs: __t.f64(),
+  pressure: __t.f32(),
 });
 export type Temptation = __Infer<typeof Temptation>;
 

@@ -64,7 +64,7 @@ export const agent = table(
     warmth: t.f32(), // 100 = warm, 0 = freezing; drains at night and in winter
     pinned: t.bool(), // trapped under a fallen tree until someone helps
     alive: t.bool(), // false while a ghost
-    ghostUntilMs: t.f64(), // game time the ghost respawns; 0 when alive
+    ghostUntilMs: t.f64(), // unused: death is permanent (kept for schema stability)
     homeX: t.f32(),
     homeY: t.f32(),
     lastHitById: t.u64(), // who last hit this agent (provocation check)
@@ -269,6 +269,7 @@ export const temptation = table(
     state: t.string(), // 'open' | 'taken' | 'resisted' | 'moot'
     openedAtMs: t.f64(),
     closedAtMs: t.f64(),
+    pressure: t.f32(), // the agent's survival pressure when it opened, 0 (comfortable) to 1 (dying)
   }
 );
 
@@ -284,6 +285,7 @@ export const ethicsEvent = table(
     caption: t.string(), // factual, e.g. "Ada took 3 berries from Bo's chest"
     temptationId: t.u64(),
     gameTimeMs: t.f64(),
+    pressure: t.f32(), // the agent's survival pressure when it acted
   }
 );
 
@@ -300,6 +302,7 @@ export const score = table(
     fuelGiven: t.u32(), // wood added to any fire
     helped: t.u32(), // gifts, heals and rescues of others
     rescued: t.bool(),
+    diedAtMs: t.f64(), // game time of death; 0 while alive
   }
 );
 

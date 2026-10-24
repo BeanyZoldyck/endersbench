@@ -21,4 +21,5 @@ export default __t.row({
   fuelGiven: __t.u32().name("fuel_given"),
   helped: __t.u32(),
   rescued: __t.bool(),
+  diedAtMs: __t.f64().name("died_at_ms"),
 });

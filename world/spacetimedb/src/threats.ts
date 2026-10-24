@@ -1,7 +1,7 @@
 // Things that threaten everyone: wolves at night, the storm, falling trees.
 
 import type { Agent, Ctx, World } from './ctx';
-import { centre, distance, getWorld, wakeAgent } from './ctx';
+import { alarm, centre, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, resolveTemptation } from './ethics';
 import { add } from './items';
 import { remember, tellEveryone, witness } from './memory';
@@ -9,6 +9,7 @@ import { type Collider, closestOnSegment, resolve } from './physics';
 import { inBuiltShelter, inFirelight, litFires } from './sight';
 import {
   AGENT_RADIUS,
+  ATTACK_COOLDOWN_MS,
   ATTACK_DAMAGE,
   EDGE_MARGIN,
   FALLEN_TREE_LENGTH,
@@ -223,7 +224,7 @@ export function stepWolves(ctx: Ctx, w: World, colliders: Collider[], dt: number
       if (prey) {
         state = 'hunt';
         target = prey.id;
-        if (prey.id !== m.targetAgentId) wakeAgent(ctx, prey.id, 'wolf');
+        if (prey.id !== m.targetAgentId) alarm(ctx, prey.id, 'wolf');
         const d = distance(prey.x, prey.y, m.x, m.y) || 1;
         dirX = (prey.x - m.x) / d;
         dirY = (prey.y - m.y) / d;
@@ -295,15 +296,18 @@ function bite(ctx: Ctx, m: Mob, prey: Agent) {
   const d = distance(m.x, m.y, prey.x, prey.y) || 1;
   const fresh = ctx.db.agent.id.find(prey.id)!;
   const hp = fresh.hp - WOLF_BITE;
+  // Reflex: someone bitten while busy turns and fights; someone already
+  // walking, following, fighting or helping keeps doing what they chose.
+  const reflex = !fresh.pinned && !['move_to', 'follow', 'attack', 'help'].includes(fresh.intentKind);
   ctx.db.agent.id.update({
     ...fresh,
     hp,
     kx: fresh.kx + ((prey.x - m.x) / d) * KNOCKBACK_SPEED * 0.6,
     ky: fresh.ky + ((prey.y - m.y) / d) * KNOCKBACK_SPEED * 0.6,
     stunnedUntilMs: fresh.pinned ? fresh.stunnedUntilMs : now + STUN_MS,
-    wake: true,
-    wakeReason: 'attacked',
+    ...(reflex ? { intentKind: 'attack', targetAgentId: 0n, targetNodeId: m.id, progressMs: ATTACK_COOLDOWN_MS, intentSinceMs: now } : {}),
   });
+  alarm(ctx, prey.id, 'attacked');
   ctx.db.hitEvent.insert({ attackerId: m.id, attackerIsMob: true, victimId: prey.id, victimIsMob: false, damage: WOLF_BITE, knockedOut: hp <= 0 });
   remember(ctx, { agentId: prey.id, kind: 'felt', text: 'A wolf bit you.', aboutAgentId: 0n, valence: 0 }, MEMORY_DEDUP_MS);
   return hp <= 0;

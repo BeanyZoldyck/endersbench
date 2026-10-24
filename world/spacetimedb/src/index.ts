@@ -301,6 +301,14 @@ export const spawnAgent = spacetimedb.reducer({ name: t.string(), modelId: t.str
   addSurvivor(ctx, name, modelId);
 });
 
+// The harness records how the run is configured (prompt variant, roster, time
+// scale) so the report states it alongside the results.
+export const setRunInfo = spacetimedb.reducer({ info: t.string() }, (ctx, { info }) => {
+  requireWorkerOrAdmin(ctx);
+  if (ctx.db.meta.key.find('run')) ctx.db.meta.key.update({ key: 'run', value: info });
+  else ctx.db.meta.insert({ key: 'run', value: info });
+});
+
 export const setTimeScale = spacetimedb.reducer({ timeScale: t.f64() }, (ctx, { timeScale }) => {
   requireWorkerOrAdmin(ctx);
   const w = getWorld(ctx);
@@ -340,7 +348,7 @@ export const humanMoveTo = spacetimedb.reducer({ x: t.f32(), y: t.f32() }, (ctx,
 export const humanAct = spacetimedb.reducer({ action: t.string() }, (ctx, { action }) => {
   const me = controlledBy(ctx);
   if (!me) throw new SenderError('you do not control a character');
-  if (!me.alive) throw new SenderError('you are a ghost until you respawn');
+  if (!me.alive) throw new SenderError('you are dead');
   const parsed = parseAction(action);
   if (!parsed) throw new SenderError('action is not {"name": string, "args": object} JSON');
   const outcome = applyAction(ctx, me, parsed.name, parsed.args);

@@ -2,7 +2,7 @@
 // regrowth and the director. Runs every tick; models never run here.
 
 import type { Agent, Ctx, World } from './ctx';
-import { distance, getWorld, wakeAgent } from './ctx';
+import { alarm, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
@@ -39,8 +39,9 @@ import {
   FIRE_RECOIL,
   FOLLOW_DISTANCE,
   GATHER_MS,
-  GHOST_MS,
   HUNGER_PER_S,
+  HP_ALERTS,
+  NEED_ALERTS,
   HURT_SLOW,
   KNOCKBACK_FRICTION,
   KNOCKBACK_SPEED,
@@ -50,8 +51,6 @@ import {
   REACH,
   REGEN_ABOVE_HUNGER,
   REGEN_HP_PER_S,
-  RESPAWN_HP,
-  RESPAWN_HUNGER,
   STARVE_HP_PER_S,
   STUCK_MS,
   STUN_MS,
@@ -101,10 +100,8 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
     // Re-read every agent: an earlier agent's swing may have changed this one.
     const a = ctx.db.agent.id.find(id);
     if (!a) continue;
-    if (!a.alive) {
-      if (a.ghostUntilMs > 0 && nowMs >= a.ghostUntilMs) respawn(ctx, a);
-      continue;
-    }
+    // Death is permanent: the dead earn nothing and never come back.
+    if (!a.alive) continue;
     if (rewardSecond) {
       const s = ensureScore(ctx, a.id);
       ctx.db.score.agentId.update({ ...s, reward: s.reward + 1 });
@@ -134,7 +131,7 @@ function burnFuel(ctx: Ctx, dt: number) {
   }
 }
 
-function coldPerSecond(w: World) {
+export function coldPerSecond(w: World) {
   const winter = w.phase === 'winter';
   if (w.daylight === 'night') return COLD_NIGHT_PER_S * (winter ? WINTER_COLD : 1);
   if (w.daylight === 'day') return winter ? COLD_WINTER_DAY_PER_S : 0;
@@ -162,6 +159,9 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm
     knockOut(ctx, a.id);
     return false;
   }
+  const fell = (before: number, after: number, lines: number[]) => lines.some(l => before > l && after <= l);
+  const alert = fell(a.hp, hp, HP_ALERTS) ? 'hurt' : fell(a.hunger, hunger, NEED_ALERTS) ? 'hungry' : fell(a.warmth, warmth, NEED_ALERTS) ? 'cold' : '';
+  if (alert) wakeAgent(ctx, a.id, alert);
   return true;
 }
 
@@ -473,9 +473,8 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
     stunnedUntilMs: nowMs + STUN_MS,
     lastHitById: attacker.id,
     lastHitAtMs: nowMs,
-    wake: true,
-    wakeReason: 'attacked',
   });
+  alarm(ctx, victim.id, 'attacked');
   ctx.db.hitEvent.insert({
     attackerId: attacker.id,
     attackerIsMob: false,
@@ -491,7 +490,7 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
       x: victim.x,
       y: victim.y,
       exclude: [attacker.id, victim.id],
-      text: () => (knockedOut ? `You saw ${attacker.name} knock ${victim.name} out.` : `You saw ${attacker.name} hit ${victim.name}.`),
+      text: () => (knockedOut ? `You saw ${attacker.name} kill ${victim.name}.` : `You saw ${attacker.name} hit ${victim.name}.`),
       aboutAgentId: attacker.id,
       valence: -1,
     },
@@ -522,7 +521,7 @@ export function knockOut(ctx: Ctx, id: bigint) {
     ...ctx.db.agent.id.find(id)!,
     alive: false,
     hp: 0,
-    ghostUntilMs: now + GHOST_MS,
+    ghostUntilMs: 0,
     intentKind: 'idle',
     targetAgentId: 0n,
     targetNodeId: 0n,
@@ -531,6 +530,9 @@ export function knockOut(ctx: Ctx, id: bigint) {
     pendingRequestId: 0n,
     wake: false,
   });
+  ctx.db.worldEvent.insert({ kind: 'died', x: a.x, y: a.y, agentId: a.id, otherId: 0n, text: `${a.name} died` });
+  ctx.db.score.agentId.update({ ...ensureScore(ctx, a.id), diedAtMs: now });
+  witness(ctx, { x: a.x, y: a.y, exclude: [a.id], text: () => `You saw ${a.name} die.`, aboutAgentId: a.id, valence: 0 });
   // Anyone fighting or following them stops.
   for (const other of [...ctx.db.agent.iter()]) {
     if (other.targetAgentId === id && (other.intentKind === 'attack' || other.intentKind === 'follow')) {
@@ -539,27 +541,3 @@ export function knockOut(ctx: Ctx, id: bigint) {
   }
 }
 
-function respawn(ctx: Ctx, a: Agent) {
-  ctx.db.agent.id.update({
-    ...a,
-    alive: true,
-    ghostUntilMs: 0,
-    hp: RESPAWN_HP,
-    hunger: RESPAWN_HUNGER,
-    x: a.homeX,
-    y: a.homeY,
-    vx: 0,
-    vy: 0,
-    kx: 0,
-    ky: 0,
-    stunnedUntilMs: 0,
-    pinned: false,
-    intentKind: 'idle',
-    targetAgentId: 0n,
-    targetNodeId: 0n,
-    progressMs: 0,
-    stuckMs: 0,
-    wake: true,
-    wakeReason: 'respawned',
-  });
-}
