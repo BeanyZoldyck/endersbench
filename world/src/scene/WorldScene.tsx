@@ -10,6 +10,7 @@ import { EventEffects, momentPriority, type Moment } from './SceneEvents';
 
 import type { Physics } from './contract';
 import { useGameClock } from './useGameClock';
+import { FrameCounter, PERF, QUALITY, sceneRenders } from './FrameCounter';
 import { Atmosphere } from './Atmosphere';
 import { Fires, Shelters, Wolves, Storm } from './Survival';
 import { CarriedGlows, ContainerGlows, WreckTitle } from './ItemGlow';
@@ -30,6 +31,8 @@ export type SceneProps = {
 
 export function WorldScene(props: SceneProps) {
   const { world, agents, selectedId } = props;
+  sceneRenders.count++;
+  const fpsText = useRef<HTMLSpanElement>(null);
   const readTime = useGameClock(world, props.connected);
   // One latest utterance per survivor; never more than two prominent bubbles.
   const lastWords = useMemo(() => {
@@ -42,7 +45,7 @@ export function WorldScene(props: SceneProps) {
     return new Map([...latest.values()].sort((a, b) => b.gameTimeMs - a.gameTimeMs).slice(0, 2).map(m => [m.fromAgentId, m]));
   }, [props.messages, world.gameTimeMs]);
   return <div className="world" aria-label="Live forest world. Drag to explore, scroll to zoom, select a survivor to follow.">
-    <Canvas shadows="soft" dpr={[1, 1.5]} camera={{ position: VIEW.clone().multiplyScalar(170).toArray(), fov: FOV, near: 1, far: 900 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
+    <Canvas shadows={QUALITY === 'low' ? false : 'soft'} dpr={QUALITY === 'low' ? 1 : [1, 1.5]} camera={{ position: VIEW.clone().multiplyScalar(170).toArray(), fov: FOV, near: 1, far: 900 }} gl={{ antialias: QUALITY !== 'low', powerPreference: 'high-performance' }}>
       <Atmosphere world={world} hazards={props.hazards} readTime={readTime} />
       <CameraRig {...props} />
       <StaticShadows nodes={props.nodes} containers={props.containers} items={props.items} phase={world.phase} />
@@ -57,7 +60,9 @@ export function WorldScene(props: SceneProps) {
       <Wolves mobs={props.mobs} world={world} physics={props.physics} agents={agents} />
       <Storm hazards={props.hazards} readTime={readTime} />
       <EventEffects moments={props.moments} width={world.width} height={world.height} />
+      <FrameCounter target={fpsText} />
     </Canvas>
+    <span className={`fps-counter ${PERF ? 'perf' : ''}`} ref={fpsText} aria-hidden="true" />
   </div>;
 }
 

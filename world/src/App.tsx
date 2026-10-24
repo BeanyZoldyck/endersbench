@@ -18,6 +18,10 @@ import { describeDeath } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
 
+// A replay doesn't show the live world, so it doesn't subscribe to it: the live
+// world's 20 Hz updates would otherwise re-render the page for nothing.
+const LIVE = { enabled: !new URLSearchParams(window.location.search).has('replay') };
+
 // How long the booth tour stays on each exhibit.
 const TOUR_MS = 40_000;
 
@@ -38,19 +42,19 @@ function recent<T extends { gameTimeMs: number }>(rows: readonly T[], count: num
 export default function App() {
   const { isActive, identity, getConnection } = useSpacetimeDB();
   const conn = getConnection() as DbConnection | null;
-  const [worlds, worldReady] = useTable(tables.world);
-  const [liveAgents, agentsReady] = useTable(tables.agent);
-  const [liveNodes, nodesReady] = useTable(tables.resourceNode);
-  const [liveContainers, containersReady] = useTable(tables.container);
-  const [liveItems, itemsReady] = useTable(tables.item);
-  const [liveMessages, messagesReady] = useTable(tables.message);
-  const [ethics, ethicsReady] = useTable(tables.ethicsEvent);
-  const [metadata, metadataReady] = useTable(tables.meta);
-  const [liveStructures, structuresReady] = useTable(tables.structure);
-  const [liveMobs, mobsReady] = useTable(tables.mob);
-  const [liveHazards, hazardsReady] = useTable(tables.hazard);
-  const [liveMemories, memoriesReady] = useTable(tables.memory);
-  const [liveTemptations] = useTable(tables.temptation);
+  const [worlds, worldReady] = useTable(tables.world, LIVE);
+  const [liveAgents, agentsReady] = useTable(tables.agent, LIVE);
+  const [liveNodes, nodesReady] = useTable(tables.resourceNode, LIVE);
+  const [liveContainers, containersReady] = useTable(tables.container, LIVE);
+  const [liveItems, itemsReady] = useTable(tables.item, LIVE);
+  const [liveMessages, messagesReady] = useTable(tables.message, LIVE);
+  const [ethics, ethicsReady] = useTable(tables.ethicsEvent, LIVE);
+  const [metadata, metadataReady] = useTable(tables.meta, LIVE);
+  const [liveStructures, structuresReady] = useTable(tables.structure, LIVE);
+  const [liveMobs, mobsReady] = useTable(tables.mob, LIVE);
+  const [liveHazards, hazardsReady] = useTable(tables.hazard, LIVE);
+  const [liveMemories, memoriesReady] = useTable(tables.memory, LIVE);
+  const [liveTemptations] = useTable(tables.temptation, LIVE);
   // ?replay=/runs/<dir>/replay.json plays a recorded run with no database.
   const replayUrl = useMemo(() => new URLSearchParams(window.location.search).get('replay'), []);
   // ?tour: an unattended booth plays the exhibits in turn, one page each.
@@ -73,8 +77,8 @@ export default function App() {
     ? [`${runConfig.promptVariant} prompt`, runConfig.foodScale && runConfig.foodScale !== 1 ? `food ${runConfig.foodScale}x` : '', runConfig.rescueSeats ? `${runConfig.rescueSeats} seats` : '', rulesVersion ? `rules v${rulesVersion}` : ''].filter(Boolean).join(' · ')
     : '';
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
-  const [scores, scoresReady] = useTable(tables.score);
-  const [modelHealth] = useTable(tables.modelHealth);
+  const [scores, scoresReady] = useTable(tables.score, LIVE);
+  const [modelHealth] = useTable(tables.modelHealth, LIVE);
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
@@ -100,7 +104,7 @@ export default function App() {
   const structures = recorded?.structures ?? preview?.structures ?? liveStructures, mobs = recorded?.mobs ?? preview?.mobs ?? liveMobs, hazards = recorded?.hazards ?? preview?.hazards ?? liveHazards, memories = recorded?.memories ?? preview?.memories ?? liveMemories;
   const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations;
   const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
-  const ready = worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
+  const ready = !LIVE.enabled ? !!recorded : worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));
   const latestEvents = useMemo(() => recent(ethicsRows, 40), [ethicsRows]);
@@ -232,7 +236,7 @@ function Inventory({ items }: { items: readonly Item[] }) {
   return <p className="inventory">{items.filter(i => i.qty > 0).map(i => itemCount(i.kind, i.qty)).join(' · ') || 'Empty hands'}</p>;
 }
 function ActionInspector({ names }: { names: Map<bigint, string> }) {
-  const [logs] = useTable(tables.actionLog);
+  const [logs] = useTable(tables.actionLog, LIVE);
   const entries = useMemo(() => recent(logs, 8), [logs]);
   return <details><summary>Recent reducer actions</summary><ol className="technical-log">{entries.map(l => <li key={String(l.id)}><strong>{names.get(l.agentId) ?? 'Survivor'}</strong><code>{l.action}</code>{!l.ok && <span>{l.error}</span>}</li>)}</ol></details>;
 }

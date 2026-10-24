@@ -71,6 +71,14 @@ Each opens its replay a few seconds before the moment. `src/exhibits.test.ts` ch
 
 **Unattended booth:** open `http://localhost:5173/?tour`. It plays the exhibits in turn, 40 seconds each, with a card naming each one, and loops. It needs no server and no credits.
 
+## Frame rate
+
+The bottom-left of the stage shows frames per second.
+- **`?perf`:** adds the slowest frame, draw calls, triangles and scene re-renders per second.
+- **Automatic fallback:** if the frame rate stays under 30 for three seconds, the scene drops shadows and pixel ratio once, and the counter says "low quality".
+- **`?quality=high`:** keeps full quality (use it for recording videos).
+- **`?quality=low`:** starts without shadows or antialiasing, for a weak laptop.
+
 ## In any replay
 
 - **`?t=m:ss`** opens the replay at that moment.
