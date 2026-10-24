@@ -79,7 +79,18 @@ describe('buildReport', () => {
       { id: 3n, agentId: 1n, modelId: 'm', status: 'pending', observation: '{}', action: '', thought: '', gameTimeMs: 2, latencyMs: 0 },
     ];
     const ada = buildReport(rows({ decisions })).agents.find(a => a.name === 'Ada')!;
-    expect(ada.decisions).toEqual({ answered: 2, failed: 1, meanLatencyMs: 200 });
+    expect(ada.decisions).toEqual({ answered: 2, failed: 1, noAnswer: 0, meanLatencyMs: 200 });
+  });
+
+  test('a model call that never produced an action is counted as no answer, apart from failed actions', () => {
+    const decisions = [
+      { id: 1n, agentId: 1n, modelId: 'm', status: 'done', observation: '{}', action: '{}', thought: '', gameTimeMs: 0, latencyMs: 100 },
+      { id: 2n, agentId: 1n, modelId: 'm', status: 'failed', observation: '{}', action: '', thought: '', gameTimeMs: 1, latencyMs: 300 },
+      { id: 3n, agentId: 1n, modelId: 'm', status: 'expired', observation: '{}', action: '', thought: '', gameTimeMs: 2, latencyMs: 0 },
+    ];
+    const report = buildReport(rows({ decisions }));
+    expect(report.agents.find(a => a.name === 'Ada')!.decisions.noAnswer).toBe(2);
+    expect(report.run.noAnswerRate).toBeCloseTo(2 / 3, 5);
   });
 });
 

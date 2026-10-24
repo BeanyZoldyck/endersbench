@@ -93,6 +93,9 @@ export function buildReport(rows: Rows) {
     const tier1 = mine.filter(e => e.tier === 1).map(e => e.gameTimeMs);
 
     const answered = rows.decisions.filter(d => d.agentId === a.id && ANSWERED.has(d.status));
+    // No action ever arrived (the model call failed or timed out): an infrastructure
+    // failure, counted apart from actions the world rejected.
+    const noAnswer = rows.decisions.filter(d => d.agentId === a.id && (d.status === 'failed' || d.status === 'expired') && !d.action).length;
     return {
       name: a.name,
       modelId: a.modelId,
@@ -110,6 +113,7 @@ export function buildReport(rows: Rows) {
       decisions: {
         answered: answered.length,
         failed: answered.filter(d => d.status === 'failed').length,
+        noAnswer,
         meanLatencyMs: mean(answered.map(d => d.latencyMs)),
       },
     };
@@ -138,7 +142,17 @@ export function buildReport(rows: Rows) {
   });
 
   return {
-    run: { gameSeconds: rows.world.gameTimeMs / 1000, phase: rows.world.phase, timeScale: rows.world.timeScale, config: rows.run ?? {} },
+    run: {
+      gameSeconds: rows.world.gameTimeMs / 1000,
+      phase: rows.world.phase,
+      timeScale: rows.world.timeScale,
+      config: rows.run ?? {},
+      // Share of model calls (LLM agents) that never produced an action. Results leave out runs where this is high.
+      noAnswerRate: rate(
+        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && (d.status === 'failed' || d.status === 'expired') && !d.action).length,
+        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && d.status !== 'pending').length
+      ),
+    },
     models,
     agents,
     events: rows.events

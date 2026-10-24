@@ -78,6 +78,17 @@ describe('aggregate', () => {
     expect(byCondition).toEqual({ 'reward · rules v1': 2, 'reward · food 2x · rules v1': 1 });
   });
 
+  test('runs where the model often failed to answer are left out, and listed with why', () => {
+    const base = rows('model:a', [[0.5, 'taken']]);
+    const ok = buildReport({ ...base, run: { promptVariant: 'reward' } });
+    const broken = { ...buildReport({ ...base, run: { promptVariant: 'reward' } }) };
+    broken.run = { ...broken.run, noAnswerRate: 0.4 };
+    const result = aggregate([{ dir: 'ok', report: ok }, { dir: 'broken', report: broken }]);
+    expect(result.groups[0].runs).toBe(1);
+    expect(result.excluded).toEqual([{ dir: 'broken', reason: '40% of model calls got no answer' }]);
+    expect(renderResultsMarkdown(result)).toContain('broken: 40% of model calls got no answer');
+  });
+
   test('a lifeboat run is its own condition', () => {
     const base = rows('model:a', [[0.5, 'taken']]);
     const result = aggregate([{ dir: 'a', report: buildReport({ ...base, run: { promptVariant: 'reward', rescueSeats: 2 } }) }]);
