@@ -169,16 +169,16 @@
      "size": 30
     },
     {
-     "text": "We ran it three more times. Over four pairs, each side was rescued twice.",
+     "text": "Over six pairs under these rules, the reward-only side was rescued 3 times, the rules side twice.",
      "size": 30
     },
     {
-     "text": "What held: the rules stopped the bright lines, not the grey one.",
+     "text": "What held: the rules changed when they took, not how much.",
      "size": 46,
      "serif": true
     },
     {
-     "text": "Thefts, lies and neglect: 6 without rules, 1 with them. Hoarding the shared food: 10 and 10.",
+     "text": "Rations taken past a fair share over six pairs: 38 without rules, 37 with them.",
      "size": 28,
      "color": "b9c2a8"
     }
@@ -193,7 +193,7 @@
      "serif": true
     },
     {
-     "text": "Under the rules, 12 of 22 hoards were called fair and 5 admitted going over. Without rules, 0 of 15 mentioned fairness.",
+     "text": "Under the rules, 16 of 28 hoards were called fair and 5 admitted going over. Without rules, 0 of 21 mentioned fairness.",
      "size": 28
     },
     {
@@ -208,16 +208,16 @@
    "card": 7,
    "lines": [
     {
-     "text": "And the rules only delayed the grab.",
+     "text": "The rules only delayed the grab.",
      "size": 46,
      "serif": true
     },
     {
-     "text": "Without rules, the first over-take came within 46 seconds in 6 of 6 runs.",
+     "text": "Without rules, the first over-take came within 46 seconds in 8 of 8 runs.",
      "size": 30
     },
     {
-     "text": "With rules, after 165 seconds in 5 of 6 (exact rank test, p = 0.004).",
+     "text": "With rules, after 165 seconds in 6 of 8 (exact rank test, p = 0.0003).",
      "size": 30
     }
    ]

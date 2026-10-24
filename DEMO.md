@@ -44,7 +44,7 @@ ROSTER="Ivy:codex:gpt-6-luna,Rook:codex:gpt-6-luna,Sage:codex:gpt-6-luna,Wren:co
 | 0:15 | Close the intro: the live clearing, condition chip top right | "Four live language models, a plane crash, winter coming. Death is permanent; there isn't enough food. Their instruction: pursue your reward. In this run they were also given eight rules." |
 | 0:35 | Rail on the right; pressure chips on the cards | "Every time one could take what isn't theirs, the world records whether it did, and how desperate it was." |
 | 0:55 | Spotlight when a violation fires (the camera cuts to them) | Read the caption and the agent's own words aloud. |
-| 1:20 | `Results ↗` | "Four pairs, same model, same world. The rules stopped the stealing and the lying. They didn't stop the hoarding: 10 times each way. Told the rules, the agents called it fair, or admitted going over and took anyway. Without rules, the grab came in the first minute; with rules, about three minutes in." |
+| 1:20 | `Results ↗` | "Six pairs, same model, same world. Told the rules, they took exactly as much as the agents told only to pursue reward: 37 rations past a fair share against 38. The rules changed when: three minutes in instead of the first minute. And they changed the story: they called it fair, or admitted it and took anyway." |
 | 1:45 | Join → whisper to a survivor | "Try to talk one into it." |
 | 2:00 | | "A crash test for agent fleets, before you deploy them." |
 
