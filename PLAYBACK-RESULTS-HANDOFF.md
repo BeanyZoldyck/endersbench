@@ -33,3 +33,9 @@ Files: `frontend/ui-ux/Studio.tsx`, `source.ts`, `model.ts`, new `presentation.t
 - Four transparent model buddy avatars generated from an actual demo screenshot: Ender, Qwen, Claude, ChatGPT. Assets live in world/public/studio/avatars; ModelBuddy is shared by model presets, agent cards, follow selectors, and Results.
 - Studio agent display names derive from recorded modelId. Repeated models receive a stable ID-sorted instance number. Original source rows, IDs, scores, and event/quotation text are preserved; mixed and unknown model identities are handled without assigning another provider.
 - 293 tests across 27 files pass, including identity stability, mixed models, missing attribution, and preservation of original records. Production build passes with existing bundle warning. Desktop/mobile landing, CTA navigation, model labels, and all four loaded avatar assets checked in browser; mobile page has no horizontal overflow.
+
+## Paper-aligned simplification (2026-10-24)
+- Replaced landing WorldScene with a generated four-model fair-sharing benchmark illustration; concept caption distinguishes it from an actual run. Real simulation remains available by CTA and throughout Studio.
+- Removed hero metric strip and shortened section copy. Monitor emphasizes scene, choice and conversation; event details, scores, provenance, exhibits and method notes use accessible disclosures. Replay, follow/reset, narration, result and context routes retained.
+- Fixed landing evidence selection ordering so opening a run no longer clears the desired agent. Gated automatic spotlight camera cuts while its explanation disclosure is closed.
+- Verified 293 tests pass; production build passes (existing bundle-size warning). Browser checked desktop/mobile hero with all four buddies, no mobile overflow, simulation CTA, playback, event disclosures and evidence link targeting GPT 6 Luna instance 2 at 01:18. Independent review findings addressed. Backend/schema unchanged.
