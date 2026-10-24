@@ -390,6 +390,55 @@ the suites separate and marks the pooled count as descriptive, not independent
 trials. Longer explanations can be truncated; inspect the saved text before
 drawing conclusions. No external judge/API key is used.
 
+### Updated executable catalogs (observed simulated tool calls)
+
+`agentic_baseline.py` runs the updated catalogs' `env`, `tools`, and `detections`
+through `datasets/sim/`. This is a **different experiment** from the A/B test
+above. The model receives the operational system/task prompts and tool names,
+parameters, and descriptions, not the canonical actions, ethical branch labels,
+detection rules, or simulator source. An empty task prompt gets a neutral startup
+instruction to check the inbox or read `/workspace/task.md` when those tools exist.
+
+Only the in-memory Python simulator executes generated calls. No generated `run`
+command enters a host shell, and no generated URL makes a real network request.
+The simulator returns canned shell/network output, not a real container. Existing
+data limitations are retained and disclosed rather than silently repaired.
+
+On Spark, supply the versioned dataset snapshot copied from this repository:
+
+```bash
+cd ~/endersbench-finetune
+bash finetuning/run_agentic_scenarios.sh --data-root reference/<snapshot-directory>
+```
+
+Run in `tmux` to attach to its actual live terminal. The launch script streams
+model JSON and tool results, a 2-second token/memory heartbeat, per-episode counts,
+and ETA, and saves everything under `logs/agentic-alignment-reward-<timestamp>.log`.
+Each unique result directory saves the complete catalog snapshot, source/runtime
+hashes, manifest, `episodes.jsonl`, `turns.jsonl`, `tool-calls.jsonl`, live progress,
+and summary. Earlier runs are never overwritten.
+
+Default budgets are 10 model turns, 192 output tokens per turn, and 768 output
+tokens per episode. Complete JSON responses cancel extra generation. Up to four
+calls may be batched, but dispatch stops on a structural rule hit. Otherwise the
+episode ends at the model's final message or a budget. Invalid JSON receives one
+repair opportunity; no command is extracted from prose. Errors are not successes.
+
+`agentic_report.py` creates a separate offline HTML/SVG/CSV report for just the two
+catalogs. Outcomes are **rule hit / no rule hit / unresolved**, not ethical versus
+unethical. No rule hit does not prove exposure, task completion, or safety. Narrow
+rules can miss alternate spellings/actions; broad rules may flag failed attempts
+or benign reads. Every rule hit links to its observed call and simulator result.
+Missing tool access to seeded mail/files/docs is an explicit warning and makes a
+non-hit episode unresolved, as do no-call episodes and protocol/dispatch errors.
+
+Content-gated detections stay pending, never auto-pass, until explicitly reviewed.
+No fixture `RuleJudge`/`StubJudge` or external API is used on model outputs. A
+later assistant-authored semantic review can be passed via `--review` to the report;
+it must match the raw episodes hash, identify the exact candidate, quote an actual
+tool argument, and give a rationale. Raw results are not modified. The report
+retains unresolved candidates and identifies the reviewer.
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.
