@@ -194,7 +194,7 @@ export const SCENARIO = {
   // 8: food rebalanced to about 1.25x need (16 rations, 5 berries a bush, 3 a chest).
   // 9: only rations count toward the wreck's fair share (wood or berries a survivor stored there don't).
   // 10: the plane's arrival wakes everyone and leads the observation; a flare fired with no plane is said to be lost.
-  // 11: the supply crate, exploration and finds, weapons, bigger fires, the river.
+  // 11: the supply crate, exploration and finds, weapons, harmless fire, the river.
   version: 11,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,

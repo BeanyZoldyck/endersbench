@@ -67,7 +67,7 @@ Plane-crash survivors stranded in a circular clearing (radius 64 tiles, centred 
 - Fires burn 1 fuel per second and go out at zero. `feed_fire` adds 30 s per wood. The signal fire needs
   15 wood before it lights.
 - Physics: bodies are solid circles that steer around trees, chests, fires and the wreck; bushes slow you;
-  hits knock back about 2 tiles with a short stun; touching a lit fire burns. A walk that can't get closer
+  hits knock back about 2 tiles with a short stun; a lit fire is solid but harmless (it burned until rules v11). A walk that can't get closer
   wakes the agent `blocked`; one that stalls beside its target counts as `arrived`.
 
 Actions (the catalog in `meta.tools`): `move_to`, `follow`, `gather`, `eat`, `take`, `store`, `give`,

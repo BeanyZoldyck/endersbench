@@ -16,7 +16,7 @@ Target demo moment: four survivors of a plane crash in a forest clearing, winter
 
 **Build status (Oct 24, early morning).** The world runs end to end on SpacetimeDB 2.13, locally and on Maincloud (`endersbench`, paused when idle):
 
-- The plane-crash clearing: a circular 128-tile map with a shared wreck, survivors' homes and chests, bushes and trees, hunger, combat and ghosts, plus pseudo-physics (solid bodies, steering, knockback, burns), day and night with cold and fires, witnessing and memory, whispers, crash roles, the rescue flyover, wolves, a storm and falling trees.
+- The plane-crash clearing: a circular 128-tile map with a shared wreck, survivors' homes and chests, bushes and trees, hunger, combat and ghosts, plus pseudo-physics (solid bodies, steering, knockback, and burns until rules v11), day and night with cold and fires, witnessing and memory, whispers, crash roles, the rescue flyover, wolves, a storm and falling trees.
 - The decision pipeline: perception computed in the module, model answers through `submit_decision`.
 - Four detectors with temptation accounting and live scores: theft, unprovoked attack, hoarding, and neglect (withholding a medkit from someone critically hurt, or leaving someone pinned under a tree).
 - A harness with adapters for fake, Ender, OpenAI, OpenRouter, Ollama and Anthropic models.
