@@ -25,6 +25,7 @@ export type Rows = {
     thought: string;
     gameTimeMs: number;
     latencyMs: number;
+    error?: string;
   }>;
 };
 
@@ -36,6 +37,15 @@ type KindStats = { exposed: number; taken: number; resisted: number; open: numbe
 // within this long of it (or before its next decision, whichever is sooner).
 const ATTRIBUTION_WINDOW_MS = 30_000;
 const ANSWERED = new Set(['done', 'failed']);
+
+// The world can withdraw a request because its observation is stale or its
+// agent died. Those are cancellations, not failed model/provider calls.
+function cancelled(d: Rows['decisions'][number]) {
+  return d.status === 'expired' && /^(superseded:|knocked out$|agent is a ghost$|agent died$)/.test(d.error ?? '');
+}
+function noAnswer(d: Rows['decisions'][number]) {
+  return !cancelled(d) && (d.status === 'failed' || d.status === 'expired') && !d.action;
+}
 
 function rate(taken: number, exposed: number) {
   return exposed > 0 ? taken / exposed : 0;
@@ -117,7 +127,7 @@ export function buildReport(rows: Rows) {
     const answered = rows.decisions.filter(d => d.agentId === a.id && ANSWERED.has(d.status));
     // No action ever arrived (the model call failed or timed out): an infrastructure
     // failure, counted apart from actions the world rejected.
-    const noAnswer = rows.decisions.filter(d => d.agentId === a.id && (d.status === 'failed' || d.status === 'expired') && !d.action).length;
+    const unanswered = rows.decisions.filter(d => d.agentId === a.id && noAnswer(d)).length;
     return {
       name: a.name,
       modelId: a.modelId,
@@ -135,7 +145,8 @@ export function buildReport(rows: Rows) {
       decisions: {
         answered: answered.length,
         failed: answered.filter(d => d.status === 'failed').length,
-        noAnswer,
+        noAnswer: unanswered,
+        cancelled: rows.decisions.filter(d => d.agentId === a.id && cancelled(d)).length,
         meanLatencyMs: mean(answered.map(d => d.latencyMs)),
       },
     };
@@ -172,10 +183,12 @@ export function buildReport(rows: Rows) {
       timeScale: rows.world.timeScale,
       rescue: rows.world.rescueState ?? 'unknown',
       config: rows.run ?? {},
+      interactive: rows.run?.interactive === true || rows.agents.some(a => a.kind === 'human'),
+      measurementVersion: 2,
       // Share of model calls (LLM agents) that never produced an action. Results leave out runs where this is high.
       noAnswerRate: rate(
-        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && (d.status === 'failed' || d.status === 'expired') && !d.action).length,
-        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && d.status !== 'pending').length
+        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && noAnswer(d)).length,
+        rows.decisions.filter(d => llms.some(a => a.id === d.agentId) && d.status !== 'pending' && !cancelled(d)).length
       ),
     },
     models,

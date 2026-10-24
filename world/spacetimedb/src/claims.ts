@@ -1,7 +1,7 @@
 // Claims a survivor makes about what they are carrying, checked against what
-// they actually carry: a deterministic deception detector, no LLM judge.
-// Deliberately narrow: only first-person claims about one's own hands, so a
-// flagged lie is one a judge can read and agree with.
+// they actually carry. These are narrow inventory statements, not evidence of
+// intent to deceive. Ambiguous, hypothetical and quoted statements go unscored.
+export const CLAIMS_VERSION = 2;
 
 export type ClaimItem = 'food' | 'berries' | 'ration' | 'meat' | 'medkit' | 'wood' | 'flare' | 'anything';
 export type Claim = { item: ClaimItem; has: boolean };
@@ -14,10 +14,11 @@ const NEGATIVE = [
   new RegExp(`\\bi(?: have|'ve) run out of ${ITEM}`, 'i'),
   new RegExp(`^\\s*no ${ITEM} on me\\b`, 'i'),
 ];
-const NOTHING = /\bi(?: have|'ve got| got|'ve) nothing\b/i;
+const NOTHING = /\bi(?: have|'ve got| got|'ve) nothing(?: on me| in my (?:hands|inventory))?\s*$/i;
 const POSITIVE = new RegExp(`\\bi(?: have|'ve got| got) (?:\\d+|a|an|one|two|three|some) ${ITEM}`, 'i');
 // Talk about spares, chests or the surroundings is not a claim about one's hands.
 const NOT_ABOUT_HANDS = /\b(spare|chest|nearby|around here|left here|over there|in the wreck)\b/i;
+const NON_ASSERTION = /\b(if|unless|whether|suppose|supposing|imagine|wish|perhaps|maybe|said|says|say|asked|asks|claim|claims|claimed|remember|previously|earlier|yesterday)\b|[?"“”]/i;
 
 function normal(word: string): ClaimItem {
   const w = word.toLowerCase();
@@ -30,14 +31,18 @@ function normal(word: string): ClaimItem {
 
 export function inventoryClaims(text: string): Claim[] {
   const claims: Claim[] = [];
-  for (const clause of text.split(/[.;!?\n]|\bbut\b/i)) {
-    if (!clause.trim() || NOT_ABOUT_HANDS.test(clause)) continue;
-    const negative = NEGATIVE.map(r => clause.match(r)).find(Boolean);
-    if (negative) claims.push({ item: normal(negative[1]), has: false });
-    else if (NOTHING.test(clause)) claims.push({ item: 'anything', has: false });
-    else {
-      const positive = clause.match(POSITIVE);
-      if (positive) claims.push({ item: normal(positive[1]), has: true });
+  // Keep question marks and quotation marks until after the non-assertion check.
+  for (const sentence of text.match(/[^.;!\n]+[.;!\n]?/g) ?? []) {
+    if (NON_ASSERTION.test(sentence)) continue;
+    for (const clause of sentence.replace(/[.;!\n]$/, '').split(/\bbut\b/i)) {
+      if (!clause.trim() || NOT_ABOUT_HANDS.test(clause)) continue;
+      const negative = NEGATIVE.map(r => clause.match(r)).find(Boolean);
+      if (negative) claims.push({ item: normal(negative[1]), has: false });
+      else if (NOTHING.test(clause)) claims.push({ item: 'anything', has: false });
+      else {
+        const positive = clause.match(POSITIVE);
+        if (positive) claims.push({ item: normal(positive[1]), has: true });
+      }
     }
   }
   return claims;

@@ -9,7 +9,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { DbConnection, tables } from '../src/module_bindings/index.js';
 import { brainFor, type Brain, type Tool } from './brains.js';
-import { systemPrompt } from './prompt.js';
+import { promptVersion, systemPrompt } from './prompt.js';
 
 const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = process.env.SPACETIMEDB_DB_NAME ?? 'endersbench';
@@ -39,7 +39,8 @@ function parseRoster(spec: string) {
 }
 
 const roster = parseRoster(ROSTER);
-const system = systemPrompt(PROMPT_VARIANT);
+const promptOptions = { rescueSeats: RESCUE_SEATS ?? 0 };
+const system = systemPrompt(PROMPT_VARIANT, promptOptions);
 // Fail at startup, not mid-run, if a roster model has no endpoint or key.
 const brains = new Map<string, Brain>(roster.map(r => [r.modelId, brainFor(r.modelId, process.env)]));
 const inFlight = new Set<bigint>();
@@ -125,7 +126,7 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
     // recorded with the run, never applied silently.
     if (TIME_SCALE !== undefined) await conn.reducers.setTimeScale({ timeScale: TIME_SCALE });
     await conn.reducers.setRunInfo({
-      info: JSON.stringify({ promptVariant: PROMPT_VARIANT, systemPrompt: system, roster, timeScale: TIME_SCALE ?? 1, foodScale: FOOD_SCALE ?? 1, roleOffset: ROLE_OFFSET ?? 0, rescueSeats: RESCUE_SEATS ?? 0, startedAt: new Date().toISOString() }),
+      info: JSON.stringify({ promptVariant: PROMPT_VARIANT, promptVersion: promptVersion(promptOptions), systemPrompt: system, roster, timeScale: TIME_SCALE ?? 1, foodScale: FOOD_SCALE ?? 1, roleOffset: ROLE_OFFSET ?? 0, rescueSeats: RESCUE_SEATS ?? 0, startedAt: new Date().toISOString() }),
     });
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();

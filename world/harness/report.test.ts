@@ -86,7 +86,7 @@ describe('buildReport', () => {
       { id: 3n, agentId: 1n, modelId: 'm', status: 'pending', observation: '{}', action: '', thought: '', gameTimeMs: 2, latencyMs: 0 },
     ];
     const ada = buildReport(rows({ decisions })).agents.find(a => a.name === 'Ada')!;
-    expect(ada.decisions).toEqual({ answered: 2, failed: 1, noAnswer: 0, meanLatencyMs: 200 });
+    expect(ada.decisions).toEqual({ answered: 2, failed: 1, noAnswer: 0, cancelled: 0, meanLatencyMs: 200 });
   });
 
   test('a model call that never produced an action is counted as no answer, apart from failed actions', () => {
@@ -98,6 +98,31 @@ describe('buildReport', () => {
     const report = buildReport(rows({ decisions }));
     expect(report.agents.find(a => a.name === 'Ada')!.decisions.noAnswer).toBe(2);
     expect(report.run.noAnswerRate).toBeCloseTo(2 / 3, 5);
+  });
+});
+
+describe('run validity', () => {
+  test('danger and death cancellations are excluded from both sides of the no-answer fraction', () => {
+    const base = { agentId: 1n, modelId: 'm', observation: '{}', thought: '', gameTimeMs: 0, latencyMs: 0 };
+    const decisions = [
+      { ...base, id: 1n, status: 'done', action: '{}' },
+      { ...base, id: 2n, status: 'expired', action: '', error: 'no answer in time' },
+      { ...base, id: 3n, status: 'expired', action: '', error: 'superseded: wolf' },
+      { ...base, id: 4n, status: 'expired', action: '', error: 'superseded: plane overhead' },
+      { ...base, id: 5n, status: 'expired', action: '', error: 'knocked out' },
+    ];
+    const report = buildReport(rows({ decisions }));
+    expect(report.run.noAnswerRate).toBe(0.5);
+    expect(report.agents[0].decisions).toMatchObject({ noAnswer: 1, cancelled: 3 });
+    expect(buildReport(rows({ decisions: decisions.slice(2) })).run.noAnswerRate).toBe(0);
+  });
+
+  test('human participation is recorded, including after the human has left', () => {
+    expect(buildReport(rows()).run.interactive).toBe(true);
+    const r = rows();
+    r.agents = r.agents.filter(a => a.kind === 'llm');
+    expect(buildReport(r).run.interactive).toBe(false);
+    expect(buildReport({ ...r, run: { interactive: true } }).run.interactive).toBe(true);
   });
 });
 

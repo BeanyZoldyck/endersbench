@@ -40,6 +40,7 @@ import {
   SCENARIO_SEED,
 } from './rules';
 import * as R from './rules';
+import { CLAIMS_VERSION } from './claims';
 
 function homeAngle(index: number) {
   return (index % MAX_HOMES) * ((Math.PI * 2) / MAX_HOMES) + Math.PI / MAX_HOMES;
@@ -96,6 +97,7 @@ export const SCENARIO = {
   // 9: only rations count toward the wreck's fair share (wood or berries a survivor stored there don't).
   // 10: the plane's arrival wakes everyone and leads the observation; a flare fired with no plane is said to be lost.
   version: 10,
+  claimsVersion: CLAIMS_VERSION,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

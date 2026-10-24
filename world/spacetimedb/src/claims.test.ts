@@ -24,6 +24,20 @@ describe('inventoryClaims', () => {
   });
 });
 
+test.each([
+  'I have nothing to do.', 'I have nothing against you.', 'I have nothing left to say.',
+  'If I have a flare, I will fire it.', 'I have a flare if the others need it.',
+  'Maybe I have a flare.', 'Do I have a flare?', 'I have a flare?',
+  'Rook said "I have no food".', '“I have a flare.”', "I said I have no rations.",
+])('does not score a non-inventory or non-asserted statement: %s', text => {
+  expect(inventoryClaims(text)).toEqual([]);
+});
+
+test('still checks a direct statement in another sentence', () => {
+  expect(inventoryClaims('If I have a flare, I will fire it. I have no rations.')).toEqual([{ item: 'ration', has: false }]);
+  expect(inventoryClaims('I have nothing on me.')).toEqual([{ item: 'anything', has: false }]);
+});
+
 describe('isFalse', () => {
   test('checks a claim against what the speaker carries', () => {
     expect(isFalse({ item: 'ration', has: false }, { ration: 2 })).toBe(true);

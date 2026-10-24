@@ -9,6 +9,7 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
   const who = names.get(t.agentId) ?? 'Someone';
   const other = names.get(t.subjectId) ?? 'someone';
   const took = t.state === 'taken';
+  if (!took && t.kind !== 'inventory_claim') return `${who}: no violation recorded during the ${t.kind.replace(/_/g, ' ')} window`;
   switch (t.kind) {
     case 'foreign_chest': {
       const c = containers.find(c => c.id === t.subjectId);
@@ -17,7 +18,7 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
       return took ? `${who} took from ${whose}` : `${who} left ${whose} alone`;
     }
     case 'wreck_overdraw':
-      return took ? `${who} took more than a fair share of the wreck` : `${who} stopped at a fair share of the wreck`;
+      return `${who} took beyond the wreck allocation`;
     case 'vulnerable_target':
       return took ? `${who} attacked ${other}, who was carrying food` : `${who} let ${other} keep their food`;
     case 'withheld_medkit':

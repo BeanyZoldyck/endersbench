@@ -128,7 +128,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 @media (max-height:720px) { .masthead { top:22px; left:25px; } h1 { font-size:39px; margin:12px 0 4px; } .masthead p { font-size:11px; margin:8px 0; } .world-status { top:24px; right:25px; gap:12px; } .season strong { font-size:12px; } .season svg { width:24px; height:24px; } .spectator-dock { bottom:10px; left:25px; right:25px; } .scene-tools { margin-bottom:12px; } .cast-card { padding:11px 13px; } .cast-heading { margin-bottom:5px; } .colophon { display:none; } .detail-panel { right:25px; top:140px; max-height:calc(100dvh - 290px); padding:20px; } .event-caption { bottom:calc(100% + 10px); font-size:12px; } }
 @media (max-width:650px) { .masthead { top:22px; left:18px; } .brand { font-size:9px; letter-spacing:.12em; gap:6px; } .brand svg { width:22px; height:22px; } h1 { font-size:36px; } .masthead p { font-size:10px; max-width:210px; line-height:1.6; } .world-status { top:25px; right:18px; gap:14px; max-width:150px; } .connection { font-size:9px; text-align:right; } .season { gap:6px; } .season strong { font-size:11px; } .season span { font-size:8px; } .utility { gap:3px; } .utility button { font-size:9px; padding:5px 6px; } .spectator-dock { left:15px; right:15px; } .cast-card { flex:0 0 190px; } .cast-heading span+span { display:none; } .camera-hint { font-size:8px; } .camera-toggle button { padding:7px 12px; font-size:10px; } .detail-panel { right:15px; width:min(305px, calc(100vw - 30px)); top:155px; max-height:calc(100dvh - 330px); } .bubble { font-size:12px; max-width:190px; } .preview-banner { font-size:8px; } .preview-banner button { margin-left:8px; font-size:8px; } .event-caption { width:100%; max-width:100%; } }
 
-.stage { z-index:0; }
+.stage { z-index:0; isolation:isolate; }
 .masthead, .world-status, .spectator-dock { z-index:2; }
 .detail-panel { z-index:3; }
 .preview-banner { z-index:4; }
@@ -242,7 +242,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 /* The record: every temptation that closed, and every death. */
 .moments-rail { grid-area:side; width:300px; box-sizing:border-box; overflow:auto; scrollbar-width:thin; padding:18px 18px 22px; background:#f4eede; border:1px solid #fdf7e5aa; border-radius:14px; box-shadow:0 4px 20px #293f3914; }
 .moments-rail h2 { font:400 24px Georgia,serif; letter-spacing:-.02em; margin:4px 0 10px; }
-.rail-stats { display:flex; gap:12px; font-size:11px; color:#5f6c55; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:6px; }
+.rail-stats { display:flex; flex-wrap:wrap; gap:8px 12px; font-size:11px; color:#5f6c55; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:6px; }
 .rail-stats b { font-size:15px; color:#293f39; margin-right:2px; }
 .rail-stats .taken b { color:#b4533f; } .rail-stats .resisted b { color:#4f7d4c; }
 .moments-rail ol { list-style:none; padding:0; margin:0; }
@@ -262,17 +262,25 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .grave-tag .ghost-word { color:#c9c2ad; margin-left:4px; }
 
 /* Replay controls, over the bottom of the stage. */
-.replay-bar { position:absolute; z-index:5; left:50%; transform:translateX(-50%); bottom:14px; display:flex; align-items:center; gap:8px; padding:7px 12px; background:#f4eedef2; border:1px solid #fdf7e5aa; border-radius:12px; box-shadow:0 6px 24px #293f3926; font-size:11px; }
+.replay-bar { position:absolute; z-index:32; left:50%; transform:translateX(-50%); bottom:14px; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; width:max-content; max-width:calc(100% - 24px); padding:7px 12px; background:#f4eedef2; border:1px solid #fdf7e5aa; border-radius:12px; box-shadow:0 6px 24px #293f3926; font-size:11px; }
 .replay-bar.error { color:#8a3a28; }
 .replay-tag { font:700 9px/1 system-ui, sans-serif; letter-spacing:.1em; background:#2f3a36; color:#f0e4cc; padding:4px 6px; border-radius:4px; }
 .replay-bar button { background:#f0e4cc58; border:1px solid #526c4222; border-radius:6px; padding:4px 8px; font-size:11px; }
 .replay-bar button.active { background:#2f3a36; color:#f0e4cc; }
-.replay-bar input[type=range] { width:220px; accent-color:#7a5c40; }
+.replay-bar input[type=range] { width:clamp(100px, 20vw, 220px); accent-color:#7a5c40; }
 .replay-time { font-variant-numeric:tabular-nums; color:#4f5d4a; }
 .replay-source { color:#8a937e; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:1180px) { .replay-source { display:none; } }
+/* The stacked layout needs four explicit tracks; otherwise the rail takes
+   the stage's height and its playback controls overlap the status bar. */
+@media (max-width:850px) {
+  .app { height:auto; min-height:100dvh; overflow:visible; grid-template-rows:auto minmax(360px, 55dvh) auto auto; }
+  .moments-rail { width:auto; max-height:40dvh; }
+  .utility { flex-wrap:wrap; justify-content:flex-end; }
+}
 
 /* A violation, called out in the scene. */
-.spotlight { position:absolute; z-index:6; top:16px; left:50%; transform:translateX(-50%); width:min(560px, calc(100% - 32px)); box-sizing:border-box; padding:14px 18px 14px 20px; background:#fbf6eaf5; border:1px solid #fdf7e5; border-left:5px solid var(--agent-color); border-radius:12px; box-shadow:0 12px 40px #293f3940; animation:spotlight-in .35s ease-out; }
+.spotlight { position:absolute; z-index:31; top:16px; left:50%; transform:translateX(-50%); width:min(560px, calc(100% - 32px)); box-sizing:border-box; padding:14px 18px 14px 20px; background:#fbf6eaf5; border:1px solid #fdf7e5; border-left:5px solid var(--agent-color); border-radius:12px; box-shadow:0 12px 40px #293f3940; animation:spotlight-in .35s ease-out; }
 .spotlight-tier { font:700 10px/1 system-ui, sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#8a3a28; background:#f3d8cc; padding:4px 7px; border-radius:4px; }
 .spotlight.tier-2 .spotlight-tier { color:#7a4f12; background:#f5e2bf; }
 .spotlight.tier-3 .spotlight-tier, .spotlight.tier-4 .spotlight-tier { color:#5a5a2a; background:#ece6c8; }
@@ -281,6 +289,9 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .spotlight-pressure .bar { width:140px; height:6px; background:#293f3914; border-radius:3px; overflow:hidden; }
 .spotlight-pressure i { display:block; height:100%; background:linear-gradient(90deg,#c9b98a,#c46a4f); }
 .spotlight blockquote { margin:9px 0 0; font:italic 15px/1.45 Georgia,serif; color:#4f5d4a; }
+.spotlight-policy { font-size:12px; line-height:1.45; margin:10px 0 0; color:#4f5d4a; }
+.explanation-note { display:block; margin-top:8px; color:#5f6c55; font-size:11px; line-height:1.4; }
+.interactive-chip { font-size:11px; color:#704d18; background:#f5e2bf; padding:5px 8px; border-radius:7px; }
 @keyframes spotlight-in { from { opacity:0; transform:translate(-50%, -10px); } to { opacity:1; transform:translate(-50%, 0); } }
 @media (prefers-reduced-motion: reduce) { .spotlight { animation:none; } }
 

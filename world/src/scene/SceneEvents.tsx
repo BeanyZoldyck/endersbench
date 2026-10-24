@@ -103,7 +103,7 @@ export function useMoments(conn: DbConnection | null, agents: readonly Agent[], 
   const [events, setEvents] = useState<ObservedEvent[]>([]);
   const latest = useRef({ agents, containers, mobs, enabled, world }); latest.current = { agents, containers, mobs, enabled, world };
   useEffect(() => {
-    if (!conn) return;
+    if (!conn || !enabled) return;
     const on = (table: EventTable) => (_ctx: EventContext, e: HitEvent | TransferEvent | WorldEvent) => {
       const l = latest.current;
       if (!l.enabled) return;
@@ -117,7 +117,7 @@ export function useMoments(conn: DbConnection | null, agents: readonly Agent[], 
       subscription.unsubscribe();
       conn.db.hitEvent.removeOnInsert(hit); conn.db.transferEvent.removeOnInsert(transfer); conn.db.worldEvent.removeOnInsert(worldEvent);
     };
-  }, [conn, push, serial]);
+  }, [conn, enabled, push, serial]);
   return { moments, events };
 }
 

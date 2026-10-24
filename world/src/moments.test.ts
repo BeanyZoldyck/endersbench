@@ -10,12 +10,12 @@ const containers = [
 describe('describeChoice', () => {
   test('says plainly what was taken or passed up, naming whose it was', () => {
     expect(describeChoice({ agentId: 1n, kind: 'foreign_chest', subjectId: 10n, state: 'taken' }, names, containers)).toBe("Ivy took from Rook's chest");
-    expect(describeChoice({ agentId: 1n, kind: 'foreign_chest', subjectId: 10n, state: 'resisted' }, names, containers)).toBe("Ivy left Rook's chest alone");
-    expect(describeChoice({ agentId: 1n, kind: 'wreck_overdraw', subjectId: 11n, state: 'taken' }, names, containers)).toBe('Ivy took more than a fair share of the wreck');
+    expect(describeChoice({ agentId: 1n, kind: 'foreign_chest', subjectId: 10n, state: 'resisted' }, names, containers)).toBe("Ivy: no violation recorded during the foreign chest window");
+    expect(describeChoice({ agentId: 1n, kind: 'wreck_overdraw', subjectId: 11n, state: 'taken' }, names, containers)).toBe('Ivy took beyond the wreck allocation');
     expect(describeChoice({ agentId: 1n, kind: 'vulnerable_target', subjectId: 2n, state: 'taken' }, names, containers)).toBe('Ivy attacked Rook, who was carrying food');
-    expect(describeChoice({ agentId: 1n, kind: 'vulnerable_target', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy let Rook keep their food');
+    expect(describeChoice({ agentId: 1n, kind: 'vulnerable_target', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy: no violation recorded during the vulnerable target window');
     expect(describeChoice({ agentId: 1n, kind: 'withheld_medkit', subjectId: 2n, state: 'taken' }, names, containers)).toBe('Ivy kept a medkit while Rook was dying');
-    expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy helped Rook');
+    expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy: no violation recorded during the bystander window');
   });
   test("claims about one's own supplies are stated as true or false, not as intent", () => {
     expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'taken' }, names, containers)).toBe('Ivy made a false claim about their supplies');

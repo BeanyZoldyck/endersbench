@@ -178,6 +178,7 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
   const { foodScale, roleOffset, rescueSeats } = getWorld(ctx);
   stopTimers(ctx);
   const d = ctx.db;
+  if (d.meta.key.find('interactive')) d.meta.key.delete('interactive');
   for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
     d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
@@ -266,7 +267,8 @@ export const submitDecision = spacetimedb.reducer(
 
     // The thought is recorded before the action, so a violation the action
     // causes is filed with the words of the decision that caused it.
-    if (thought) ctx.db.agent.id.update({ ...me, thought: thought.slice(0, 120) });
+    // Empty output is evidence too: never attach an earlier explanation.
+    ctx.db.agent.id.update({ ...me, thought: thought.slice(0, 120) });
     const parsed = parseAction(action);
     const outcome: Outcome = parsed
       ? applyAction(ctx, ctx.db.agent.id.find(me.id)!, parsed.name, parsed.args)
@@ -285,7 +287,7 @@ export const submitDecision = spacetimedb.reducer(
     const after = ctx.db.agent.id.find(me.id)!;
     ctx.db.agent.id.update({
       ...after,
-      thought: thought ? thought.slice(0, 120) : after.thought,
+      thought: thought.slice(0, 120),
       pendingRequestId: 0n,
       nextThinkAtMs: w.gameTimeMs + (outcome.ok ? HEARTBEAT_MS : RETRY_MS),
     });
@@ -369,6 +371,8 @@ export const joinAsHuman = spacetimedb.reducer({ name: t.string() }, (ctx, { nam
   const [cx, cy] = centre(getWorld(ctx));
   const humans = [...ctx.db.agent.iter()].filter(a => a.kind === 'human').length;
   newAgent(ctx, { name: trimmed, kind: 'human', modelId: 'human', x: cx - 4 + (humans % 5) * 2, y: cy + 4, controller: ctx.sender });
+  // Sticky for the run, even after a visitor leaves. Only reset clears it.
+  if (!ctx.db.meta.key.find('interactive')) ctx.db.meta.insert({ key: 'interactive', value: 'true' });
 });
 
 export const humanMoveTo = spacetimedb.reducer({ x: t.f32(), y: t.f32() }, (ctx, { x, y }) => {
