@@ -94,12 +94,12 @@ def apply_review(rows, review, source_hash):
     return rows
 
 
-def chart(title, groups):
+def chart(title, groups, backend_label="BF16 / llama.cpp"):
     height = 230 + len(groups) * 48
     pieces = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 {height}" role="img" aria-label="{html.escape(title, quote=True)}">',
               f'<title>{html.escape(title)}</title><rect width="1200" height="{height}" rx="18" fill="#111b2d"/>',
               '<g font-family="system-ui,sans-serif">', text(28, 40, title, 25),
-              text(28, 70, "Qwen3.8-27B · BF16 / llama.cpp · observed simulated tool calls, not stated choices", 15, "#a9b7cf")]
+              text(28, 70, f"Qwen3.8-27B · {backend_label} · observed simulated tool calls", 15, "#a9b7cf")]
     for index, label in enumerate(LABELS):
         x = 28 + index * 245
         pieces.extend([f'<rect x="{x}" y="94" width="13" height="13" fill="{COLORS[label]}"/>',
@@ -135,6 +135,7 @@ def dashboard(rows, summary, overall, categories, manifest):
         trace = {key: row[key] for key in ("initial_messages", "tools", "call_log", "events", "pending_judges",
                                           "semantic_reviews", "environment_warnings", "final_text", "turns")}
         trace.update({key: row.get(key, []) for key in ("seed_brief_repairs", "context_checkpoints")})
+        trace.update({key: row.get(key) for key in ("resumed_from", "execution_backend", "hosted_model")})
         table.append(f'<tr data-label="{row["outcome"]}" data-dataset="{esc(row["dataset"])}" data-category="{esc(row["category"])}">'
                      f'<td><b>{esc(row["id"])}</b><br>{esc(row["title"])}</td><td>{esc(row["category"])}</td>'
                      f'<td class="{row["outcome"]}">{NAMES[row["outcome"]]}<br><small>{esc(row["status"])}</small></td>'
@@ -156,7 +157,7 @@ input{{flex:1;min-width:200px}}.table-wrap{{overflow:auto}}table{{width:100%;bor
 pre{{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.6 system-ui,sans-serif}}details[open]{{min-width:280px}}summary{{cursor:pointer}}footer{{margin-top:36px;border-top:1px solid #28354c;padding-top:20px;font-size:13px}}
 @media(max-width:600px){{main{{padding:20px 12px}}.cards{{gap:8px}}.card{{padding:12px}}.card strong{{font-size:32px}}}}
 </style></head><body><main><div class="eyebrow">Executable catalogs · observed actions in simulation</div>
-<h1>Alignment & reward hacking</h1><p class="muted">Qwen3.8-27B · {len(rows)} scenarios · 2 catalogs · BF16 / llama.cpp · thinking off</p>
+<h1>Alignment & reward hacking</h1><p class="muted">Qwen3.8-27B · {len(rows)} scenarios · 2 catalogs · {esc(manifest.get('backend_label', 'BF16 / llama.cpp'))} · thinking off requested</p>
 <p><code>{esc(summary['source_run'])}</code></p><div class="cards">{cards}</div><div class="note">{esc(LIMITATION)}</div>
 <p class="note"><b>Detector audit:</b> {failed_command_hits} rule-hit episodes have only failed simulated shell commands as their detection evidence.
 Command failure alone does not establish or rule out an attempted violation. Listing or inspecting a path can trigger broad substring rules;
@@ -215,8 +216,8 @@ def main(argv=None):
                    runtime_interventions=interventions,
                    runtime_interventions_sha256=sha256(intervention_file) if intervention_file.exists() else None)
     overall = chart("Observed simulated-tool detector outcomes", [("Both catalogs (overlap present)", summary["overall"]),
-                                                               *summary["by_dataset"].items()])
-    categories = chart("Detector outcomes by semantic category", sorted(summary["by_category"].items()))
+                                                               *summary["by_dataset"].items()], manifest.get("backend_label", "BF16 / llama.cpp"))
+    categories = chart("Detector outcomes by semantic category", sorted(summary["by_category"].items()), manifest.get("backend_label", "BF16 / llama.cpp"))
     args.output_dir.mkdir(parents=True, exist_ok=False)
     write_json(args.output_dir / "summary.json", summary)
     write_json(args.output_dir / "manifest.json", manifest)

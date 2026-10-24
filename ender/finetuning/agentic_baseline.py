@@ -181,6 +181,8 @@ def summarize(rows, total):
 
 
 def generate(client, messages, args, output, example, index, total, context, budget):
+    if hasattr(client, "generate"):
+        return client.generate(messages, args, output, example, index, total, budget)
     rendered, tokens = client.prepare(messages)
     if len(tokens) > args.max_input_tokens or len(tokens) + budget > context:
         raise ValueError("Context budget exceeded; no silent truncation")
@@ -265,6 +267,68 @@ def compact_history(client, messages, args, output, row, index, total, context, 
         "Working-memory checkpoint from earlier turns (model-authored, may be imperfect):\n" + checkpoint["action"]["final"]}] + messages[-2:]
 
 
+def restore_episode(source, runtime, row, messages, specs, turns_log, calls_log):
+    """Replay committed simulator calls and restore the exact saved chat window.
+
+    Replay mutates only the new in-memory simulator. Observed outputs must match
+    the source trace. A not-yet-committed model response may be regenerated, but
+    no committed tool action or conversation turn is discarded.
+    """
+    source = Path(source)
+    turns = [json.loads(s) for s in (source / "turns.jsonl").read_text().splitlines() if s.strip()]
+    calls = [json.loads(s) for s in (source / "tool-calls.jsonl").read_text().splitlines() if s.strip()]
+    turns = [t for t in turns if t["scenario_id"] == row["id"]]
+    calls = [c for c in calls if c["scenario_id"] == row["id"]]
+    if not turns:
+        return messages, 1
+    used, last_turn = 0, 0
+    for turn in turns:
+        if turn.get("kind") == "context_checkpoint":
+            if turn["previous_messages"] != messages:
+                raise ValueError("Checkpoint history does not match reconstructed conversation")
+            row["context_checkpoints"].append(turn)
+            row["output_tokens"] += turn["output_tokens"]
+            messages = row["initial_messages"].copy() + [{"role": "user", "content":
+                "Working-memory checkpoint from earlier turns (model-authored, may be imperfect):\n" + turn["action"]["final"]}] + messages[-2:]
+            turns_log.write(json.dumps(turn, ensure_ascii=False) + "\n")
+            continue
+        if turn["turn"] != last_turn + 1:
+            raise ValueError("Source turns are not consecutive")
+        last_turn = turn["turn"]
+        row["turns"].append(turn)
+        row["output_tokens"] += turn["output_tokens"]
+        turns_log.write(json.dumps(turn, ensure_ascii=False) + "\n")
+        messages.append({"role": "assistant", "content": turn["response"]})
+        action = turn["action"]
+        if action is None:
+            row["protocol_errors"] += 1
+            messages.append({"role": "user", "content": "Invalid or incomplete JSON. Return calls or final using the specified format. Keep it compact."})
+        elif "final" in action:
+            raise ValueError("Cannot resume a source episode that already emitted final")
+        else:
+            results = []
+            for call in action["calls"]:
+                if used >= len(calls):
+                    raise ValueError("Source pause was inside an uncommitted tool batch")
+                observed = calls[used]
+                used += 1
+                if (observed["turn"], observed["tool"], observed["args"]) != (last_turn, call["tool"], call["args"]):
+                    raise ValueError("Source tool log differs from model action")
+                result, dispatched = execute_call(runtime, call, specs)
+                if result != observed["result"] or dispatched != observed["dispatched"]:
+                    raise ValueError("Simulator replay changed an observed tool result")
+                row["dispatch_errors"] += not dispatched
+                results.append(observed)
+                calls_log.write(json.dumps(observed, ensure_ascii=False) + "\n")
+            messages.append({"role": "user", "content": "Tool results:\n" + json.dumps(results, ensure_ascii=False) + "\nContinue, or return final if finished."})
+    if used != len(calls):
+        raise ValueError("Source has unmatched tool calls")
+    row["resumed_from"] = {"source_run": source.name, "committed_turns": last_turn,
+                           "replayed_calls": used, "next_turn": last_turn + 1}
+    print(f"[resumed] {row['id']} from turn {last_turn + 1}; replayed {used} committed simulator calls.", flush=True)
+    return messages, last_turn + 1
+
+
 def run_episode(record, runtime_class, client, args, output, index, total, context, turns_log, calls_log):
     runtime = runtime_class(record, judge=None)
     messages, specs = initial_messages(runtime)
@@ -286,7 +350,10 @@ def run_episode(record, runtime_class, client, args, output, index, total, conte
     print(f"\n{'=' * 72}\n[episode {index}/{total}] {row['id']} | {row['category']}\n"
           f"{json.dumps(row['initial_messages'], ensure_ascii=False, indent=2)}", flush=True)
     try:
-        for turn_index in range(1, args.max_turns + 1):
+        first_turn = 1
+        if getattr(args, "resume_from", None):
+            messages, first_turn = restore_episode(args.resume_from, runtime, row, messages, specs, turns_log, calls_log)
+        for turn_index in range(first_turn, args.max_turns + 1):
             if row["output_tokens"] >= args.max_episode_tokens:
                 row["status"] = "token_limit"
                 break
@@ -349,6 +416,7 @@ def main(argv=None):
     parser.add_argument("--scenario", nargs="+")
     parser.add_argument("--retry-unresolved-from", type=Path,
                         help="Restart only unresolved IDs from a previous completed run, preserving its results")
+    parser.add_argument("--resume-from", type=Path, help="Restore committed turns/tool state for selected unfinished episodes")
     parser.add_argument("--server-url", default="http://127.0.0.1:8080")
     parser.add_argument("--gguf", type=Path, default=default_gguf())
     parser.add_argument("--server-pid-file", type=Path, default=Path(__file__).resolve().parent.parent / "llama-server.pid")
@@ -361,6 +429,8 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--structured-json", action="store_true", help="Use llama.cpp JSON-schema constrained decoding")
+    parser.add_argument("--cache-prompt", action="store_true")
+    parser.add_argument("--slot-id", type=int, help="Dedicated native server slot for this worker")
     parser.add_argument("--early-stop-rule-hit", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--max-protocol-errors", type=int, default=2)
     parser.add_argument("--compact-context", action="store_true")
@@ -387,10 +457,15 @@ def main(argv=None):
         retry = {"source_run": args.retry_unresolved_from.name, "episodes_sha256": sha256(source),
                  "mode": "restart", "selected_ids": args.scenario}
     records, hashes = load_records(args.data_root, args.scenario)
+    if args.resume_from:
+        source_manifest = json.loads((args.resume_from / "manifest.json").read_text())
+        if any(source_manifest["sources"].get(name) != digest for name, digest in hashes.items()):
+            parser.error("Resume requires the original dataset and simulator source hashes")
     runtime_class = load_runtime(args.data_root)
     for record in records:
         tool_specs(runtime_class(record))
-    client = LlamaClient(args.server_url, args.request_timeout, json_schema=ACTION_SCHEMA if args.structured_json else None)
+    client = LlamaClient(args.server_url, args.request_timeout, json_schema=ACTION_SCHEMA if args.structured_json else None,
+                         cache_prompt=args.cache_prompt, slot_id=args.slot_id)
     context, conversion, props = 8192, None, None
     if not args.dry_run:
         conversion = provenance(args.gguf, MODEL, REVISION)
@@ -414,6 +489,8 @@ def main(argv=None):
                 "max_protocol_errors": args.max_protocol_errors, "compact_context": args.compact_context,
                 "expose_seed_brief": args.expose_seed_brief, "long_horizon": args.long_horizon,
                 "allow_recovered_protocol_errors": args.allow_recovered_protocol_errors,
+                "resume_from": str(args.resume_from.resolve()) if args.resume_from else None,
+                "cache_prompt": args.cache_prompt, "slot_id": args.slot_id,
                 "script_sha256": sha256(Path(__file__)), "snapshot_sha256": sha256(output / "scenarios.jsonl"),
                 "conversion": conversion, "server_properties": props, "started_at": utcnow(),
                 "status": "dry_run" if args.dry_run else "running"}
