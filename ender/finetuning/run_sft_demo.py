@@ -94,6 +94,20 @@ def stop_project_server(run):
 
 def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_tokens=128, memory_fraction=None,
                  retep_shadow=False):
+    import logging
+    class CastWarningOnce(logging.Filter):
+        seen = False
+
+        def filter(self, record):
+            if record.getMessage().startswith("MatMul8bitLt: inputs will be cast from"):
+                if self.seen:
+                    return False
+                self.seen = True
+            return True
+
+    # Keep the precision warning, but do not repeat it hundreds of times per
+    # microbatch for hours. Other warnings/errors are never filtered.
+    logging.getLogger("bitsandbytes.autograd._functions").addFilter(CastWarningOnce())
     import torch
     from transformers import TrainerCallback
     from llamafactory.train.tuner import run_exp

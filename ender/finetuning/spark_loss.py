@@ -39,9 +39,11 @@ def install_response_only_loss(model, config):
     def forward(self, *args, labels=None, logits_to_keep=0, **kwargs):
         if labels is None:
             return original(*args, labels=None, logits_to_keep=logits_to_keep, **kwargs)
-        if logits_to_keep != 0 or any(kwargs.get(name) is not None for name in (
-                "pixel_values", "pixel_values_videos", "image_grid_thw", "video_grid_thw")):
-            raise ValueError("Response-only loss supports full text-only SFT sequences")
+        if logits_to_keep != 0:
+            raise ValueError("Response-only loss requires full SFT hidden-state sequences")
+        # LLaMA-Factory attaches a fully masked dummy image to text-only VLM
+        # batches. Preserve native multimodal preprocessing, position IDs and
+        # masking rather than rejecting or silently removing those inputs.
         count = kwargs.pop("num_items_in_batch", None)
         shifted = kwargs.pop("shift_labels", None)
         kwargs.pop("skip_logits", None)

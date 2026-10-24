@@ -18,7 +18,7 @@ def optimized_config(source, output_dir, *, upper_layers=16, num_layers=64,
     config = {**source, "output_dir": str(output_dir), "overwrite_output_dir": False,
               "enable_liger_kernel": liger, "gradient_checkpointing": checkpointing,
               "disable_gradient_checkpointing": not checkpointing,
-              "eval_strategy": "epoch"}
+              "eval_strategy": "epoch", "include_num_input_tokens_seen": True}
     config.pop("eval_steps", None)
     if upper_layers:
         # Exact suffixes select only language decoder layers, never vision modules.
