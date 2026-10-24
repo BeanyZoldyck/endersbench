@@ -381,3 +381,149 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 /* Frames per second, bottom-left of the stage; ?perf adds where the frame goes. */
 .fps-counter { position:absolute; left:10px; bottom:10px; z-index:2; pointer-events:none; font:600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color:#f4eede; background:#293f39b3; padding:4px 7px; border-radius:6px; }
 .fps-counter:empty { display:none; }
+
+/* ── The Studio look ──────────────────────────────────────────────────────
+   The live screen wears the Observation Studio's design (frontend/studio.css):
+   dark ground, Manrope, gold accents, 4px corners, hairline rules. Scoped to
+   .app so the Studio page is untouched; the 3D scene and its in-world labels
+   keep their own palette, as they do in the Studio. */
+.app { --ground:#101010; --surface:#1b1b1b; --surface2:#202020; --ink:#f5f5f3; --muted:#adadaa; --line:#303030; --gold:#d7bd78; --bad:#e8907a; --good:#9fcf98;
+  background:var(--ground); color:var(--ink); font-family:Manrope, system-ui, sans-serif; padding:14px 24px 12px; gap:12px; }
+.app button:focus-visible, .app input:focus-visible, .app summary:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+.app .eyebrow { color:var(--gold); font-size:.68rem; letter-spacing:.14em; font-weight:700; text-transform:uppercase; }
+.app .muted, .app .inventory { color:var(--muted); }
+.app summary { color:var(--muted); }
+
+/* Header: the Studio's brand line, title and hairline rule. */
+.app .topbar { border-bottom:1px solid var(--line); padding-bottom:12px; min-height:44px; }
+.app .brand { color:var(--ink); font-size:.95rem; font-weight:700; letter-spacing:-.02em; gap:8px; }
+.app .brand svg { color:var(--gold); }
+.app .edition { color:var(--muted); border-left-color:var(--line); font-size:.66rem; font-weight:600; letter-spacing:.14em; }
+.app .studio-link { margin-left:14px; color:var(--muted); font-size:.75rem; font-weight:500; letter-spacing:0; text-decoration:none; pointer-events:auto; white-space:nowrap; }
+.app .studio-link:hover { color:var(--ink); }
+.app .masthead h1 { font-family:Manrope, system-ui, sans-serif; font-weight:600; font-size:1.45rem; letter-spacing:-.03em; color:var(--ink); }
+.app .masthead h1 span { color:var(--gold); }
+.app .masthead p { color:var(--muted); }
+.app .connection { color:var(--muted); font-size:.72rem; }
+.app .connection i { background:#7a6a4a; } .app .connection.online i { background:var(--gold); box-shadow:0 0 0 3px #d7bd7822; }
+.app .season svg { color:var(--gold); } .app .season span { color:var(--muted); } .app .season strong { color:var(--ink); font-weight:600; }
+.app .condition-chip, .app .food-left, .app .rescue-countdown { background:var(--surface); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.7rem; padding:5px 9px; }
+.app .condition-chip { color:var(--gold); border-color:#d7bd7844; }
+.app .model-trouble { background:#3a1d17; border:1px solid #e8907a55; color:var(--bad); border-radius:4px; }
+.app .interactive-chip { background:#2a2414; color:var(--gold); border-radius:4px; }
+.app .rescue-banner { background:var(--surface); border:1px solid var(--line); color:var(--ink); font-family:Manrope, system-ui, sans-serif; border-radius:4px; }
+.app .rescue-banner.missed { color:var(--muted); }
+.app .utility { gap:8px; }
+.app .utility button, .app .results-link { background:none; border:1px solid #555; border-radius:4px; color:var(--ink); padding:7px 12px; font-size:.72rem; font-weight:500; }
+.app .utility button:hover, .app .utility button[aria-expanded=true], .app .results-link:hover { background:none; border-color:var(--ink); }
+.app .utility button[aria-expanded=true] { color:var(--gold); border-color:var(--gold); }
+.app .utility button.reset { color:var(--bad); border-color:#e8907a55; }
+.app .utility button.reset:hover:not(:disabled) { background:#3a1d17; border-color:var(--bad); }
+
+/* The stage: a plain frame, as the Studio's scene. */
+.app .stage { border-radius:4px; border:1px solid var(--line); box-shadow:none; background:#141414; }
+.app .fps-counter { background:#101010b3; color:var(--muted); border-radius:4px; }
+.app .loading-world { color:var(--muted); font-family:Manrope, system-ui, sans-serif; font-style:normal; }
+
+/* Side column (the record, details): the Studio's inspector column. */
+.app .moments-rail, .app .detail-panel { background:var(--surface); border:1px solid var(--line); border-radius:4px; box-shadow:none; color:var(--ink); }
+.app .moments-rail h2, .app .detail-panel h2 { font-family:Manrope, system-ui, sans-serif; font-weight:500; font-size:1.45rem; letter-spacing:-.03em; color:var(--ink); }
+.app .detail-panel h3, .app .agent-card h3 { color:var(--muted); }
+.app .close { color:var(--muted); }
+.app .rail-stats { color:var(--muted); border-bottom-color:var(--line); }
+.app .rail-stats b { color:var(--ink); }
+.app .rail-stats .taken b { color:var(--bad); } .app .rail-stats .resisted b { color:var(--good); }
+.app .rail-curve { border-bottom-color:var(--line); }
+.app .curve-bar { background:#ffffff0d; }
+.app .curve-fill { background:linear-gradient(0deg, #c4664d, var(--gold)); }
+.app .curve-label, .app .curve-caption { color:var(--muted); } .app .curve-label b { color:var(--ink); }
+.app .moment { border-bottom-color:var(--line); }
+.app .moment p { color:var(--ink); }
+.app .moment time { color:var(--muted); }
+.app .moment .pressure { color:var(--muted); } .app .moment .pressure .bar { background:#ffffff12; }
+.app .moment .pressure i, .app .spotlight-pressure i { background:linear-gradient(90deg, var(--gold), #c4664d); }
+.app .moment blockquote { color:var(--muted); font-family:Manrope, system-ui, sans-serif; }
+.app .moment-mark, .app .record-tier { border-radius:3px; }
+.app .moment.taken .moment-mark, .app .record-tier { background:#3a1d17; color:var(--bad); }
+.app .moment.resisted .moment-mark { background:#1c2b1d; color:var(--good); }
+.app .moment.died .moment-mark { background:#000; color:var(--ink); border:1px solid var(--line); }
+.app .moment.noted .moment-mark { background:var(--surface2); color:var(--gold); }
+.app .moment.jumpable:hover, .app .moment.jumpable:focus-visible { background:var(--surface2); }
+.app .stance.claims-fair { background:#2a2414; color:var(--gold); } .app .stance.admits-over { background:#3a1d17; color:var(--bad); }
+.app .thought, .app .facts, .app .memory-panel { border-color:var(--line); }
+.app .thought p, .app .backstory, .app .agent-record q { font-family:Manrope, system-ui, sans-serif; color:var(--ink); }
+.app .facts dt, .app .role-label, .app .memory-summary, .app .speech-channel, .app .agent-record small { color:var(--muted); }
+.app .journal li, .app .technical-log li, .app .agent-record li { border-color:var(--line); }
+.app .journal time, .app .journal small { color:var(--muted); }
+.app .primary { background:var(--gold); color:#101010; border-radius:4px; font-weight:700; }
+.app .primary:hover:not(:disabled) { background:#ead39b; }
+.app .human-controls input { background:var(--surface2); border:1px solid #555; border-radius:4px; color:var(--ink); }
+.app .exhibits a { background:var(--surface2); border:1px solid var(--line); border-radius:4px; }
+.app .exhibits a:hover, .app .exhibits a:focus-visible { background:var(--surface2); border-color:var(--gold); }
+.app .exhibits b { font-family:Manrope, system-ui, sans-serif; font-weight:600; } .app .exhibits span { color:var(--muted); }
+.app .preview-actions button { background:var(--surface2); border:1px solid #555; color:var(--ink); border-radius:4px; }
+.app .error-toast { background:#3a1d17; border-color:#e8907a55; color:var(--ink); border-radius:4px; }
+
+/* The cast: the Studio's agent cards, with its model buddies. */
+.app .cast-heading { color:var(--gold); font-weight:700; } .app .cast-heading span+span { color:var(--muted); font-weight:500; }
+.app .cast-card { background:var(--surface); border:1px solid var(--line); border-radius:4px; box-shadow:none; color:var(--ink); }
+.app .cast-card:hover { background:var(--surface2); }
+.app .cast-card.selected { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); }
+.app .cast-name strong { font-family:Manrope, system-ui, sans-serif; font-weight:600; font-size:1.1rem; letter-spacing:-.02em; }
+.app .cast-name>span, .app .model-name, .app .role-label, .app .vneed, .app .need { color:var(--muted); }
+.app .vbar, .app meter, .app meter::-webkit-meter-bar { background:#2c2c2c; }
+.app .wreck-share { background:var(--surface2); color:var(--muted); border-radius:3px; } .app .wreck-share.over { background:#3a1d17; color:var(--bad); }
+.app .card-pressure { color:#ffd9cc; background:linear-gradient(90deg, #8a3a28 var(--p), #262626 var(--p)); border-color:#e8907a44; border-radius:3px; }
+.app .cast-strip { scrollbar-color:#444 transparent; }
+.app .empty-cast { background:var(--surface); color:var(--muted); border-radius:4px; }
+.app .colophon { color:var(--muted); } .app .colophon span:nth-child(2) { font-family:Manrope, system-ui, sans-serif; font-style:normal; }
+.app .agent-avatar-halo { display:inline-flex; align-items:center; justify-content:center; border:2px solid; border-radius:50%; padding:2px; flex-shrink:0; background:#202320; }
+.app .agent-avatar-halo.ghost { opacity:.4; filter:grayscale(1); }
+.app .avatar.model-buddy { width:40px; height:40px; display:block; }
+.app .model-buddy img { display:block; width:100%; height:100%; object-fit:contain; }
+.app .nametag .agent-avatar-halo { padding:1px; border-width:1.5px; margin-right:4px; }
+.app .nametag .avatar.model-buddy { width:22px; height:22px; }
+.app .nametag:has(.agent-avatar-halo) { padding:3px 8px 3px 3px; }
+
+/* Scene tools and overlays. */
+.app .camera-toggle { background:var(--surface); border:1px solid var(--line); border-radius:4px; box-shadow:none; }
+.app .camera-toggle button { border-radius:3px; color:var(--muted); }
+.app .camera-toggle button.active { background:var(--gold); color:#101010; font-weight:700; box-shadow:none; }
+.app .camera-hint { color:var(--muted); }
+.app .glow-legend { color:var(--ink); }
+.app .glow-legend button, .app .glow-legend ul { background:var(--surface); border:1px solid var(--line); border-radius:4px; color:var(--ink); }
+.app .event-caption { background:var(--surface); border:1px solid var(--line); border-radius:4px; box-shadow:none; color:var(--ink); }
+.app .event-mark { background:var(--gold); }
+.app .spotlight { background:#1b1b1bf5; border:1px solid var(--line); border-left:4px solid var(--agent-color); border-radius:4px; box-shadow:0 12px 40px #00000080; color:var(--ink); }
+.app .spotlight-caption { font-family:Manrope, system-ui, sans-serif; font-weight:500; letter-spacing:-.02em; color:var(--ink); }
+.app .spotlight blockquote, .app .spotlight-policy, .app .explanation-note, .app .spotlight-pressure { color:var(--muted); font-family:Manrope, system-ui, sans-serif; }
+.app .spotlight-pressure .bar { background:#ffffff12; }
+.app .spotlight-tier, .app .spotlight.tier-1 .spotlight-tier { background:#3a1d17; color:var(--bad); border-radius:3px; }
+.app .spotlight.tier-2 .spotlight-tier, .app .spotlight.tier-3 .spotlight-tier, .app .spotlight.tier-4 .spotlight-tier { background:#2a2414; color:var(--gold); }
+.app .spotlight.tier-0 .spotlight-tier { background:#000; color:var(--ink); }
+.app .spotlight.tier-5 .spotlight-tier { background:#1c2b1d; color:var(--good); }
+.app .replay-bar { background:#1b1b1bf2; border:1px solid var(--line); border-radius:4px; box-shadow:0 6px 24px #00000080; color:var(--ink); }
+.app .replay-tag { background:var(--gold); color:#101010; border-radius:3px; }
+.app .replay-bar button { background:none; border:1px solid #555; border-radius:4px; color:var(--ink); }
+.app .replay-bar button.active { background:var(--gold); border-color:var(--gold); color:#101010; }
+.app .replay-bar input[type=range] { accent-color:var(--gold); }
+.app .replay-time { color:var(--ink); } .app .replay-source { color:var(--muted); }
+.app .tour-card { background:#1b1b1bee; border:1px solid var(--line); border-radius:4px; }
+.app .tour-card b { font-family:Manrope, system-ui, sans-serif; font-weight:600; color:var(--ink); } .app .tour-card p { color:var(--muted); }
+.app .preview-banner { background:#2a2414; color:var(--gold); }
+
+/* The selected survivor's card in the scene. */
+.app .agent-card, .app .agent-card::before { background:var(--surface); }
+.app .agent-card { border-color:var(--line); border-radius:4px; box-shadow:0 10px 34px #00000080; color:var(--ink); }
+.app .agent-card h2 { font-family:Manrope, system-ui, sans-serif; font-weight:600; letter-spacing:-.02em; }
+
+/* The first-visit card. */
+.app .intro, .intro { background:#000000a6; }
+.intro-card { background:var(--surface, #1b1b1b); border:1px solid #303030; border-radius:4px; box-shadow:0 20px 60px #000000a0; color:#f5f5f3; font-family:Manrope, system-ui, sans-serif; }
+.intro-card h2 { font-family:Manrope, system-ui, sans-serif; font-weight:600; font-size:1.75rem; letter-spacing:-.03em; }
+.intro-card .eyebrow { color:#d7bd78; font-size:.68rem; letter-spacing:.14em; font-weight:700; }
+.intro-card blockquote { background:#202020; border-left:3px solid #d7bd78; border-radius:3px; font-family:Manrope, system-ui, sans-serif; font-style:normal; font-weight:500; font-size:1.05rem; }
+.intro-actions a { color:#f5f5f3; text-decoration:underline; text-underline-offset:4px; }
+.intro-actions .primary { background:#d7bd78; color:#101010; border-radius:4px; font-weight:700; }
+.app .avatar.model-dot { display:block; width:40px; height:40px; border-radius:50%; border:0; box-shadow:inset -4px -5px 8px #00000040; }
+.app .nametag .avatar.model-dot { width:22px; height:22px; }

@@ -1,12 +1,14 @@
 import { boundaryFog } from './boundaryFog';
 import { useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Billboard, Html, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Agent, Message, World } from '../module_bindings/types';
 import type { ReadGameTime } from './useGameClock';
 import { toScene } from './Environment';
 import type { Weapon } from './contract';
+import { modelLogo } from './modelLogo';
+import { faceTextures } from './faceTexture';
 
 // Survivors are drawn larger than their collision circle so they read at a
 // distance; the physics radius is unchanged.
@@ -19,6 +21,12 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
   const radius = bodyRadius * CRITTER_SCALE;
   const root = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), eyes = useRef<THREE.Group>(null);
   const feet = useRef<THREE.Group>(null);
+  const logoAnchor = useRef<THREE.Group>(null);
+  const logoPosition = useMemo(() => ({ center: new THREE.Vector3(), camera: new THREE.Vector3(), direction: new THREE.Vector3(), front: new THREE.Vector3() }), []);
+  const face = useRef<THREE.MeshBasicMaterial>(null);
+  const faces = useMemo(faceTextures, []);
+  const logo = useTexture(modelLogo(agent.modelId, agent.kind));
+  logo.colorSpace = THREE.SRGBColorSpace;
   const bubble = useRef<HTMLDivElement>(null), cardBox = useRef<HTMLDivElement>(null);
   const projected = useMemo(() => new THREE.Vector3(), []);
   const latest = useRef(agent); latest.current = agent;
@@ -64,7 +72,10 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
     const stunned = a.stunnedUntilMs > readTime();
     const moving = speed > 0.12 && !stunned && !a.pinned && a.alive && world.running && connected;
     motion.current = THREE.MathUtils.damp(motion.current, moving ? 1 : 0, 10, dt);
-    if (moving) { facing.current = Math.atan2(a.vx, a.vy); stride.current += speed * dt * world.timeScale * 3; }
+    // A paused snapshot still tells us its heading; only the walk animation
+    // depends on the clock running. Retain the last heading when idle.
+    if (speed > 0.12 && !stunned && !a.pinned && a.alive) facing.current = Math.atan2(a.vx, a.vy);
+    if (moving) stride.current += speed * dt * world.timeScale * 3;
     const turn = facing.current - body.current.rotation.y;
     body.current.rotation.y += Math.atan2(Math.sin(turn), Math.cos(turn)) * Math.min(1, dt * 9);
     const t = state.clock.elapsedTime + phase;
@@ -76,12 +87,29 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
     body.current.scale.set(radius, radius * (1 + breathing), radius);
     body.current.rotation.x = THREE.MathUtils.damp(body.current.rotation.x, Math.cos(impactAngle) * impulse + (cold ? 0.1 : 0), 12, dt);
     body.current.rotation.z = a.pinned ? 0.6 : Math.sin(stride.current) * 0.045 * motion.current + Math.sin(impactAngle) * impulse + (stunned ? Math.sin(t * 6) * 0.05 : 0) + (cold ? Math.sin(t * 17) * 0.015 : 0) + (a.pendingRequestId !== 0n ? 0.055 : 0);
+    if (logoAnchor.current) {
+      // Move toward the camera along this sphere's own view ray, not the
+      // camera's forward axis. Both centers then project to the same pixel,
+      // including agents near the screen edge or viewed from above.
+      body.current.updateWorldMatrix(true, false);
+      body.current.getWorldPosition(logoPosition.center);
+      state.camera.getWorldPosition(logoPosition.camera);
+      state.camera.getWorldDirection(logoPosition.direction);
+      logoPosition.front.copy(logoPosition.camera).sub(logoPosition.center).normalize();
+      // The logo plane stays parallel to the screen. At the edge of the
+      // view, account for that oblique ray so its center cannot cut the shell.
+      const viewCosine = Math.max(0.2, -logoPosition.front.dot(logoPosition.direction));
+      logoPosition.front.multiplyScalar(radius * 1.04 * (1 + Math.abs(breathing)) / viewCosine).add(logoPosition.center);
+      logoAnchor.current.position.copy(body.current.worldToLocal(logoPosition.front));
+    }
     if (eyes.current) {
+      // The face follows the body's heading, with a glance toward the person
+      // being addressed. Only the logo billboards toward the camera.
       const toward = addressedTo && said?.channel === 'say' ? Math.atan2(addressedTo.x - a.x, addressedTo.y - a.y) - body.current.rotation.y : 0;
       const headTurn = toward - eyes.current.rotation.y;
       eyes.current.rotation.y += Math.atan2(Math.sin(headTurn), Math.cos(headTurn)) * Math.min(1, dt * 5);
       const blink = t % (4.1 + phase % 1.9);
-      eyes.current.scale.y = blink < 0.15 ? 0.12 : 1;
+      if (face.current) face.current.map = blink < 0.15 ? faces.blink : faces.open;
     }
     if (feet.current) {
       feet.current.rotation.y = body.current.rotation.y;
@@ -96,16 +124,23 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
       {[-1, 1].map(s => <mesh key={s} position={[s * radius * 0.41, radius * 0.15, 0]} scale={[radius * 0.28, radius * 0.15, radius * 0.4]} ><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#665744" transparent={ghost} opacity={opacity} roughness={1} /></mesh>)}
     </group>
     <group ref={body} position={[0, radius * 1.1, 0]} scale={radius}>
-      <mesh ><sphereGeometry args={[1, 24, 20]} /><meshStandardMaterial {...boundaryFog} color={tint} roughness={0.96} transparent={ghost} opacity={opacity} depthWrite={!ghost} /></mesh>
-      <group ref={eyes} position={[0, 0.15, 0]}>
-        {[-1, 1].map(s => <group key={s} position={[s * 0.27, 0, 0.95]}>
-          <mesh scale={[0.075, 0.13, 0.035]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#293b36" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-          <mesh position={[-0.015, 0.045, 0.031]} scale={[0.018, 0.022, 0.01]}><sphereGeometry args={[1, 8, 6]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent={ghost} opacity={opacity} /></mesh>
-        </group>)}
+      {/* Billboarding is independent of the body's heading and tilt. */}
+      <Billboard ref={logoAnchor}>
+        <mesh name="model-logo">
+          <planeGeometry args={[1.3, 1.3]} />
+          <meshBasicMaterial {...boundaryFog} map={logo} transparent opacity={opacity} depthWrite={false} toneMapped={false} />
+        </mesh>
+      </Billboard>
+      <mesh name="model-shell">
+        <sphereGeometry args={[1, 32, 24]} />
+        <meshPhysicalMaterial {...boundaryFog} color={tint} roughness={0.3} metalness={0} clearcoat={1} clearcoatRoughness={0.2} transparent opacity={ghost ? 0.3 : 0.88} depthWrite={!ghost} />
+      </mesh>
+      <group ref={eyes}>
+        <mesh name="surface-eyes" renderOrder={2}>
+          <sphereGeometry args={[1.008, 64, 48]} />
+          <meshBasicMaterial ref={face} {...boundaryFog} map={faces.open} transparent opacity={opacity} alphaTest={0.005} depthWrite={false} />
+        </mesh>
       </group>
-      <mesh position={[0, -0.47, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.89, 0.105, 6, 24]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-      <mesh position={[0.57, -0.67, 0.57]} rotation={[0.12, 0, -0.2]} scale={[0.22, 0.55, 0.12]}><sphereGeometry args={[1, 10, 8]} /><meshStandardMaterial {...boundaryFog} color={agent.color} roughness={1} transparent={ghost} opacity={opacity} /></mesh>
-      <mesh position={[-0.72, -0.5, -0.4]} rotation={[0, 0, -0.3]} scale={[0.24, 0.35, 0.2]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#b8a583" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
       {weapon && <Spear flaming={weapon === 'flaming_spear'} attacking={agent.intentKind === 'attack'} phase={phase} />}
     </group>
     {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent opacity={0.85} /></mesh>}

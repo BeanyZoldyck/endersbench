@@ -18,6 +18,8 @@ import { Spotlight, type Beat } from './Spotlight';
 import { describeDeath, intentLabel } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
+import { ModelBuddy } from './frontend/ui-ux/ModelBuddy';
+import { modelAvatarPath } from './frontend/model-identity';
 
 // A replay doesn't show the live world, so it doesn't subscribe to it: the live
 // world's 20 Hz updates would otherwise re-render the page for nothing.
@@ -178,7 +180,7 @@ export default function App() {
     </div>
     <div className="topbar">
     <header className="masthead">
-      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><span className="edition">FIELD STUDY 01</span></div>
+      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><span className="edition">FIELD STUDY 01</span><a className="studio-link" href="/">Observation Studio ↗</a></div>
       <h1>The Clearing<span>.</span></h1>
       <p>{agents.length ? `${agents.length} survivors. ${isWinter ? 'Winter is here.' : 'Winter is coming.'} Who will share?` : 'A small world. A question of survival.'}</p>
     </header>
@@ -225,8 +227,13 @@ export default function App() {
     </footer>
   </main>;
 }
+// The Studio's model buddy, ringed in the survivor's colour, as on the Studio's agent cards and
+// in the scene's name tags. A model with no buddy (a scripted test brain, a person) gets a plain
+// dot in the survivor's colour inside the same ring.
 function Portrait({ agent }: { agent: Agent }) {
-  return <span className={`portrait ${!agent.alive ? 'ghost' : ''}`} style={{ '--agent-color': agent.color } as CSSProperties} aria-hidden="true"><i /><i /><b /></span>;
+  return <span className={`agent-avatar-halo ${!agent.alive ? 'ghost' : ''}`} style={{ borderColor: agent.color }} aria-hidden="true">
+    {modelAvatarPath(agent.modelId) ? <ModelBuddy modelId={agent.modelId} /> : <span className="avatar model-dot" style={{ background: agent.color }} />}
+  </span>;
 }
 function Needs({ agent, compact = false }: { agent: Agent; compact?: boolean }) {
   const needs: Array<[string, number]> = [['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]];
