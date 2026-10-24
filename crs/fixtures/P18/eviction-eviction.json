@@ -1,0 +1,32 @@
+{
+  "persona": "P18",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "TERRENCE",
+      "last": "ABERNATHY",
+      "ssn": "666-70-1018",
+      "dob": "02-29-1980",
+      "zip": "60608"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "6a0bc70b-4bda-4433-a947-0558370c4d87",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "ABERNATHY,TERRENCE"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

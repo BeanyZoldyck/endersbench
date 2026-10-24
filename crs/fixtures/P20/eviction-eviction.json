@@ -1,0 +1,32 @@
+{
+  "persona": "P20",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "DOLORES",
+      "last": "WHITCOMB",
+      "ssn": "666-70-1020",
+      "dob": "05-04-1952",
+      "zip": "93109"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "7860df0d-3777-4b38-bd1a-0e8c3b7e08e9",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "WHITCOMB,DOLORES"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

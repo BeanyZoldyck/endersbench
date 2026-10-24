@@ -1,0 +1,32 @@
+{
+  "persona": "P16",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "SAMUEL",
+      "last": "OYELARAN",
+      "ssn": "666-70-1016",
+      "dob": "06-12-1977",
+      "zip": "33131"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "6630b26f-2d2f-451a-8267-bb20885e39cb",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "OYELARAN,SAMUEL"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

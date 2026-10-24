@@ -1,0 +1,83 @@
+{
+  "persona": "P05",
+  "product": "fraud_finder",
+  "variant": "FraudFinder",
+  "method": "POST",
+  "path": "/fraud-finder/fraud-finder",
+  "request": {
+    "firstName": "RICKY",
+    "lastName": "DALTON",
+    "phoneNumber": "5550101005",
+    "email": "ricky.dalton@example.com",
+    "ipAddress": "203.0.113.15",
+    "address": {
+      "addressLine1": "7031 SUNSET RIDGE RD",
+      "city": "ORLANDO",
+      "state": "FL",
+      "postalCode": "32819"
+    }
+  },
+  "expected": "risk.score 52 (medium). Send name, phone, email and address; ipAddress is free.",
+  "status": 200,
+  "requestId": "57fdf770-f0dd-482e-b7fe-d3af12e26ab5",
+  "response": {
+    "eam": {
+      "date_first_seen": "2024-09-10",
+      "longevity": 3,
+      "velocity": 7,
+      "popularity": 4
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 52,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P05-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "28.54",
+        "longitude": "-81.38"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "5 miles"
+      },
+      "phone": {
+        "line_type": "mobile",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "ricky.dalton@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

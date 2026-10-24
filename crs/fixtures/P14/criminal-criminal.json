@@ -1,0 +1,32 @@
+{
+  "persona": "P14",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "HAROLD",
+      "last": "PETTIGREW",
+      "ssn": "666-70-1014",
+      "dob": "01-19-1948",
+      "zip": "45402"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "a882d3ab-2973-4aae-a189-9f8bfcd6e511",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "PETTIGREW,HAROLD"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

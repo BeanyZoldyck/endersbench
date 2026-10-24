@@ -1,0 +1,32 @@
+{
+  "persona": "P10",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "LAUREN",
+      "last": "KOWALCZYK",
+      "ssn": "666-70-1010",
+      "dob": "10-03-1992",
+      "zip": "48226"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "ae3652a2-56b7-464f-a92d-ba1393b189f9",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "KOWALCZYK,LAUREN"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

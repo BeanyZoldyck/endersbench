@@ -1,0 +1,32 @@
+{
+  "persona": "P05",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "RICKY",
+      "last": "DALTON",
+      "ssn": "666-70-1005",
+      "dob": "09-09-1988",
+      "zip": "32819"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "2720457e-2fc1-40d7-a3f0-b554021e8b04",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "DALTON,RICKY"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

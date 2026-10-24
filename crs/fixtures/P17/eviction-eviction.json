@@ -1,0 +1,32 @@
+{
+  "persona": "P17",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "ELENA",
+      "last": "CASTELLANOS",
+      "ssn": "666-70-1017",
+      "dob": "11-20-1987",
+      "zip": "75206"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "73d026ab-1250-4084-8c29-1fdc697a813f",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "CASTELLANOS,ELENA"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "persona": "P07",
+  "product": "fraud_finder",
+  "variant": "FraudFinder",
+  "method": "POST",
+  "path": "/fraud-finder/fraud-finder",
+  "request": {
+    "firstName": "MARCUS",
+    "lastName": "BELLAMY",
+    "phoneNumber": "5550101007",
+    "email": "marcus.bellamy@example.com",
+    "ipAddress": "203.0.113.17",
+    "address": {
+      "addressLine1": "1507 PEACHTREE INDUSTRIAL BLVD",
+      "city": "ATLANTA",
+      "state": "GA",
+      "postalCode": "30341"
+    }
+  },
+  "expected": "risk.score 12 (low). Send name, phone, email and address; ipAddress is free.",
+  "status": 200,
+  "requestId": "fa3f2a76-c75d-437f-969f-c25b86fc899d",
+  "response": {
+    "eam": {
+      "date_first_seen": "2011-10-02",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 6
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 12,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P07-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "33.75",
+        "longitude": "-84.39"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "5 miles"
+      },
+      "phone": {
+        "line_type": "mobile",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "marcus.bellamy@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

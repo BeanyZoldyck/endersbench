@@ -1,0 +1,32 @@
+{
+  "persona": "P12",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "VICTOR",
+      "last": "ANAND",
+      "ssn": "666-70-1012",
+      "dob": "08-08-1968",
+      "zip": "10041"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "447e1e8c-1b0c-4e48-82d5-9e4e89099a8a",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "ANAND,VICTOR"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

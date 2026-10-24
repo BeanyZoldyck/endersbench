@@ -1,0 +1,32 @@
+{
+  "persona": "P01",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "MARGARET",
+      "last": "OKAFOR",
+      "ssn": "666-70-1001",
+      "dob": "03-14-1984",
+      "zip": "95125"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "57d017f1-0871-454a-9ae5-eb272c916ca5",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "OKAFOR,MARGARET"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

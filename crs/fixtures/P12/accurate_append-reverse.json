@@ -1,0 +1,32 @@
+{
+  "persona": "P12",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101012"
+  },
+  "expected": "one result for RAJESH MENON (a different person)",
+  "status": 200,
+  "requestId": "dd76eef8-fd34-46ca-a4e5-4f8153d856d8",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-P12",
+      "records": [
+        {
+          "firstName": "RAJESH",
+          "lastName": "MENON",
+          "houseNo": "55",
+          "streetName": "WATER ST FL 20",
+          "address": "55 WATER ST FL 20",
+          "city": "NEW YORK",
+          "state": "NY",
+          "postalCode": "10041"
+        }
+      ]
+    }
+  }
+}

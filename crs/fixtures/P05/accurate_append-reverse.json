@@ -1,0 +1,32 @@
+{
+  "persona": "P05",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101005"
+  },
+  "expected": "one result for the persona",
+  "status": 200,
+  "requestId": "dffca8e9-c41c-42ef-b654-25ac05b0f721",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "RICKY",
+          "lastName": "DALTON",
+          "houseNo": "7031",
+          "streetName": "SUNSET RIDGE RD",
+          "address": "7031 SUNSET RIDGE RD",
+          "city": "ORLANDO",
+          "state": "FL",
+          "postalCode": "32819"
+        }
+      ]
+    }
+  }
+}

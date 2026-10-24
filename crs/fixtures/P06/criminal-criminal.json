@@ -1,0 +1,32 @@
+{
+  "persona": "P06",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "ANGELA",
+      "last": "MORRISSEY",
+      "ssn": "666-70-1006",
+      "dob": "04-18-1979",
+      "zip": "43209"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "8cde82e7-77dc-4e07-956d-4de16d017e35",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "MORRISSEY,ANGELA"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

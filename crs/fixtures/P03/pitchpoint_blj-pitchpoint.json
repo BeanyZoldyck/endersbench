@@ -1,0 +1,42 @@
+{
+  "persona": "P03",
+  "product": "pitchpoint_blj",
+  "variant": "PitchPoint",
+  "method": "POST",
+  "path": "/pp/fcrablj/data",
+  "request": {
+    "terms": {
+      "term": [
+        {
+          "person": {
+            "firstName": "JASMINE",
+            "lastName": "REYES",
+            "ssn": "666701003"
+          }
+        }
+      ]
+    }
+  },
+  "expected": "BankruptciesFound/JudgmentsFound/LiensFound: 0/0/0",
+  "status": 200,
+  "requestId": "bbfe6b59-6805-4890-b979-7285adc91fb2",
+  "response": {
+    "DetailedBLJReport": {
+      "JudgmentsFound": 0,
+      "Filters": {
+        "ExcludeBankruptcies": false,
+        "FilterVerbiage": "Judgment satisfied = 7 years; Judgment unsatisfied = 7 years; Lien released = 7 years; Lien unreleased = 10 years; Bankruptcy chapter 7 or 11 dismissed or discharged = 10 years; Bankruptcy chapter 7 or 11 not dismissed or discharged = 10 years; Bankruptcy chapter 13 dismissed or discharged = 7 years; Bankruptcy chapter 13 not dismissed or discharged = 10 years",
+        "SkipNameValidation": false
+      },
+      "Messages": {
+        "Message": {
+          "Text": "No Errors",
+          "Code": 0
+        }
+      },
+      "Results": "",
+      "BankruptciesFound": 0,
+      "LiensFound": 0
+    }
+  }
+}

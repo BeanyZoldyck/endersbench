@@ -1,0 +1,69 @@
+{
+  "persona": "P10",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "LAUREN",
+      "last": "KOWALCZYK",
+      "ssn": "666-70-1010",
+      "dob": "10-03-1992",
+      "zip": "48226"
+    }
+  },
+  "expected": "1 MISDEMEANOR disorderly conduct, Wayne County, DISMISSED 2014",
+  "status": 200,
+  "requestId": "dff3883d-ac3d-4380-b60d-9ba994112045",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9110",
+      "name": "KOWALCZYK,LAUREN"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "candidate": [
+          {
+            "offenses": {
+              "count": "1",
+              "offense": [
+                {
+                  "caseType": "MISDEMEANOR",
+                  "description": "DISORDERLY CONDUCT",
+                  "arrestDate": "03/08/2014",
+                  "sentenceLength": "",
+                  "statute": "750.167",
+                  "filingDate": "03/20/2014",
+                  "disposition": "DISMISSED",
+                  "dispositionDate": "07/11/2014",
+                  "offenseDate": "03/08/2014",
+                  "offenseCode": "750.167",
+                  "convictionDate": "",
+                  "convictionLocation": "",
+                  "probationSentenceLength": "",
+                  "court": "36TH DISTRICT COURT - DETROIT",
+                  "plea": "NOT GUILTY"
+                }
+              ]
+            },
+            "subject": {
+              "category": "CRIMINAL",
+              "address": "1181 WOODWARD AVE",
+              "comments": "DISMISSED BY PROSECUTION",
+              "sex": "FEMALE",
+              "source": "MI WAYNE COUNTY 36TH DISTRICT COURT",
+              "jurisdiction": "WAYNE COUNTY",
+              "dob": "10/03/1992",
+              "state": "MI",
+              "fullName": "LAUREN B KOWALCZYK",
+              "caseNumber": "14-M-02211"
+            }
+          }
+        ],
+        "count": "1"
+      }
+    }
+  }
+}

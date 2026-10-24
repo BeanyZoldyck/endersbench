@@ -1,0 +1,42 @@
+{
+  "persona": "P02",
+  "product": "pitchpoint_blj",
+  "variant": "PitchPoint",
+  "method": "POST",
+  "path": "/pp/fcrablj/data",
+  "request": {
+    "terms": {
+      "term": [
+        {
+          "person": {
+            "firstName": "DANIEL",
+            "lastName": "WHITFIELD",
+            "ssn": "666701002"
+          }
+        }
+      ]
+    }
+  },
+  "expected": "BankruptciesFound/JudgmentsFound/LiensFound: 0/0/0",
+  "status": 200,
+  "requestId": "9758d0e7-bc24-42a1-9684-09245dc76adf",
+  "response": {
+    "DetailedBLJReport": {
+      "JudgmentsFound": 0,
+      "Filters": {
+        "ExcludeBankruptcies": false,
+        "FilterVerbiage": "Judgment satisfied = 7 years; Judgment unsatisfied = 7 years; Lien released = 7 years; Lien unreleased = 10 years; Bankruptcy chapter 7 or 11 dismissed or discharged = 10 years; Bankruptcy chapter 7 or 11 not dismissed or discharged = 10 years; Bankruptcy chapter 13 dismissed or discharged = 7 years; Bankruptcy chapter 13 not dismissed or discharged = 10 years",
+        "SkipNameValidation": false
+      },
+      "Messages": {
+        "Message": {
+          "Text": "No Errors",
+          "Code": 0
+        }
+      },
+      "Results": "",
+      "BankruptciesFound": 0,
+      "LiensFound": 0
+    }
+  }
+}
