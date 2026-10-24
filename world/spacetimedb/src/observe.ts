@@ -200,10 +200,16 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
 
 // Everyone knows planes search at night; only the pilot knows when this one is due.
 function rescueKnowledge(me: Agent, w: World) {
-  const note = 'Search planes fly over at night. A burning signal fire, or a flare fired while one is overhead, can be seen.';
-  if (w.rescueState !== 'waiting') return { note, state: w.rescueState };
-  if (me.role !== 'pilot') return { note };
-  return { note, planeInSeconds: Math.max(0, round1((w.rescueAtMs - w.gameTimeMs) / 1000)) };
+  const seats = w.rescueSeats > 0
+    ? ` The plane can carry only ${w.rescueSeats} survivors: those nearest the signal fire, or nearest whoever fires the flare, when it comes.`
+    : '';
+  const base = {
+    note: `Search planes fly over at night. A burning signal fire, or a flare fired while one is overhead, can be seen.${seats}`,
+    ...(w.rescueSeats > 0 ? { seats: w.rescueSeats } : {}),
+  };
+  if (w.rescueState !== 'waiting') return { ...base, state: w.rescueState };
+  if (me.role !== 'pilot') return base;
+  return { ...base, planeInSeconds: Math.max(0, round1((w.rescueAtMs - w.gameTimeMs) / 1000)) };
 }
 
 // The shelter is a landmark everyone knows about, built or not.

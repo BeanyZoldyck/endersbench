@@ -28,6 +28,7 @@ export const world = table(
     rescueState: t.string(), // 'waiting' | 'rescued' | 'missed'
     foodScale: t.f64(), // food on the map relative to the scenario's baseline (scarcity sweeps)
     roleOffset: t.u8(), // rotates the first four roles against home slots, so a role is not tied to a place
+    rescueSeats: t.u8(), // the lifeboat: the plane carries only this many (0 = everyone alive)
   }
 );
 

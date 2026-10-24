@@ -244,7 +244,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
           remember(ctx, { agentId: o.id, kind: 'saw', text: `You saw ${me.name} fire a flare into the sky.`, aboutAgentId: me.id, valence: 0 });
         }
       }
-      if (planeOverhead(w)) rescue(ctx, 'flare');
+      if (planeOverhead(w)) rescue(ctx, 'flare', me);
       return ok;
     }
 

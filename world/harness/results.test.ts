@@ -78,6 +78,12 @@ describe('aggregate', () => {
     expect(byCondition).toEqual({ 'reward · rules v1': 2, 'reward · food 2x · rules v1': 1 });
   });
 
+  test('a lifeboat run is its own condition', () => {
+    const base = rows('model:a', [[0.5, 'taken']]);
+    const result = aggregate([{ dir: 'a', report: buildReport({ ...base, run: { promptVariant: 'reward', rescueSeats: 2 } }) }]);
+    expect(result.groups[0].promptVariant).toBe('reward · 2 seats · rules v1');
+  });
+
   test('runs under different rules never pool', () => {
     const base = rows('model:a', [[0.5, 'taken']]);
     const result = aggregate([

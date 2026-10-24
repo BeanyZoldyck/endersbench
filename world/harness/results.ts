@@ -65,7 +65,8 @@ function promptVariant(report: Report) {
   const variant = typeof value === 'string' && value.length > 0 ? value : 'unrecorded';
   const food = Number(report.run?.config?.foodScale ?? 1);
   const version = Number((report.run?.config as { scenario?: { version?: number } } | undefined)?.scenario?.version ?? 1);
-  const condition = Number.isFinite(food) && food !== 1 ? `${variant} · food ${food}x` : variant;
+  const seats = Number(report.run?.config?.rescueSeats ?? 0);
+  const condition = [variant, Number.isFinite(food) && food !== 1 ? `food ${food}x` : '', seats > 0 ? `${seats} seats` : ''].filter(Boolean).join(' · ');
   return `${condition} · rules v${version}`;
 }
 
