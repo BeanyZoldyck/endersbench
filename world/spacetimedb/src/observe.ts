@@ -12,6 +12,7 @@ import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltere
 import { stormActive } from './threats';
 import { coldPerSecond } from './sim';
 import { planeOverhead } from './rescue';
+import { canCraft, weaponOf } from './weapons';
 
 const MAX_RESOURCES = 10;
 const TREELINE_TREES = 3;
@@ -36,6 +37,8 @@ export function describeIntent(ctx: Ctx, a: Agent) {
       return a.targetAgentId === 0n ? 'fighting a wolf' : `attacking ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
     case 'help':
       return `helping ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
+    case 'craft':
+      return 'crafting';
     case 'approach': {
       const name = (() => { try { return String(JSON.parse(a.pendingAction).name).replace(/_/g, ' '); } catch { return 'act'; } })();
       return `on the way to ${name}`;
@@ -66,6 +69,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     doing: describeIntent(ctx, o),
     // A full satchel is visible; what is in it is not.
     carryingFood: hasFood(ctx, { agentId: o.id }),
+    // A weapon in hand is plain to see.
+    holding: weaponOf(ctx, o.id),
   }));
 
   // Landmarks are known by heart: the wreck and your own chest are listed even
@@ -80,7 +85,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     id: Number(c.id),
     kind: c.kind,
     label: c.label,
-    owner: c.ownerAgentId === 0n ? 'shared' : c.ownerAgentId === me.id ? 'you' : names.get(c.ownerAgentId) ?? 'someone',
+    // A dead survivor's things stay free for anyone: a drop reads as shared, whoever it was.
+    owner: c.ownerAgentId === 0n || c.kind === 'drop' ? 'shared' : c.ownerAgentId === me.id ? 'you' : names.get(c.ownerAgentId) ?? 'someone',
     x: round1(c.x),
     y: round1(c.y),
     distance: round1(d),
@@ -182,6 +188,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const [cx, cy] = centre(w);
 
   const fc = forecast(ctx, w, me);
+  const craftable = canCraft(ctx, me);
   return JSON.stringify({
     // First, in plain words: what could kill you soon.
     alerts: alerts(me, w, fc, wolves),
@@ -201,6 +208,9 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       sheltered: sheltered(w, me.x, me.y) || inBuiltShelter(ctx, me.x, me.y),
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
+      holding: weaponOf(ctx, me.id),
+      // Only while there is something to make.
+      ...(craftable ? { canCraft: craftable } : {}),
       home: { x: round1(me.homeX), y: round1(me.homeY) },
       score: { reward: ensureScore(ctx, me.id).reward },
     },

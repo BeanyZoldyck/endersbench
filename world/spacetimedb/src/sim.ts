@@ -10,6 +10,7 @@ import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
 import { isBerry, isWoody, yields } from './resources';
 import { skills } from './roles';
+import { craftBlocker, craftItem, damageFor, isCraftable, weaponOf } from './weapons';
 import { updateRescue } from './rescue';
 import { hitWolf, spawnWolves, stepWolves, stormActive, unpin, updateHazards, wolvesLeave } from './threats';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
@@ -17,7 +18,6 @@ import { daylightAt, inBuiltShelter, inFirelight, litFires, sheltered, timeOfDay
 import {
   AGENT_RADIUS,
   ATTACK_COOLDOWN_MS,
-  ATTACK_DAMAGE,
   BUMP_SPEED,
   BURN_DPS,
   BUSH_REGROW_MS,
@@ -27,6 +27,7 @@ import {
   PINNED_HP_PER_S,
   STORM_COLD_PER_S,
   STORM_FUEL_FACTOR,
+  CRAFT_MS,
   CRITICAL_HP,
   FIRE_STANDOFF,
   COLD_NIGHT_PER_S,
@@ -426,6 +427,20 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
       return;
     }
 
+    case 'craft': {
+      const progress = a.progressMs + dt;
+      if (progress < CRAFT_MS) {
+        ctx.db.agent.id.update({ ...a, progressMs: progress });
+        return;
+      }
+      const item = pendingOf(a)?.args.item;
+      if (!isCraftable(item)) return goIdle(ctx, a, 'failed: craft');
+      const blocker = craftBlocker(ctx, a, item);
+      if (blocker) return goIdle(ctx, a, `failed: craft: ${blocker}`);
+      craftItem(ctx, a, item);
+      return goIdle(ctx, a, 'done: craft');
+    }
+
     case 'attack': {
       if (a.targetAgentId === 0n) {
         const wolf = ctx.db.mob.id.find(a.targetNodeId)!;
@@ -510,7 +525,8 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
   const d = distance(attacker.x, attacker.y, victim.x, victim.y) || 1;
   const nx = (victim.x - attacker.x) / d;
   const ny = (victim.y - attacker.y) / d;
-  const hp = victim.hp - ATTACK_DAMAGE;
+  const damage = damageFor(weaponOf(ctx, attacker.id));
+  const hp = victim.hp - damage;
   const knockedOut = hp <= 0;
   const shove = KNOCKBACK_SPEED * (knockedOut ? 1.5 : 1);
   ctx.db.agent.id.update({
@@ -528,7 +544,7 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
     attackerIsMob: false,
     victimId: victim.id,
     victimIsMob: false,
-    damage: ATTACK_DAMAGE,
+    damage,
     knockedOut,
   });
   remember(ctx, { agentId: victim.id, kind: 'felt', text: `${attacker.name} hit you.`, aboutAgentId: attacker.id, valence: -1 }, MEMORY_DEDUP_MS);
@@ -548,11 +564,13 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
   return knockedOut;
 }
 
-// Leaves everything the agent carried in a shared drop at its feet.
-export function dropAll(ctx: Ctx, a: Agent) {
+// Leaves everything the agent carried in a shared drop at its feet. When the
+// agent has died the drop remembers whose it was, so that taking from it can be
+// recorded as looting; it is still free for anyone to take.
+export function dropAll(ctx: Ctx, a: Agent, died = false) {
   const held = contents(ctx, { agentId: a.id });
   if (Object.keys(held).length === 0) return;
-  const drop = ctx.db.container.insert({ id: 0n, kind: 'drop', x: a.x, y: a.y, ownerAgentId: 0n, label: `${a.name}'s dropped things` });
+  const drop = ctx.db.container.insert({ id: 0n, kind: 'drop', x: a.x, y: a.y, ownerAgentId: died ? a.id : 0n, label: `${a.name}'s dropped things` });
   for (const [kind, qty] of Object.entries(held)) move(ctx, { agentId: a.id }, { containerId: drop.id }, kind, qty);
 }
 
@@ -564,7 +582,7 @@ export function describeDeath(name: string, cause: string) {
 export function knockOut(ctx: Ctx, id: bigint, cause = '') {
   const a = ctx.db.agent.id.find(id);
   if (!a || !a.alive) return;
-  dropAll(ctx, a);
+  dropAll(ctx, a, true);
   const now = getWorld(ctx).gameTimeMs;
   if (a.pendingRequestId !== 0n) {
     const req = ctx.db.decisionRequest.id.find(a.pendingRequestId);

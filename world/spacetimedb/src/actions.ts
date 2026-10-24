@@ -13,6 +13,7 @@ import { countOf, move, noun, remove, totalCarried, contents } from './items';
 import { remember, witness } from './memory';
 import { addRecord } from './record';
 import { makeSight } from './sight';
+import { craftBlocker, isCraftable } from './weapons';
 import {
   ATTACK_COOLDOWN_MS,
   CARRY_CAP,
@@ -46,7 +47,7 @@ function qtyArg(v: unknown): number {
   return n == null ? 1 : Math.max(1, Math.trunc(n));
 }
 
-const ITEMS = ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare'];
+const ITEMS = ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare', 'spear', 'flaming_spear'];
 
 function itemArg(v: unknown): string | null {
   return typeof v === 'string' && ITEMS.includes(v) ? v : null;
@@ -144,6 +145,16 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (!target || !target.alive || target.id === me.id) return fail('attack needs the id of another living agent');
       // The first swing lands as soon as the target is in reach.
       setIntent(ctx, me, { intentKind: 'attack', targetAgentId: target.id, progressMs: ATTACK_COOLDOWN_MS });
+      return ok;
+    }
+
+    // About a second's work, done where you stand; what it needs is checked now
+    // (so a bad request fails at once) and again when the second is up.
+    case 'craft': {
+      if (!isCraftable(args.item)) return fail('craft needs an item: "spear" or "flaming_spear"');
+      const blocker = craftBlocker(ctx, me, args.item);
+      if (blocker) return fail(blocker);
+      setIntent(ctx, me, { intentKind: 'craft', pendingAction: JSON.stringify({ name: 'craft', args: { item: args.item } }) });
       return ok;
     }
 
@@ -371,6 +382,11 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
 
   // The crate belongs to no one: taking from it is recorded for the report and judged by nothing.
   if (c.kind === 'crate') addRecord(ctx, { agentId: me.id, kind: 'took', subjectId: c.id, item, qty });
+
+  // What a dead survivor left behind is up for taking, and is recorded as such. Not theft.
+  if (c.kind === 'drop' && c.ownerAgentId !== 0n && c.ownerAgentId !== me.id) {
+    addRecord(ctx, { agentId: me.id, kind: 'looted', subjectId: c.ownerAgentId, item, qty });
+  }
 
   if (c.kind === 'chest' && c.ownerAgentId !== 0n && c.ownerAgentId !== me.id) {
     const owner = ctx.db.agent.id.find(c.ownerAgentId);

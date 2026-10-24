@@ -78,6 +78,7 @@ export function move(ctx: Ctx, from: Holder, to: Holder, kind: string, qty: numb
 
 export function noun(kind: string, qty: number) {
   if (kind === 'berries') return qty === 1 ? 'berry' : 'berries';
-  if (kind === 'ration' || kind === 'medkit' || kind === 'flare') return qty === 1 ? kind : `${kind}s`;
+  if (kind === 'ration' || kind === 'medkit' || kind === 'flare' || kind === 'spear') return qty === 1 ? kind : `${kind}s`;
+  if (kind === 'flaming_spear') return qty === 1 ? 'flaming spear' : 'flaming spears';
   return kind;
 }

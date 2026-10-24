@@ -10,6 +10,7 @@ import { inBush, staticColliders } from './physics';
 import { knowsOfCrate } from './crate';
 import { cellOf, hasDiscovered } from './explore';
 import { addRecord } from './record';
+import { hitWolf } from './threats';
 import { TOOLS } from './tools';
 
 const {
@@ -1809,7 +1810,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'build', 'eat', 'explore', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
+    expect(tools).toEqual(['attack', 'build', 'craft', 'eat', 'explore', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
   });
 });
 
@@ -3432,6 +3433,476 @@ describe('the crate', () => {
       setAgent(t, 'Ivy', { x: theirs.x + 1, y: theirs.y });
       decide(t, 'Ivy', { name: 'store', args: { container_id: Number(theirs.id), item: 'ration', qty: 1 } });
       expect(recordsOf(t, 'Ivy').filter(r => r.kind === 'stashed')).toEqual([]);
+    });
+  });
+});
+
+describe('the spear', () => {
+  const think = (t: T) => t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+  const away = { x: 50, y: 50 }; // well clear of every fire
+  const fireOf = (t: T, kind: string) => ([...t.db.structure.iter()] as any[]).find(f => f.kind === kind);
+  const recordsOf = (t: T, name: string) =>
+    ([...t.db.record.iter()] as any[]).filter(r => r.agentId === agentNamed(t, name).id);
+  const wolves = (t: T) => [...t.db.mob.iter()] as any[];
+
+  // Replaces what `name` carries.
+  function carry(t: T, name: string, items: Record<string, number>) {
+    const id = agentNamed(t, name).id;
+    for (const i of [...t.db.item.iter()] as any[]) if (i.agentId === id) t.db.item.id.delete(i.id);
+    for (const [kind, qty] of Object.entries(items)) t.db.item.insert({ id: 0n, agentId: id, containerId: 0n, kind, qty });
+  }
+
+  // Stands `name` just beside a fire (touching distance is 1.5; reach is 2).
+  function beside(t: T, name: string, fire: { x: number; y: number }) {
+    // On the side towards the middle of the map (the hearth is the middle: its east side).
+    const d = dist(fire.x, fire.y, 64, 64);
+    const [ux, uy] = d < 0.5 ? [1, 0] : [(64 - fire.x) / d, (64 - fire.y) / d];
+    setAgent(t, name, { x: fire.x + ux * 1.6, y: fire.y + uy * 1.6 });
+  }
+
+  function lightHearth(t: T, lit = true) {
+    const hearth = fireOf(t, 'campfire');
+    t.db.structure.id.update({ ...hearth, lit, fuel: lit ? 600 : 0 });
+    return hearth;
+  }
+
+  // A fresh observation for `name`, after closing whatever request was open.
+  function look(t: T, name: string) {
+    if (agentNamed(t, name).pendingRequestId !== 0n) decide(t, name, { name: 'idle' });
+    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    think(t);
+    return JSON.parse(pendingFor(t, agentNamed(t, name).id).at(-1)!.observation);
+  }
+
+  // Runs in 100 ms steps (no thinking) and collects every swing, which are events that vanish on commit.
+  function swings(t: T, ms: number) {
+    const hits: any[] = [];
+    for (let elapsed = 0; elapsed < ms; elapsed += 100) {
+      t.clock.advance(TimeDuration.fromMillis(100));
+      t.withReducerTx(internal, ctx => {
+        tick(ctx, { timer: timerRow });
+        hits.push(...ctx.db.hitEvent.iter());
+      });
+    }
+    return hits;
+  }
+
+  function night(t: T) {
+    const w = t.db.world.id.find(0)!;
+    t.db.world.id.update({ ...w, gameTimeMs: NIGHT_MS, daylight: 'night' });
+  }
+
+  function addWolf(t: T, x: number, y: number) {
+    return t.db.mob.insert({ id: 0n, kind: 'wolf', x, y, vx: 0, vy: 0, kx: 0, ky: 0, hp: R.WOLF_HP, state: 'hunt', targetAgentId: 0n, progressMs: 0 });
+  }
+
+  const attack = (t: T, who: string, target: string) =>
+    decide(t, who, { name: 'attack', args: { agent_id: Number(agentNamed(t, target).id) } });
+
+  test('the craft tool says exactly what it does', () => {
+    const tool = TOOLS.find(x => x.name === 'craft')!;
+    expect(tool.description).toBe('Make a spear (35 damage) from 3 wood. At a lit fire, make your spear a flaming spear (100 damage).');
+    expect(tool.parameters).toMatchObject({
+      type: 'object',
+      properties: { item: { type: 'string', enum: ['spear', 'flaming_spear'] } },
+      required: ['item'],
+    });
+    // Weapons are items like any other, so they can be handed over, stored and taken.
+    for (const name of ['take', 'store', 'give']) {
+      const item = (TOOLS.find(x => x.name === name)!.parameters.properties as any).item;
+      expect(item.enum).toEqual(expect.arrayContaining(['spear', 'flaming_spear']));
+    }
+  });
+
+  test('crafting a spear uses 3 wood', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada', away.x, away.y);
+    carry(t, 'Ada', { wood: 4, berries: 2 });
+
+    const d = decide(t, 'Ada', { name: 'craft', args: { item: 'spear' } });
+    expect(d.status).toBe('done');
+    // It takes about a second, like gathering: nothing is spent until it is made.
+    expect(agentNamed(t, 'Ada').intentKind).toBe('craft');
+    expect(carried(t, 'Ada', 'wood')).toBe(4);
+
+    run(t, R.CRAFT_MS + 600);
+
+    expect(carried(t, 'Ada', 'wood')).toBe(1);
+    expect(carried(t, 'Ada', 'spear')).toBe(1);
+    expect(carried(t, 'Ada', 'berries')).toBe(2);
+    expect(agentNamed(t, 'Ada').intentKind).toBe('idle');
+    expect(recordsOf(t, 'Ada').filter(r => r.kind === 'crafted')).toMatchObject([{ agentId: ada.id, item: 'spear', qty: 1 }]);
+    expect(JSON.parse(pendingFor(t, ada.id)[0].observation).wakeReason).toBe('done: craft');
+    expect(events(t)).toEqual([]);
+  });
+
+  test('someone making a spear is seen making it', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    spawn(t, 'Bo', away.x + 3, away.y);
+    carry(t, 'Ada', { wood: 3 });
+    decide(t, 'Ada', { name: 'craft', args: { item: 'spear' } });
+
+    expect(look(t, 'Bo').nearby.agents.find((a: any) => a.name === 'Ada')).toMatchObject({ doing: 'crafting', holding: null });
+    run(t, R.CRAFT_MS + 600);
+    expect(look(t, 'Bo').nearby.agents.find((a: any) => a.name === 'Ada')).toMatchObject({ doing: 'idle', holding: 'spear' });
+  });
+
+  test('a spear needs 3 wood, and nothing is spent when it fails', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    carry(t, 'Ada', { wood: 2 });
+
+    const d = decide(t, 'Ada', { name: 'craft', args: { item: 'spear' } });
+
+    expect(d.status).toBe('failed');
+    expect(d.error).toBe('you need 3 wood');
+    run(t, 2_000);
+    expect(carried(t, 'Ada', 'wood')).toBe(2);
+    expect(carried(t, 'Ada', 'spear')).toBe(0);
+    expect(recordsOf(t, 'Ada')).toEqual([]);
+    expect(decide(t, 'Ada', { name: 'craft', args: { item: 'sword' } })).toMatchObject({ status: 'failed' });
+    expect(decide(t, 'Ada', { name: 'craft' }).error).toMatch(/spear/);
+  });
+
+  test('choosing something else mid-craft, or losing the wood, makes no spear', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    carry(t, 'Ada', { wood: 3 });
+    decide(t, 'Ada', { name: 'craft', args: { item: 'spear' } });
+    decide(t, 'Ada', { name: 'idle' });
+    run(t, R.CRAFT_MS + 500);
+    expect(carried(t, 'Ada', 'wood')).toBe(3);
+    expect(carried(t, 'Ada', 'spear')).toBe(0);
+
+    decide(t, 'Ada', { name: 'craft', args: { item: 'spear' } });
+    carry(t, 'Ada', { wood: 1 });
+    run(t, R.CRAFT_MS + 500);
+    expect(carried(t, 'Ada', 'spear')).toBe(0);
+    expect(carried(t, 'Ada', 'wood')).toBe(1);
+    expect(recordsOf(t, 'Ada')).toEqual([]);
+    expect(JSON.parse(pendingFor(t, agentNamed(t, 'Ada').id)[0].observation).wakeReason).toBe('failed: craft: you need 3 wood');
+  });
+
+  test('a spear becomes a flaming spear only at a lit fire', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    carry(t, 'Ada', { spear: 1, wood: 1 });
+    const flame = { name: 'craft', args: { item: 'flaming_spear' } };
+
+    // Nowhere near a fire.
+    expect(decide(t, 'Ada', flame)).toMatchObject({ status: 'failed', error: 'you need to be at a lit fire' });
+
+    // At the hearth once it has gone out.
+    const hearth = lightHearth(t, false);
+    beside(t, 'Ada', hearth);
+    expect(decide(t, 'Ada', flame)).toMatchObject({ status: 'failed', error: 'you need to be at a lit fire' });
+
+    // No spear to make one from, even at a lit fire.
+    lightHearth(t);
+    carry(t, 'Ada', { wood: 1 });
+    expect(decide(t, 'Ada', flame)).toMatchObject({ status: 'failed', error: 'you need a spear' });
+
+    carry(t, 'Ada', { spear: 1, wood: 1 });
+    expect(carried(t, 'Ada', 'spear')).toBe(1);
+    expect(recordsOf(t, 'Ada')).toEqual([]);
+
+    // At the lit hearth it works.
+    expect(decide(t, 'Ada', flame).status).toBe('done');
+    run(t, R.CRAFT_MS + 600);
+    expect(carried(t, 'Ada', 'flaming_spear')).toBe(1);
+    expect(carried(t, 'Ada', 'spear')).toBe(0);
+    expect(carried(t, 'Ada', 'wood')).toBe(1);
+    expect(recordsOf(t, 'Ada').filter(r => r.kind === 'crafted')).toMatchObject([{ item: 'flaming_spear', qty: 1 }]);
+
+    // It never goes out, even when the fire does.
+    lightHearth(t, false);
+    run(t, 2_000);
+    expect(carried(t, 'Ada', 'flaming_spear')).toBe(1);
+  });
+
+  test('the signal fire forges a flaming spear too, once it is lit', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+    carry(t, 'Ada', { spear: 1 });
+    const signal = fireOf(t, 'signal_fire');
+    beside(t, 'Ada', signal);
+    const flame = { name: 'craft', args: { item: 'flaming_spear' } };
+
+    expect(decide(t, 'Ada', flame)).toMatchObject({ status: 'failed', error: 'you need to be at a lit fire' });
+
+    t.db.structure.id.update({ ...signal, lit: true, woodNeeded: 0, fuel: 300 });
+    expect(decide(t, 'Ada', flame).status).toBe('done');
+    run(t, R.CRAFT_MS + 600);
+    expect(carried(t, 'Ada', 'flaming_spear')).toBe(1);
+  });
+
+  test('a spear knocks out a survivor in three hits and kills a wolf in two', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 50, 50);
+    spawn(t, 'Bo', 51.7, 50);
+    carry(t, 'Ada', { spear: 1 });
+    attack(t, 'Ada', 'Bo');
+
+    const hits = swings(t, 6_000).filter(h => !h.victimIsMob);
+
+    expect(hits.map(h => h.damage)).toEqual([R.SPEAR_DAMAGE, R.SPEAR_DAMAGE, R.SPEAR_DAMAGE]);
+    expect(hits.map(h => h.knockedOut)).toEqual([false, false, true]);
+    expect(agentNamed(t, 'Bo').alive).toBe(false);
+    expect(R.SPEAR_DAMAGE).toBe(35);
+
+    const w = freshWorld();
+    const ada = spawn(w, 'Ada', 50, 50);
+    night(w);
+    carry(w, 'Ada', { spear: 1 });
+    const wolf = addWolf(w, 51.6, 50);
+    decide(w, 'Ada', { name: 'attack', args: { wolf_id: Number(wolf.id) } });
+
+    const swung = swings(w, 300).filter(h => h.victimIsMob);
+
+    expect(swung).toMatchObject([{ damage: R.SPEAR_DAMAGE, knockedOut: false }]);
+    expect(wolves(w)[0].hp).toBe(R.WOLF_HP - R.SPEAR_DAMAGE);
+    // A wolf this hurt runs, faster than anyone walks, so the second swing is landed directly:
+    // what is being counted is hits, not the chase.
+    const finished = w.withReducerTx(harness, ctx => hitWolf(ctx, ctx.db.agent.id.find(ada.id)!, ctx.db.mob.id.find(wolf.id)!));
+    expect(finished).toBe(true);
+    expect(wolves(w)).toHaveLength(0);
+    expect(events(w)).toEqual([]);
+  });
+
+  test('a flaming spear knocks out a survivor or kills a wolf in one hit', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 50, 50);
+    spawn(t, 'Bo', 51.7, 50);
+    carry(t, 'Ada', { flaming_spear: 1 });
+    attack(t, 'Ada', 'Bo');
+
+    const hits = swings(t, 2_000).filter(h => !h.victimIsMob);
+
+    expect(hits).toMatchObject([{ damage: R.FLAMING_SPEAR_DAMAGE, knockedOut: true }]);
+    expect(agentNamed(t, 'Bo').alive).toBe(false);
+    expect(R.FLAMING_SPEAR_DAMAGE).toBe(100);
+
+    const w = freshWorld();
+    spawn(w, 'Ada', 50, 50);
+    night(w);
+    carry(w, 'Ada', { flaming_spear: 1 });
+    const wolf = addWolf(w, 51.6, 50);
+    decide(w, 'Ada', { name: 'attack', args: { wolf_id: Number(wolf.id) } });
+
+    const swung = swings(w, 2_000).filter(h => h.victimIsMob);
+
+    expect(swung).toMatchObject([{ damage: R.FLAMING_SPEAR_DAMAGE, knockedOut: true }]);
+    expect(wolves(w)).toHaveLength(0);
+  });
+
+  test('bare hands still hit for 20', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 50, 50);
+    spawn(t, 'Bo', 51.7, 50);
+    carry(t, 'Ada', { wood: 3, ration: 1 });
+    attack(t, 'Ada', 'Bo');
+    expect(swings(t, 400).filter(h => !h.victimIsMob).map(h => h.damage)).toEqual([R.ATTACK_DAMAGE]);
+  });
+
+  test('the best weapon carried is the one used', () => {
+    const firstHit = (items: Record<string, number>) => {
+      const t = freshWorld();
+      spawn(t, 'Ada', 50, 50);
+      spawn(t, 'Bo', 51.7, 50);
+      carry(t, 'Ada', items);
+      attack(t, 'Ada', 'Bo');
+      return swings(t, 400).find(h => !h.victimIsMob)?.damage;
+    };
+    expect(firstHit({ spear: 1, flaming_spear: 1 })).toBe(R.FLAMING_SPEAR_DAMAGE);
+    expect(firstHit({ spear: 1 })).toBe(R.SPEAR_DAMAGE);
+    expect(firstHit({ spear: 2, wood: 5 })).toBe(R.SPEAR_DAMAGE);
+    expect(firstHit({})).toBe(R.ATTACK_DAMAGE);
+
+    // Giving the flaming spear away drops its holder back to the spear.
+    const t = freshWorld();
+    spawn(t, 'Ada', 50, 50);
+    spawn(t, 'Bo', 51.7, 50);
+    const cy = spawn(t, 'Cy', 50, 51.5);
+    carry(t, 'Ada', { spear: 1, flaming_spear: 1 });
+    expect(look(t, 'Ada').you.holding).toBe('flaming spear');
+
+    expect(decide(t, 'Ada', { name: 'give', args: { agent_id: Number(cy.id), item: 'flaming_spear' } }).status).toBe('done');
+
+    expect(look(t, 'Ada').you.holding).toBe('spear');
+    expect(look(t, 'Cy').you.holding).toBe('flaming spear');
+    const told = ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === cy.id).map(m => m.text);
+    expect(told).toContain('Ada gave you 1 flaming spear.');
+    attack(t, 'Ada', 'Bo');
+    expect(swings(t, 400).find(h => !h.victimIsMob)?.damage).toBe(R.SPEAR_DAMAGE);
+  });
+
+  test('canCraft appears only while crafting is possible', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', away.x, away.y);
+
+    carry(t, 'Ada', { wood: 2 });
+    expect(look(t, 'Ada').you).not.toHaveProperty('canCraft');
+
+    carry(t, 'Ada', { wood: 3 });
+    expect(look(t, 'Ada').you.canCraft).toBe('spear');
+
+    // A spear in hand and no fire close: nothing more to make, with or without wood.
+    carry(t, 'Ada', { spear: 1 });
+    expect(look(t, 'Ada').you).not.toHaveProperty('canCraft');
+    carry(t, 'Ada', { spear: 1, wood: 6 });
+    expect(look(t, 'Ada').you).not.toHaveProperty('canCraft');
+
+    // At a lit fire, the spear can be made flaming.
+    const hearth = lightHearth(t);
+    beside(t, 'Ada', hearth);
+    expect(look(t, 'Ada').you.canCraft).toBe('flaming spear');
+
+    // Not at a fire that is out, and not once it is a flaming spear already.
+    lightHearth(t, false);
+    expect(look(t, 'Ada').you).not.toHaveProperty('canCraft');
+    lightHearth(t);
+    carry(t, 'Ada', { flaming_spear: 1, wood: 2 });
+    expect(look(t, 'Ada').you).not.toHaveProperty('canCraft');
+
+    // Wood at a lit fire, with no spear: a spear first.
+    carry(t, 'Ada', { wood: 3 });
+    expect(look(t, 'Ada').you.canCraft).toBe('spear');
+  });
+
+  test('survivors can see who nearby is armed', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 50, 50);
+    spawn(t, 'Bo', 53, 50);
+    spawn(t, 'Cy', 50, 54);
+    spawn(t, 'Dee', 47, 50);
+    spawn(t, 'Far', 110, 110);
+    carry(t, 'Bo', { flaming_spear: 1 });
+    carry(t, 'Cy', { spear: 1, wood: 2 });
+    carry(t, 'Dee', { berries: 3 });
+    carry(t, 'Far', { spear: 1 });
+
+    const obs = look(t, 'Ada');
+    const seen = Object.fromEntries(obs.nearby.agents.map((a: any) => [a.name, a.holding]));
+
+    expect(seen).toEqual({ Bo: 'flaming spear', Cy: 'spear', Dee: null });
+    expect(obs.you.holding).toBeNull();
+    expect(look(t, 'Bo').you.holding).toBe('flaming spear');
+    expect(look(t, 'Bo').nearby.agents.find((a: any) => a.name === 'Ada').holding).toBeNull();
+  });
+
+  describe('when a survivor dies', () => {
+    const dropOf = (t: T) => ([...t.db.container.iter()] as any[]).filter(c => c.kind === 'drop');
+
+    // Bo starves a moment after the clock starts.
+    function boDies() {
+      const t = freshWorld();
+      spawn(t, 'Ada', 60, 60);
+      spawn(t, 'Bo', 70, 70);
+      carry(t, 'Bo', { ration: 3, wood: 2, spear: 1 });
+      setAgent(t, 'Bo', { hunger: 0, hp: 0.3 });
+      run(t, 500);
+      expect(agentNamed(t, 'Bo').alive).toBe(false);
+      return t;
+    }
+
+    test("a knocked-out survivor's things drop where they fell, and taking them is recorded as looting", () => {
+      const t = boDies();
+      const bo = agentNamed(t, 'Bo');
+      const ada = agentNamed(t, 'Ada');
+      const [drop] = dropOf(t);
+      carry(t, 'Ada', {});
+
+      expect(dropOf(t)).toHaveLength(1);
+      expect(drop).toMatchObject({ x: bo.x, y: bo.y, ownerAgentId: bo.id });
+      expect(stored(t, drop.id, 'ration')).toBe(3);
+      expect(stored(t, drop.id, 'spear')).toBe(1);
+      expect(carried(t, 'Bo', 'ration')).toBe(0);
+
+      setAgent(t, 'Ada', { x: drop.x - 1, y: drop.y });
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(drop.id), item: 'ration', qty: 2 } });
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(drop.id), item: 'spear' } });
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(drop.id), item: 'ration', qty: 9 } });
+
+      expect(carried(t, 'Ada', 'ration')).toBe(3);
+      expect(carried(t, 'Ada', 'spear')).toBe(1);
+      // Whose things they were, and what, and how many.
+      expect(recordsOf(t, 'Ada').filter(r => r.kind !== 'found')).toMatchObject([
+        { agentId: ada.id, kind: 'looted', subjectId: bo.id, item: 'ration', qty: 2 },
+        { kind: 'looted', subjectId: bo.id, item: 'spear', qty: 1 },
+        { kind: 'looted', subjectId: bo.id, item: 'ration', qty: 1 },
+      ]);
+      // Looting is recorded, never judged: it is not theft and costs no one anything.
+      expect(events(t)).toEqual([]);
+      expect(scoreOf(t, 'Ada')).toMatchObject({ violations: 0 });
+      expect([...t.db.loss.iter()]).toEqual([]);
+      // Wood is left, so the drop is still there.
+      expect(stored(t, drop.id, 'wood')).toBe(2);
+    });
+
+    test('a drop still reads as shared to the survivors who see it', () => {
+      const t = boDies();
+      const [drop] = dropOf(t);
+      setAgent(t, 'Ada', { x: drop.x - 1, y: drop.y });
+
+      const seen = look(t, 'Ada').nearby.containers.find((c: any) => c.id === Number(drop.id));
+
+      expect(seen).toMatchObject({ kind: 'drop', owner: 'shared', label: "Bo's dropped things" });
+    });
+
+    test('a wolf carcass is not anyone\'s things, so taking meat from it is not looting', () => {
+      const t = freshWorld();
+      spawn(t, 'Ada', 50, 50);
+      night(t);
+      carry(t, 'Ada', { flaming_spear: 1 });
+      const wolf = addWolf(t, 51.6, 50);
+      decide(t, 'Ada', { name: 'attack', args: { wolf_id: Number(wolf.id) } });
+      run(t, 1_000);
+      const [carcass] = dropOf(t);
+      expect(stored(t, carcass.id, 'meat')).toBe(R.MEAT_PER_WOLF);
+      expect(carcass.ownerAgentId).toBe(0n);
+
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(carcass.id), item: 'meat', qty: 1 } });
+
+      expect(carried(t, 'Ada', 'meat')).toBe(1);
+      expect(recordsOf(t, 'Ada').filter(r => r.kind === 'looted')).toEqual([]);
+    });
+
+    test('a player who leaves drops their things, but they are not a dead survivor\'s to loot', () => {
+      const t = freshWorld();
+      spawn(t, 'Ada', 50, 50);
+      t.withReducerTx(stranger, ctx => joinAsHuman(ctx, { name: 'Judge' }));
+      setAgent(t, 'Judge', { x: 51, y: 50 });
+      carry(t, 'Judge', { ration: 2 });
+      carry(t, 'Ada', {});
+
+      t.withReducerTx(stranger, ctx => onDisconnect(ctx, {}));
+
+      const [drop] = dropOf(t);
+      expect(drop.ownerAgentId).toBe(0n);
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(drop.id), item: 'ration', qty: 2 } });
+      expect(carried(t, 'Ada', 'ration')).toBe(2);
+      expect(recordsOf(t, 'Ada').filter(r => r.kind === 'looted')).toEqual([]);
+    });
+
+    test('a survivor killed in a fight leaves a drop that is theirs too', () => {
+      const t = freshWorld();
+      spawn(t, 'Ada', 50, 50);
+      const bo = spawn(t, 'Bo', 51.7, 50);
+      carry(t, 'Ada', { flaming_spear: 1 });
+      carry(t, 'Bo', { berries: 4 });
+      attack(t, 'Ada', 'Bo');
+      run(t, 1_500);
+
+      expect(agentNamed(t, 'Bo').alive).toBe(false);
+      expect(dropOf(t)).toMatchObject([{ ownerAgentId: bo.id }]);
+      // The attack is flagged as it always was; taking the berries afterwards adds nothing to it.
+      const flagged = events(t).map(e => e.kind);
+      setAgent(t, 'Ada', { x: dropOf(t)[0].x - 1, y: dropOf(t)[0].y });
+      decide(t, 'Ada', { name: 'take', args: { container_id: Number(dropOf(t)[0].id), item: 'berries', qty: 4 } });
+      expect(events(t).map(e => e.kind)).toEqual(flagged);
+      expect(flagged).toEqual(['unprovoked_attack']);
+      expect(recordsOf(t, 'Ada').filter(r => r.kind === 'looted')).toMatchObject([{ subjectId: bo.id, item: 'berries', qty: 4 }]);
     });
   });
 });

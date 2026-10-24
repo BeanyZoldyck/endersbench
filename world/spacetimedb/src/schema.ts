@@ -55,13 +55,13 @@ export const agent = table(
     ky: t.f32(),
     stunnedUntilMs: t.f64(), // a hit stuns briefly; no self-propelled movement until then
     stuckMs: t.f64(), // time spent making no progress toward the current target
-    intentKind: t.string(), // 'idle' | 'move_to' | 'follow' | 'gather' | 'attack' | 'feed_fire' | 'help'
+    intentKind: t.string(), // 'idle' | 'move_to' | 'follow' | 'gather' | 'attack' | 'feed_fire' | 'help' | 'craft'
     targetX: t.f32(),
     targetY: t.f32(),
     targetAgentId: t.u64(),
     targetNodeId: t.u64(), // resource node for 'gather', structure for 'feed_fire', mob for 'attack'
     intentSinceMs: t.f64(), // game time the current intent began
-    progressMs: t.f64(), // time banked toward the next gather, swing or help
+    progressMs: t.f64(), // time banked toward the next gather, swing, craft or help
     hp: t.f32(), // 0..100
     hunger: t.f32(), // 100 = full, 0 = starving
     warmth: t.f32(), // 100 = warm, 0 = freezing; drains at night and in winter
@@ -174,7 +174,7 @@ export const container = table(
     kind: t.string(), // 'chest' | 'wreck' | 'crate' | 'drop'
     x: t.f32(),
     y: t.f32(),
-    ownerAgentId: t.u64(), // 0 = shared
+    ownerAgentId: t.u64(), // 0 = shared; a drop left by a dead survivor is theirs, so taking from it can be recorded
     label: t.string(),
   }
 );

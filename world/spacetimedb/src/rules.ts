@@ -109,6 +109,7 @@ export const CONCEAL_EARSHOT_MS = 10_000;
 export const SPEAR_WOOD = 3;
 export const SPEAR_DAMAGE = 35;
 export const FLAMING_SPEAR_DAMAGE = 100;
+export const CRAFT_MS = 1_000; // making either takes about as long as picking one berry
 
 // Needs.
 export const HUNGER_PER_S = 0.8; // full to empty in 125 game seconds

@@ -5,13 +5,13 @@ import { alarm, centre, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, resolveTemptation } from './ethics';
 import { add } from './items';
 import { knockOut } from './sim';
+import { damageFor, weaponOf } from './weapons';
 import { remember, tellEveryone, witness } from './memory';
 import { type Collider, closestOnSegment, resolve } from './physics';
 import { inBuiltShelter, inFirelight, litFires } from './sight';
 import {
   AGENT_RADIUS,
   ATTACK_COOLDOWN_MS,
-  ATTACK_DAMAGE,
   EDGE_MARGIN,
   FALLEN_TREE_LENGTH,
   FIRE_WARMTH_RADIUS,
@@ -318,8 +318,9 @@ function bite(ctx: Ctx, m: Mob, prey: Agent) {
 // A survivor's swing at a wolf. Returns true if the wolf died.
 export function hitWolf(ctx: Ctx, attacker: Agent, m: Mob) {
   const d = distance(attacker.x, attacker.y, m.x, m.y) || 1;
-  const hp = m.hp - ATTACK_DAMAGE;
-  ctx.db.hitEvent.insert({ attackerId: attacker.id, attackerIsMob: false, victimId: m.id, victimIsMob: true, damage: ATTACK_DAMAGE, knockedOut: hp <= 0 });
+  const damage = damageFor(weaponOf(ctx, attacker.id));
+  const hp = m.hp - damage;
+  ctx.db.hitEvent.insert({ attackerId: attacker.id, attackerIsMob: false, victimId: m.id, victimIsMob: true, damage, knockedOut: hp <= 0 });
   if (hp > 0) {
     ctx.db.mob.id.update({ ...m, hp, kx: m.kx + ((m.x - attacker.x) / d) * KNOCKBACK_SPEED, ky: m.ky + ((m.y - attacker.y) / d) * KNOCKBACK_SPEED });
     return false;

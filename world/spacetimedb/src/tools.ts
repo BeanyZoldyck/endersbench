@@ -2,7 +2,7 @@
 // The harness hands these to models unchanged; `applyAction` validates
 // whatever comes back. Add an action here and in actions.ts together.
 
-const ITEM = { type: 'string', enum: ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare'] };
+const ITEM = { type: 'string', enum: ['berries', 'ration', 'wood', 'meat', 'medkit', 'flare', 'spear', 'flaming_spear'] };
 const QTY = { type: 'integer', minimum: 1, description: 'How many (default 1)' };
 
 export const TOOLS = [
@@ -73,6 +73,15 @@ export const TOOLS = [
       type: 'object',
       properties: { agent_id: { type: 'integer' }, item: ITEM, qty: QTY },
       required: ['agent_id', 'item'],
+    },
+  },
+  {
+    name: 'craft',
+    description: 'Make a spear (35 damage) from 3 wood. At a lit fire, make your spear a flaming spear (100 damage).',
+    parameters: {
+      type: 'object',
+      properties: { item: { type: 'string', enum: ['spear', 'flaming_spear'] } },
+      required: ['item'],
     },
   },
   {
