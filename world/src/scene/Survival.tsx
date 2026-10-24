@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { OrbitControls } from 'three-stdlib';
 import * as THREE from 'three';
-import type { Hazard, Mob, Structure, World } from '../module_bindings/types';
+import type { Agent, Hazard, Mob, Structure, World } from '../module_bindings/types';
 import { activeStorm, type Physics } from './contract';
 import { toScene } from './Environment';
 import { shelterPanels } from './SceneEvents';
@@ -55,8 +55,40 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
   </group>;
 }
 
-export function Wolves({ mobs, world, physics }: { mobs: readonly Mob[]; world: World; physics: Physics }) {
-  return <group>{mobs.filter(m => m.kind === 'wolf').map(m => <Wolf key={String(m.id)} mob={m} world={world} radius={physics.wolfRadius} />)}</group>;
+export function Wolves({ mobs, world, physics, agents }: { mobs: readonly Mob[]; world: World; physics: Physics; agents: readonly Agent[] }) {
+  return <group>
+    {mobs.filter(m => m.kind === 'wolf').map(m => <Wolf key={String(m.id)} mob={m} world={world} radius={physics.wolfRadius} />)}
+    {mobs.filter(m => m.kind === 'wolf' && m.state === 'hunt').map(m => {
+      const prey = agents.find(a => a.id === m.targetAgentId && a.alive);
+      return prey ? <HuntLine key={`hunt-${m.id}`} wolf={m} prey={prey} world={world} /> : null;
+    })}
+  </group>;
+}
+
+// A hunting wolf draws a pulsing red line to its prey and a ring at their feet,
+// so the audience sees the danger before the bite.
+function HuntLine({ wolf, prey, world }: { wolf: Mob; prey: Agent; world: World }) {
+  const line = useRef<THREE.Mesh>(null), ring = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    const [wx, wz] = toScene(world, wolf.x, wolf.y), [px, pz] = toScene(world, prey.x, prey.y);
+    const pulse = 0.55 + Math.sin(clock.elapsedTime * 8) * 0.25;
+    if (line.current) {
+      const length = Math.hypot(px - wx, pz - wz);
+      line.current.position.set((wx + px) / 2, 0.09, (wz + pz) / 2);
+      line.current.rotation.set(-Math.PI / 2, 0, -Math.atan2(pz - wz, px - wx));
+      line.current.scale.set(Math.max(0.01, length), 1, 1);
+      (line.current.material as THREE.MeshBasicMaterial).opacity = pulse * 0.7;
+    }
+    if (ring.current) {
+      ring.current.position.set(px, 0.1, pz);
+      ring.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 8) * 0.12);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity = pulse;
+    }
+  });
+  return <group name="hunt">
+    <mesh ref={line}><planeGeometry args={[1, 0.16]} /><meshBasicMaterial {...boundaryFog} color="#c4452f" transparent depthWrite={false} /></mesh>
+    <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[1.25, 1.45, 36]} /><meshBasicMaterial {...boundaryFog} color="#c4452f" transparent depthWrite={false} /></mesh>
+  </group>;
 }
 function Wolf({ mob: m, world, radius: r }: { mob: Mob; world: World; radius: number }) {
   const root = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null);

@@ -7,6 +7,7 @@ import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
 import { parsePhysics, itemName } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
+import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
@@ -127,12 +128,13 @@ export default function App() {
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
+    {!panel && !preview && <MomentsRail world={world} agents={liveAgents} containers={liveContainers} scores={scores} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
-          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Ghost' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div><Needs agent={a} compact />
+          <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span>{!a.alive ? 'Dead' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : a.intentKind === 'idle' ? 'Resting' : a.intentKind === 'gather' ? 'Gathering' : a.intentKind === 'attack' ? 'Attacking' : a.intentKind === 'feed_fire' ? 'Tending fire' : a.intentKind === 'help' ? 'Helping' : 'Walking'}</span></div>{a.role && <span className="role-label">{a.role}</span>}<span className="model-name" title={a.modelId}>{a.modelId}</span></div><Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>

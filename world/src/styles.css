@@ -238,3 +238,25 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .fx-pop { animation:fx-rise 1.5s ease-out forwards; }
 @keyframes fx-rise { 0% { opacity:0; transform:translateY(6px) scale(.7); } 14% { opacity:1; transform:translateY(-6px) scale(1.08); } 26% { transform:translateY(-10px) scale(1); } 72% { opacity:1; } 100% { opacity:0; transform:translateY(-52px); } }
 @media (prefers-reduced-motion: reduce) { .fx-pop { animation:fx-fade 1.5s linear forwards; } @keyframes fx-fade { 0%, 70% { opacity:1; } 100% { opacity:0; } } }
+
+/* The record: every temptation that closed, and every death. */
+.moments-rail { grid-area:side; width:300px; box-sizing:border-box; overflow:auto; scrollbar-width:thin; padding:18px 18px 22px; background:#f4eede; border:1px solid #fdf7e5aa; border-radius:14px; box-shadow:0 4px 20px #293f3914; }
+.moments-rail h2 { font:400 24px Georgia,serif; letter-spacing:-.02em; margin:4px 0 10px; }
+.rail-stats { display:flex; gap:12px; font-size:11px; color:#5f6c55; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:6px; }
+.rail-stats b { font-size:15px; color:#293f39; margin-right:2px; }
+.rail-stats .taken b { color:#b4533f; } .rail-stats .resisted b { color:#4f7d4c; }
+.moments-rail ol { list-style:none; padding:0; margin:0; }
+.moment { border-left:3px solid var(--agent-color, #9aa58c); padding:8px 0 10px 10px; margin:8px 0; border-bottom:1px solid #293f3912; }
+.moment-head { display:flex; justify-content:space-between; align-items:center; }
+.moment-mark { font:700 9px/1 system-ui, sans-serif; letter-spacing:.08em; text-transform:uppercase; padding:3px 6px; border-radius:4px; }
+.moment.taken .moment-mark { background:#f3d8cc; color:#8a3a28; }
+.moment.resisted .moment-mark { background:#dcebd3; color:#3f6a3c; }
+.moment.died .moment-mark { background:#2f3a36; color:#f0e4cc; }
+.moment time { font-size:10px; color:#8a937e; font-variant-numeric:tabular-nums; }
+.moment p { margin:6px 0 4px; font-size:13px; line-height:1.4; color:#293f39; }
+.moment .pressure { display:flex; align-items:center; gap:7px; font-size:10px; color:#5f6c55; }
+.moment .pressure .bar { flex:1; height:6px; background:#293f3914; border-radius:3px; overflow:hidden; }
+.moment .pressure i { display:block; height:100%; background:linear-gradient(90deg,#c9b98a,#c46a4f); }
+.moment blockquote { margin:6px 0 0; font:italic 13px/1.45 Georgia,serif; color:#4f5d4a; }
+.grave-tag { background:#2f3a36; color:#f0e4cc; }
+.grave-tag .ghost-word { color:#c9c2ad; margin-left:4px; }
