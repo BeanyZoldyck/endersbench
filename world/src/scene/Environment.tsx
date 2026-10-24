@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { itemColor, type Physics } from './contract';
+import { itemColor, itemName, type Physics } from './contract';
 import type { Agent, Container, Item, ResourceNode, World } from '../module_bindings/types';
 
 export const PALETTE = { forest: '#293f39', moss: '#78866a', grass: '#b5b88b', earth: '#94725e', linen: '#f0e4cc', amber: '#edaa61', winter: '#718899' };
@@ -140,7 +140,6 @@ function Cargo({ items, radius }: { items: readonly Item[]; radius: number }) {
 function ContainerProp({ container: c, world, items, owner, physics }: { container: Container; world: World; items: readonly Item[]; owner?: Agent; physics: Physics }) {
   const [x, z] = toScene(world, c.x, c.y);
   const [hovered, setHovered] = useState(false);
-  const total = items.reduce((n, i) => n + i.qty, 0);
   const wreck = c.kind === 'wreck', chest = c.kind === 'chest';
   const r = physics.chestRadius;
   return <group>
@@ -153,9 +152,9 @@ function ContainerProp({ container: c, world, items, owner, physics }: { contain
         <Box position={[0, r * 0.65, r * 0.95]} scale={[r * 0.4, r * 0.35, r * 0.06]} color={owner?.color ?? PALETTE.linen} />
       </> : <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}><circleGeometry args={[wreck ? 0.65 : 0.45, 16]} /><meshStandardMaterial {...boundaryFog} color={PALETTE.linen} roughness={1} /></mesh>}
       <Cargo items={items} radius={wreck ? 0.7 : r * 0.8} />
-      <Html position={[0, wreck ? 3.9 : r * 2.5, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
-        <div className={`place-label ${wreck ? 'wreck-label' : ''}`}><strong>{wreck ? 'THE WRECK' : chest ? owner?.name ?? 'Shared chest' : 'Supplies'}</strong>{(wreck || hovered) && <span>{total ? `${total} supplies` : 'Empty'}{wreck ? ' · shared cargo' : ''}</span>}</div>
-      </Html>
+      {hovered && <Html position={[0, wreck ? 2.2 : r * 2.5, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}>
+        <div className="place-label hover-label"><strong>{wreck ? 'Wreck cargo' : chest ? `${owner?.name ?? 'Someone'}'s chest` : c.label}</strong><span>{contentsLine(items)}</span></div>
+      </Html>}
     </group>
   </group>;
 }
@@ -188,4 +187,9 @@ function FallenTree({ node, world, physics }: { node: ResourceNode; world: World
     <mesh rotation={[0, 0, -Math.PI / 2]} castShadow receiveShadow><capsuleGeometry args={[r, length, 4, 10]} /><meshStandardMaterial {...boundaryFog} color="#78654e" roughness={1} /></mesh>
     <mesh position={[-length / 2 - r * 0.9, 0, 0]} rotation={[0, -Math.PI / 2, 0]}><circleGeometry args={[r * 0.4, 10]} /><meshStandardMaterial {...boundaryFog} color="#c3a779" roughness={1} /></mesh>
   </group>;
+}
+
+function contentsLine(items: readonly Item[]) {
+  const held = items.filter(i => i.qty > 0);
+  return held.length ? held.map(i => `${i.qty} ${itemName(i.kind)}`).join(' · ') : 'Empty';
 }

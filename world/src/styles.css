@@ -159,3 +159,13 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .compact .need { flex:1 0 30%; }
 @media (max-width:1000px) { .compact .need { flex-basis:43%; } .compact .need:nth-child(3) { max-width:48%; } }
 @media (max-width:650px) { .rescue-banner { top:170px; font-size:16px; width:90%; } .rescue-countdown { font-size:8px; } .world-status { gap:10px; } }
+
+/* Item glows replace object labels; details appear on hover. */
+.hover-label span { font-size: 10px; }
+.glow-legend { position: absolute; top: 172px; right: 38px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 11px; color: #293f39; }
+.glow-legend button { background: #f0e4ccd9; border: 1px solid #293f3926; border-radius: 999px; padding: 4px 10px; font: inherit; color: inherit; cursor: pointer; }
+.glow-legend ul { list-style: none; margin: 0; padding: 8px 12px; background: #f0e4ccd9; border: 1px solid #293f3926; border-radius: 12px; display: grid; gap: 5px; }
+.glow-legend li { display: flex; align-items: center; gap: 8px; }
+.glow-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+/* The wreck's title stays readable at night. */
+.wreck-label { background: #f0e4ccd9; padding: 4px 10px 5px; border-radius: 10px; box-shadow: 0 1px 6px #293f3926; }

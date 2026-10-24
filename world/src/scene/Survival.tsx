@@ -1,7 +1,6 @@
 import { boundaryFog } from './boundaryFog';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import type { OrbitControls } from 'three-stdlib';
 import * as THREE from 'three';
 import type { Hazard, Mob, Structure, World } from '../module_bindings/types';
@@ -52,7 +51,6 @@ function Fire({ structure: s, world, radius: r }: { structure: Structure; world:
       <pointLight ref={light} color="#edaa61" position={[0, signal ? 2.5 : 1.2, 0]} distance={signal ? 15 : 9} decay={2} />
       {signal && <instancedMesh ref={smoke} args={[undefined, undefined, 10]} frustumCulled={false} name="signal-smoke"><icosahedronGeometry args={[1, 1]} /><meshBasicMaterial {...boundaryFog} color="#93998e" transparent opacity={0.2} depthWrite={false} /></instancedMesh>}
     </>}
-    <Html position={[0, burning ? (signal ? 5 : 2.8) : 1.8, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}><div className="place-label"><strong>{signal ? 'SIGNAL FIRE' : 'THE HEARTH'}</strong><span>{burning ? `${Math.ceil(s.fuel)}s fuel` : signal && s.woodNeeded > 0 ? `${s.woodNeeded} wood needed` : 'Unlit'}</span></div></Html>
   </group>;
 }
 
@@ -87,7 +85,6 @@ function Wolf({ mob: m, world, radius: r }: { mob: Mob; world: World; radius: nu
         <mesh position={[side * r * 0.2, r * 0.35, r * 0.91]}><sphereGeometry args={[r * 0.045, 8, 6]} /><meshBasicMaterial {...boundaryFog} color="#293f39" /></mesh>
       </group>)}
     </group>
-    <Html position={[0, r * 2.1, 0]} center style={{ pointerEvents: 'none' }} zIndexRange={[6, 0]}><span className="mob-label">Wolf · {m.hp <= 0 ? 'down' : m.state}</span></Html>
   </group>;
 }
 
