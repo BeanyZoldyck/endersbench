@@ -327,3 +327,4 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .agent-record small { color:#8a937e; }
 .record-tier { font:700 9px/1 system-ui, sans-serif; text-transform:uppercase; letter-spacing:.06em; color:#8a3a28; background:#f3d8cc; padding:2px 5px; border-radius:3px; margin-right:4px; }
 .agent-record q { display:block; margin-top:3px; font:italic 12.5px/1.4 Georgia,serif; color:#4f5d4a; }
+.spotlight.tier-5 { border-left-color:#4f7d4c; } .spotlight.tier-5 .spotlight-tier { color:#2f5a2c; background:#dcebd3; }

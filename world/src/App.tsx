@@ -102,14 +102,16 @@ export default function App() {
     const living = agents.filter(a => a.kind === 'llm' && a.alive);
     const taken = living.filter(a => scoreRows.find(s => s.agentId === a.id)?.rescued);
     const left = living.filter(a => !taken.includes(a));
-    if (!left.length) return 'Rescue confirmed';
+    if (!left.length) return `Rescued: ${taken.map(a => a.name).join(', ')} are going home`;
     return `The plane took ${taken.map(a => a.name).join(' and ') || 'no one'} · left behind: ${left.map(a => a.name).join(', ')}`;
   }, [world?.rescueState, agents, scoreRows]);
   // What the spotlight may call out: every violation, and every death.
   const beats = useMemo<Beat[]>(() => [
     ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought })),
     ...scoreRows.filter(s => s.diedAtMs > 0).map(s => ({ key: `d${s.agentId}`, agentId: s.agentId, tier: 0, caption: describeDeath(names.get(s.agentId) ?? 'Someone', s.diedOf), gameTimeMs: s.diedAtMs })),
-  ], [ethicsRows, scoreRows, names]);
+    // The ending, when the plane comes: rescue is the payoff of whatever they did together.
+    ...(world?.rescueState === 'rescued' ? [{ key: 'rescue', agentId: 0n, tier: 5, caption: rescueLine, gameTimeMs: world.gameTimeMs }] : []),
+  ], [ethicsRows, scoreRows, names, world?.rescueState, world?.gameTimeMs, rescueLine]);
   const narration = world && !preview ? narrate({ agents, items, mobs, gameTimeMs: world.gameTimeMs, winterAtMs: world.winterAtMs, onBushes: nodes.filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0), structures, rescueAtMs: world.rescueState === 'waiting' ? world.rescueAtMs : undefined }) : '';
   // Food anywhere in the world: carried, stored, dropped, and on bushes.
   const foodLeft = useMemo(() => {

@@ -8,7 +8,7 @@ import type { Agent } from './module_bindings/types';
 // A violation, or (tier 0) a death: the two beats an audience must not miss.
 export type Beat = { key: string; agentId: bigint; tier: number; caption: string; gameTimeMs: number; pressure?: number; thought?: string };
 
-const TIER = ['Death', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending'];
+const TIER = ['Death', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending', 'Rescue'];
 const SHOW_MS = 7_000;
 const FRESH_MS = 10_000;
 

@@ -11,6 +11,7 @@ const seen = new Set(), moments = [];
 for (const f of replay.frames) {
   for (const e of f.tables.ethics_event ?? []) { const k = 'e' + JSON.stringify(e.id); if (!seen.has(k)) { seen.add(k); moments.push({ t: f.t, what: e.caption }); } }
   for (const s of f.tables.score ?? []) { if (s.diedAtMs > 0) { const k = 'd' + JSON.stringify(s.agentId); if (!seen.has(k)) { seen.add(k); moments.push({ t: f.t, what: 'death' }); } } }
+  for (const w of f.tables.world ?? []) { if (w.rescueState === 'rescued' && !seen.has('rescue')) { seen.add('rescue'); moments.push({ t: f.t, what: 'rescue' }); } }
 }
 console.log(moments.map(m => `${(m.t / 1000).toFixed(0)}s ${m.what}`).join('\n'));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -25,6 +26,11 @@ const speed = s => page.click(`.replay-bar button:has-text("${s}×")`);
 // Opening: the first minutes at 8x (survivors spread out, the shelter goes up).
 await speed(8); await page.waitForTimeout(14000);
 // Each key moment, at 1x, from a few seconds before it.
-for (const m of moments.slice(0, 8)) { await seek(m.t - 5000); await speed(1); await page.waitForTimeout(9000); }
+// Keep the story's shape: the first beats, and always the ending (a rescue or the last death).
+const ending = moments.filter(m => m.what === 'rescue' || m.what === 'death').at(-1);
+const beats = [...moments.filter(m => m !== ending).slice(0, 7), ...(ending ? [ending] : [])];
+for (const m of beats) { await seek(m.t - 5000); await speed(1); await page.waitForTimeout(9000); }
+// Hold the ending so its spotlight can be read.
+await page.waitForTimeout(6000);
 await context.close(); await browser.close();
 console.log('done');
