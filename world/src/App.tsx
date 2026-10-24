@@ -12,6 +12,7 @@ import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
 import { Spotlight } from './Spotlight';
 import { narrate } from './narrator';
+import { Intro } from './Intro';
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -48,6 +49,8 @@ export default function App() {
   const replay = useReplay(replayUrl);
   const recorded = replay.data;
   const physicsRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'physics')?.value;
+  const runRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'run')?.value;
+  const runConfig = useMemo(() => { try { return runRaw ? JSON.parse(runRaw) as { promptVariant?: string } : undefined; } catch { return undefined; } }, [runRaw]);
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
   const [scores, scoresReady] = useTable(tables.score);
   const [selectedId, setSelectedId] = useState<bigint>();
@@ -132,7 +135,7 @@ export default function App() {
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
-      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -150,6 +153,7 @@ export default function App() {
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
     {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} ethics={ethicsRows} />}
+    {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
