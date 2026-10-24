@@ -12,6 +12,9 @@ export default function App() {
 
   const [worlds] = useTable(tables.world);
   const [agents] = useTable(tables.agent);
+  const [nodes] = useTable(tables.resourceNode);
+  const [containers] = useTable(tables.container);
+  const [items] = useTable(tables.item);
   const [messages] = useTable(tables.message);
   const [pending] = useTable(tables.decisionRequest.where(r => r.status.eq('pending')));
   const [log] = useTable(tables.actionLog);
@@ -42,6 +45,9 @@ export default function App() {
               agents={agents}
               messages={messages}
               thinking={thinking}
+              nodes={nodes}
+              containers={containers}
+              items={items}
               meId={me?.id}
               onClickTile={(x, y) => me && conn?.reducers.humanMoveTo({ x, y }).catch(console.error)}
             />

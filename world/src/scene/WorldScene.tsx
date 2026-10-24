@@ -3,11 +3,12 @@ import {
   Canvas,
   useFrame,
   useThree,
-  type ThreeEvent,
 } from "@react-three/fiber";
 import { Html, MapControls } from "@react-three/drei";
 import * as THREE from "three";
-import type { Agent, Message, World } from "../module_bindings/types.ts";
+import type { Agent, Message, World, ResourceNode, Container, Item } from "../module_bindings/types.ts";
+
+import { Environment } from "./Environment";
 
 const SPEECH_MS = 5_000; // game ms a speech bubble stays up
 const BODY_RADIUS = 1.5; // the body is a unit sphere scaled by this
@@ -17,6 +18,9 @@ export type SceneProps = {
   agents: readonly Agent[];
   messages: readonly Message[];
   thinking: Set<bigint>;
+  nodes: readonly ResourceNode[];
+  containers: readonly Container[];
+  items: readonly Item[];
   meId?: bigint;
   onClickTile: (x: number, y: number) => void;
 };
@@ -47,16 +51,18 @@ export function WorldScene(props: SceneProps) {
       <Canvas
         shadows
         orthographic
-        dpr={[1, 2]}
-        camera={{ position: [60, 60, 60], zoom: 10, near: 0.1, far: 1000 }}
+        dpr={[1, 1.5]}
+        camera={{ position: [80, 95, 110], zoom: 10, near: 0.1, far: 1000 }}
       >
-        <color attach="background" args={["#a8d8ea"]} />
-        <hemisphereLight args={["#ffffff", "#7a9e5a", 0.9]} />
+        <color attach="background" args={[world.phase === "winter" ? "#aabcc0" : "#a4ad91"]} />
+        <fog attach="fog" args={[world.phase === "winter" ? "#aabcc0" : "#a4ad91", 115, 260]} />
+        <hemisphereLight args={["#d9e5df", "#706650", 1.4]} />
         <directionalLight
           castShadow
-          position={[25, 45, 15]}
-          intensity={1.6}
-          shadow-mapSize={[2048, 2048]}
+          position={[-35, 28, 20]}
+          color={world.phase === "winter" ? "#e3e6da" : "#ffe0a8"}
+          intensity={2.1}
+          shadow-mapSize={[1024, 1024]}
           shadow-camera-left={-45}
           shadow-camera-right={45}
           shadow-camera-top={45}
@@ -70,7 +76,7 @@ export function WorldScene(props: SceneProps) {
           minZoom={4}
           maxZoom={60}
         />
-        <Island world={world} onClickTile={props.onClickTile} />
+        <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} onClickTile={props.onClickTile} />
         {agents
           .filter((a) => a.alive)
           .map((a) => (
@@ -100,67 +106,6 @@ function FitCamera({ world }: { world: World }) {
     ortho.updateProjectionMatrix();
   }, [camera, size.width, size.height, world.width, world.height]);
   return null;
-}
-
-function grassTexture(width: number, height: number) {
-  const px = 16;
-  const canvas = document.createElement("canvas");
-  canvas.width = width * px;
-  canvas.height = height * px;
-  const g = canvas.getContext("2d")!;
-  for (let i = 0; i < width; i++) {
-    for (let j = 0; j < height; j++) {
-      // Two-tone checker with a little deterministic speckle, like game tiles.
-      const base = (i + j) % 2 === 0 ? [126, 200, 104] : [116, 190, 96];
-      const n = ((i * 73856093) ^ (j * 19349663)) & 7;
-      g.fillStyle = `rgb(${base[0] + n},${base[1] + n},${base[2]})`;
-      g.fillRect(i * px, j * px, px, px);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.magFilter = THREE.NearestFilter;
-  tex.anisotropy = 4;
-  return tex;
-}
-
-function Island({
-  world,
-  onClickTile,
-}: {
-  world: World;
-  onClickTile: (x: number, y: number) => void;
-}) {
-  const texture = useMemo(
-    () => grassTexture(world.width, world.height),
-    [world.width, world.height],
-  );
-  const onClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    onClickTile(e.point.x + world.width / 2, e.point.z + world.height / 2);
-  };
-  return (
-    <group>
-      {/* Dirt slab under the grass gives the floating-diorama look. */}
-      <mesh position={[0, -1.6, 0]} receiveShadow>
-        <boxGeometry args={[world.width, 3, world.height]} />
-        <meshStandardMaterial color="#9b6b43" roughness={1} />
-      </mesh>
-      <mesh position={[0, -0.12, 0]}>
-        <boxGeometry args={[world.width, 0.24, world.height]} />
-        <meshStandardMaterial color="#5fa84a" roughness={1} />
-      </mesh>
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.001, 0]}
-        receiveShadow
-        onClick={onClick}
-      >
-        <planeGeometry args={[world.width, world.height]} />
-        <meshStandardMaterial map={texture} roughness={0.95} />
-      </mesh>
-    </group>
-  );
 }
 
 function Critter(props: {
