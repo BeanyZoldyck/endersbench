@@ -271,6 +271,14 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         }
       }
 
+      // Rules v11: a plain spear becomes a flaming spear at a lit fire, so take it to the
+      // nearest. A walk to a fire stops 2.3 tiles from its centre; there `you.canCraft`
+      // offers the flaming spear, and the craft rule above makes it.
+      if (inv.spear && !inv.flaming_spear && litFire && litFire.distance > 2.5) {
+        const d = act('move_to', { x: litFire.x, y: litFire.y }, 'making my spear a flaming spear');
+        if (d) return d;
+      }
+
       // Rules v11: now and then, with nothing else to do and a full belly, walk into the unseen forest.
       if (me.doing === 'idle' && !hungry && Math.random() < EXPLORE_CHANCE) {
         const d = act('explore', {}, 'seeing what is out there');

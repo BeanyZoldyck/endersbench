@@ -1,7 +1,7 @@
 // Pseudo-physics: bodies are circles with velocity; trees, wood piles, chests,
-// fires and the wreck are solid; bushes and thickets slow you down. Movement
-// is intent-driven velocity plus a decaying knockback impulse, resolved
-// against colliders.
+// the supply crate, fires and the wreck are solid; bushes and thickets slow
+// you down. Movement is intent-driven velocity plus a decaying knockback
+// impulse, resolved against colliders.
 
 import type { Ctx, World } from './ctx';
 import { centre, distance } from './ctx';
@@ -11,6 +11,7 @@ import {
   AGENT_RADIUS,
   BUSH_RADIUS,
   CHEST_RADIUS,
+  CRATE_RADIUS,
   EDGE_MARGIN,
   FALLEN_TREE_LENGTH,
   FIRE_RADIUS,
@@ -19,7 +20,7 @@ import {
 } from './rules';
 
 export type Collider = {
-  tag: 'tree' | 'chest' | 'fire' | 'wreck';
+  tag: 'tree' | 'chest' | 'crate' | 'fire' | 'wreck';
   id: bigint;
   x1: number;
   y1: number;
@@ -62,6 +63,7 @@ export function staticColliders(ctx: Ctx, w: World): Collider[] {
   }
   for (const c of ctx.db.container.iter()) {
     if (c.kind === 'chest') circle('chest', c.id, c.x, c.y, CHEST_RADIUS);
+    else if (c.kind === 'crate') circle('crate', c.id, c.x, c.y, CRATE_RADIUS);
   }
   for (const s of ctx.db.structure.iter()) if (s.kind !== 'shelter') circle('fire', s.id, s.x, s.y, FIRE_RADIUS);
   const f = wreckFuselage(w);

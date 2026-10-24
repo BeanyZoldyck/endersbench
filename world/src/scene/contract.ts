@@ -8,6 +8,8 @@ export type Physics = {
   // Rules v11: the river's centre line in world x/y, and the supply crate. Absent in older recordings.
   river?: Array<[number, number]>;
   crate?: { x: number; y: number };
+  // The crate's collider: a circle this wide around its centre (absent before it was solid).
+  crateRadius?: number;
 };
 const radii = ['agentRadius', 'treeRadius', 'stumpRadius', 'bushRadius', 'chestRadius', 'fireRadius', 'wolfRadius', 'fallenTreeLength'] as const;
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);

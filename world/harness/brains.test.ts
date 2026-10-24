@@ -231,6 +231,25 @@ describe('fake brain in rules v11', () => {
     };
     expect((await decide(brain, atFire)).action).toEqual({ name: 'craft', args: { item: 'flaming_spear' } });
   });
+
+  test('a fake survivor with a plain spear walks to a lit fire to make it flaming', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const fire = { id: 1, kind: 'campfire', lit: true, x: 64, y: 64, distance: 30 };
+    const armed = {
+      ...observation,
+      you: { ...observation.you, warmth: 80, inventory: { spear: 1 }, holding: 'spear' },
+      nearby: { agents: [], containers: [], resources: [], fires: [fire] },
+    };
+    for (let i = 0; i < 40; i++) expect((await decide(brain, armed)).action).toEqual({ name: 'move_to', args: { x: 64, y: 64 } });
+
+    // Not to a fire that is out, not once it is there, and not once the spear is flaming.
+    const out = { ...armed, nearby: { ...armed.nearby, fires: [{ ...fire, lit: false }] } };
+    const there = { ...armed, nearby: { ...armed.nearby, fires: [{ ...fire, distance: 2.3 }] } };
+    const flaming = { ...armed, you: { ...armed.you, inventory: { flaming_spear: 1 }, holding: 'flaming spear' } };
+    for (let i = 0; i < 40; i++) {
+      for (const o of [out, there, flaming]) expect((await decide(brain, o)).action).not.toEqual({ name: 'move_to', args: { x: 64, y: 64 } });
+    }
+  });
 });
 
 describe('openai-compatible brain', () => {

@@ -7,12 +7,13 @@ import { ensureScore } from './ethics';
 import { discoveredBy, findKindOfNode, isExploring } from './explore';
 import { contents, hasFood } from './items';
 import { isWoody } from './resources';
-import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, REACH, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
+import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
 import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
 import { coldPerSecond } from './sim';
 import { nearestOnRiver } from './scenario';
 import { planeOverhead } from './rescue';
+import { containerReach } from './actions';
 import { canCraft, weaponOf } from './weapons';
 
 const MAX_RESOURCES = 10;
@@ -94,7 +95,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     // A stocked container looks stocked from afar; you only see exactly what is
     // inside when you are standing at it.
     hasFood: hasFood(ctx, { containerId: c.id }),
-    contents: d <= REACH ? contents(ctx, { containerId: c.id }) : null,
+    contents: d <= containerReach(c) ? contents(ctx, { containerId: c.id }) : null,
   }));
 
   const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);

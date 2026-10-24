@@ -6,7 +6,7 @@ import type { Agent, Ctx } from './ctx';
 import { distance } from './ctx';
 import { add, countOf, remove } from './items';
 import { addRecord } from './record';
-import { ATTACK_DAMAGE, FLAMING_SPEAR_DAMAGE, REACH, SPEAR_DAMAGE, SPEAR_WOOD } from './rules';
+import { ATTACK_DAMAGE, FLAMING_SPEAR_DAMAGE, FORGE_REACH, SPEAR_DAMAGE, SPEAR_WOOD } from './rules';
 
 export type Weapon = 'flaming spear' | 'spear';
 // What the craft action is asked for (item kinds), against what canCraft says (plain words).
@@ -27,9 +27,10 @@ export function damageFor(weapon: Weapon | null): number {
   return weapon === 'flaming spear' ? FLAMING_SPEAR_DAMAGE : weapon === 'spear' ? SPEAR_DAMAGE : ATTACK_DAMAGE;
 }
 
+// Close enough to a lit fire to forge: anyone who walked up to it is.
 function atLitFire(ctx: Ctx, me: Agent) {
   return [...ctx.db.structure.iter()].some(
-    s => (s.kind === 'campfire' || s.kind === 'signal_fire') && s.lit && distance(me.x, me.y, s.x, s.y) <= REACH
+    s => (s.kind === 'campfire' || s.kind === 'signal_fire') && s.lit && distance(me.x, me.y, s.x, s.y) <= FORGE_REACH
   );
 }
 

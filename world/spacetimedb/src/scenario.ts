@@ -179,6 +179,7 @@ export function physicsContract(w: World) {
     wreck: wreckFuselage(w),
     river: riverPath(w),
     crate: { x: crateX, y: crateY },
+    crateRadius: R.CRATE_RADIUS,
   });
 }
 
@@ -319,7 +320,9 @@ export function seedWorld(ctx: Ctx) {
 
   // Finds for explorers: big berry thickets and wood piles in the outer band,
   // beyond daytime sight of every home and out of the crate's clearing. They
-  // are placed last, so the bushes and trees keep the positions they always had.
+  // are placed last, so they take no place a bush or tree would have had. (The
+  // river's keep-out did move some bushes and trees from where they stood
+  // before rules v11; v11 is never pooled with earlier rules.)
   const [bandInner, bandOuter] = FINDS_BAND;
   const homes = Array.from({ length: MAX_HOMES }, (_, i) => [cx + Math.cos(homeAngle(i)) * HOME_RING, cy + Math.sin(homeAngle(i)) * HOME_RING]);
   const place = (kind: string, count: number, capacity: number) => {

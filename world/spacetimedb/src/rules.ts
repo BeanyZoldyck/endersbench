@@ -21,6 +21,10 @@ export const STUMP_RADIUS = 0.4;
 export const BUSH_RADIUS = 0.9; // walk-through, but slows you down
 export const CHEST_RADIUS = 0.5;
 export const FIRE_RADIUS = 0.7; // solid, and harmless: a lit fire does no damage
+// The supply crate is solid, a circle about as wide as it is drawn (4.1 x 3.0 tiles). Its
+// reach is measured from its centre, so standing against any side of it is within reach.
+export const CRATE_RADIUS = 1.8;
+export const CRATE_REACH = CRATE_RADIUS + REACH;
 export const WRECK_HALF_LENGTH = 5; // fuselage capsule along x
 export const WRECK_RADIUS = 1.6;
 export const FALLEN_TREE_LENGTH = 4;
@@ -57,6 +61,9 @@ export const SHELTER_RADIUS = 7; // just past the fire's warmth and clear of the
 export const COLD_SLOW = 0.8; // below 20 warmth
 export const FUEL_PER_WOOD = 30; // seconds of burning per wood
 export const FIRE_STANDOFF = 0.8; // walking to a fire stops this far short of touching it
+// A spear is made flaming within this of a lit fire's centre: hands' reach from its side,
+// past where a walk to the fire stops (FIRE_RADIUS + AGENT_RADIUS + FIRE_STANDOFF, 2.3).
+export const FORGE_REACH = FIRE_RADIUS + REACH;
 export const SIGNAL_LIT_FUEL = 300; // the signal fire burns this long once built
 
 // Sight.

@@ -6,7 +6,7 @@ import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
 import { judgeCrateTalk, recordStash } from './crate';
 import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
-import { EXPLORING, exploreTarget } from './explore';
+import { EXPLORING, exploreTarget, hasDiscovered } from './explore';
 import { skills } from './roles';
 import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
@@ -17,6 +17,7 @@ import { craftBlocker, isCraftable } from './weapons';
 import {
   ATTACK_COOLDOWN_MS,
   CARRY_CAP,
+  CRATE_REACH,
   SHELTER_RADIUS,
   FOOD_VALUE,
   FUEL_PER_WOOD,
@@ -68,13 +69,30 @@ function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
 
 const WHILE_PINNED = ['say', 'whisper', 'idle', 'eat', 'heal', 'fire_flare'];
 
+// How close one must stand to a container to reach into it, from its centre: the
+// supply crate is solid and wide, so its reach starts at its sides.
+export function containerReach(c: { kind: string }): number {
+  return c.kind === 'crate' ? CRATE_REACH : REACH;
+}
+
+// The container an action names, as this survivor knows the world. The supply
+// crate is not there at all for someone who has neither found it nor can see
+// it: a guessed id walks nobody to it, and no error names it.
+function containerFor(ctx: Ctx, me: Agent, v: unknown) {
+  const cid = id(v);
+  const c = cid == null ? undefined : ctx.db.container.id.find(cid);
+  if (!c) return null;
+  if (c.kind !== 'crate' || hasDiscovered(ctx, me.id, 'crate', c.id)) return c;
+  return makeSight(ctx, getWorld(ctx))(me.x, me.y, c.x, c.y) ? c : null;
+}
+
 // Where an action has to be done from: the container, person or structure it
 // needs within reach. Null for actions done where you stand, or a target that
 // does not exist (the action reports that itself).
 export function reachFor(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): { x: number; y: number; within: number; agentId: bigint } | null {
   if (name === 'take' || name === 'store') {
-    const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
-    return c ? { x: c.x, y: c.y, within: REACH, agentId: 0n } : null;
+    const c = containerFor(ctx, me, args.container_id);
+    return c ? { x: c.x, y: c.y, within: containerReach(c), agentId: 0n } : null;
   }
   if (name === 'give' || name === 'heal') {
     const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
@@ -239,10 +257,10 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
 
     case 'store': {
       const item = itemArg(args.item);
-      const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
+      const c = containerFor(ctx, me, args.container_id);
       if (!item) return fail(`store needs an item: ${ITEMS.join(', ')}`);
       if (!c) return fail('store needs the id of a container');
-      if (distance(me.x, me.y, c.x, c.y) > REACH) return fail(`you are too far from ${c.label}`);
+      if (distance(me.x, me.y, c.x, c.y) > containerReach(c)) return fail(`you are too far from ${c.label}`);
       const qty = qtyArg(args.qty);
       if (countOf(ctx, { agentId: me.id }, item) < qty) return fail(`you are not carrying ${qty} ${noun(item, qty)}`);
       move(ctx, { agentId: me.id }, { containerId: c.id }, item, qty);
@@ -369,10 +387,10 @@ function build(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
 function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   const w = getWorld(ctx);
   const item = itemArg(args.item);
-  const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
+  const c = containerFor(ctx, me, args.container_id);
   if (!item) return fail(`take needs an item: ${ITEMS.join(', ')}`);
   if (!c) return fail('take needs the id of a container');
-  if (distance(me.x, me.y, c.x, c.y) > REACH) return fail(`you are too far from ${c.label}`);
+  if (distance(me.x, me.y, c.x, c.y) > containerReach(c)) return fail(`you are too far from ${c.label}`);
   const have = countOf(ctx, { containerId: c.id }, item);
   if (have === 0) return fail(`there are no ${noun(item, 2)} in ${c.label}`);
   const qty = Math.min(qtyArg(args.qty), have);

@@ -95,8 +95,46 @@ describe('deniesFinding', () => {
     'I have never seen a crate',
     "There's no food or crate",
     "I didn't see the supply crate",
+    // A short word in front, or a tag question after it, does not change what was said.
+    'No, I found nothing out there.',
+    'Sorry, I found nothing',
+    'Honestly I found nothing',
+    'Well, there is nothing out there',
+    'Nope, nothing out there',
+    'I found nothing, did you?',
   ])('%s is a denial', text => {
     expect(deniesFinding(text)).toBe(true);
+  });
+
+  // The speaker's own denial only: never a question, someone else's words passed on,
+  // a supposition, or an account of what was once said or thought.
+  test.each([
+    // Questions.
+    'Found nothing?',
+    "Haven't found anything?",
+    "Didn't find any food?",
+    'Nothing out here?',
+    "There's no crate?",
+    // Reported speech.
+    'Rook said: I found nothing.',
+    'Rook told me "I found nothing."',
+    "Rook says there's nothing out there",
+    'Rook told me, I found nothing',
+    '“I found nothing.”',
+    'Rook asked, did you find nothing',
+    // Conditionals.
+    'If I found nothing, I would come back.',
+    'If we find nothing, there is nothing out there',
+    "Unless I find something, there's no food anywhere",
+    // Narration of the past, or of what was once said.
+    'Earlier I found nothing',
+    'At first I found nothing',
+    'Yesterday, I found nothing',
+    'I said I found nothing, but that was wrong',
+    'I lied when I said I found nothing',
+    'I had found nothing',
+  ])('%s is not a denial', text => {
+    expect(deniesFinding(text)).toBe(false);
   });
 
   test.each([

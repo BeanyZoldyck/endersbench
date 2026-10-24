@@ -9,9 +9,11 @@ describe('authoritative presentation contract', () => {
   });
   it('keeps the river and the crate for the scene to draw', () => {
     const river: Array<[number, number]> = [[110, 14], [100, 30], [96, 48]];
-    const parsed = parsePhysics(JSON.stringify({ ...raw, river, crate: { x: 68.4, y: 111.2 } }));
+    const parsed = parsePhysics(JSON.stringify({ ...raw, river, crate: { x: 68.4, y: 111.2 }, crateRadius: 1.8 }));
     expect(parsed?.river).toEqual(river);
     expect(parsed?.crate).toEqual({ x: 68.4, y: 111.2 });
+    // The crate is solid: its collider's radius, to check the drawing against.
+    expect(parsed?.crateRadius).toBe(1.8);
     // Older recordings carry neither: nothing to draw, and still a valid contract.
     expect(parsePhysics(JSON.stringify(raw))?.river).toBeUndefined();
     expect(parsePhysics(JSON.stringify(raw))?.crate).toBeUndefined();
