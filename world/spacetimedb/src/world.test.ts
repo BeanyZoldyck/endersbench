@@ -1752,7 +1752,7 @@ describe('the shelter', () => {
     return JSON.parse(pendingFor(t, agentNamed(t, name).id).at(-1)!.observation);
   }
   function decideNothing(t: T, name: string) {
-    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    setAgent(t, name, { wake: true, wakeReason: 'test', pendingRequestId: 0n });
     t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
   }
   function finish(t: T) {
@@ -1771,6 +1771,23 @@ describe('the shelter', () => {
     const obs = obsFor(t, 'Ada');
     expect(obs.nearby.fires.map((f: any) => f.kind)).not.toContain('shelter');
     expect(obs.shelter).toMatchObject({ id: Number(s.id), woodNeeded: R.SHELTER_WOOD, built: false, youAreInside: true });
+  });
+
+  test('the unfinished frame does not protect anyone standing in it', () => {
+    const t = freshWorld();
+    const s = shelterOf(t);
+    spawn(t, 'Ada', s.x + 3, s.y);
+    expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: false });
+    finish(t);
+    expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: true });
+  });
+
+  test('the treeline is always in view, so wood can be found from the middle of the clearing', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    const trees = obsFor(t, 'Ada').nearby.resources.filter((r: any) => r.kind === 'tree');
+    expect(trees.length).toBeGreaterThanOrEqual(3);
+    for (const tree of trees) expect(tree.distance).toBeGreaterThan(R.VIEW_RADIUS);
   });
 
   test('survivors build it with wood they carry, from anywhere at its ring', () => {

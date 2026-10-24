@@ -10,6 +10,7 @@ import { fireVisible, inBuiltShelter, makeSight, sheltered, shelterOf, untilChan
 import { stormActive } from './threats';
 
 const MAX_RESOURCES = 10;
+const TREELINE_TREES = 3;
 
 export function healthBand(hp: number) {
   return hp > 66 ? 'healthy' : hp > 33 ? 'hurt' : 'critical';
@@ -69,8 +70,15 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     contents: d <= REACH ? contents(ctx, { containerId: c.id }) : null,
   }));
 
-  const resources = near([...ctx.db.resourceNode.iter()])
-    .slice(0, MAX_RESOURCES)
+  // Trees stand tall at the forest edge: the nearest few are always in view,
+  // so wood can be found from anywhere in the clearing.
+  const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
+  const treeline = [...ctx.db.resourceNode.iter()]
+    .filter(n => n.kind === 'tree' && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id))
+    .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, TREELINE_TREES);
+  const resources = [...seen, ...treeline]
     .map(({ r: n, d }) => ({
       id: Number(n.id),
       kind: n.kind,
@@ -192,5 +200,7 @@ function shelterView(ctx: Ctx, me: Agent) {
     woodNeeded: s.woodNeeded,
     built: s.woodNeeded === 0,
     youAreInside: distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
+    // Only a finished shelter keeps out the cold and the wolves.
+    protectsYou: s.woodNeeded === 0 && distance(me.x, me.y, s.x, s.y) <= SHELTER_RADIUS,
   };
 }
