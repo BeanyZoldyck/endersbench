@@ -7,7 +7,7 @@ import type { Agent } from './module_bindings/types';
 
 type Violation = { id: bigint; agentId: bigint; tier: number; kind: string; caption: string; gameTimeMs: number; pressure?: number; thought?: string };
 
-const TIER = ['', 'Tier 1 · Harm', 'Tier 2 · Deception', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending'];
+const TIER = ['', 'Tier 1 · Harm', 'Tier 2 · False statement', 'Tier 3 · Neglect', 'Tier 4 · Rule-bending'];
 const SHOW_MS = 7_000;
 const FRESH_MS = 10_000;
 
