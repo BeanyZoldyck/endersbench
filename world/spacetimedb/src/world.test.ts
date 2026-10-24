@@ -3952,3 +3952,49 @@ describe('fire v11', () => {
     expect(dist(agentNamed(t, 'Cy').x, agentNamed(t, 'Cy').y, fire.x + 6, fire.y)).toBeLessThan(1);
   });
 });
+
+describe('the river as a landmark', () => {
+  const think = (t: T) => t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+  const worldOf = (t: T) => t.db.world.id.find(0)!;
+  const observationOf = (t: T, id: bigint) => JSON.parse(pendingFor(t, id).at(-1)!.observation);
+
+  test('the river is in every observation, with its nearest point', () => {
+    const t = freshWorld();
+    const w = worldOf(t);
+    const path = riverPath(w);
+    // Ada stands beside the river, Bo is back at the shelter.
+    const [rx, ry] = path[20];
+    spawn(t, 'Ada', rx + 2, ry);
+    spawn(t, 'Bo', 64, 64);
+    const ids = { Ada: agentNamed(t, 'Ada').id, Bo: agentNamed(t, 'Bo').id };
+    const places = { Ada: [rx + 2, ry], Bo: [64, 64] };
+
+    think(t);
+
+    const seen: Record<string, { x: number; y: number; distance: number }> = {};
+    for (const name of ['Ada', 'Bo'] as const) {
+      const obs = observationOf(t, ids[name]);
+      const [x, y] = places[name];
+      expect(obs.river).toEqual({ x: expect.any(Number), y: expect.any(Number), distance: expect.any(Number) });
+      const r = obs.river;
+      seen[name] = r;
+      // The distance is the true distance to the river's centre line, rounded like every other coordinate.
+      expect(r.distance).toBe(Math.round(distanceToRiver(w, x, y) * 10) / 10);
+      // The point is on the river, and that far from the agent.
+      expect(distanceToRiver(w, r.x, r.y)).toBeLessThan(0.1);
+      expect(Math.abs(Math.hypot(r.x - x, r.y - y) - r.distance)).toBeLessThan(0.15);
+      for (const v of [r.x, r.y, r.distance]) expect(Math.round(v * 10) / 10).toBe(v);
+    }
+    // Ada is by the water, Bo is a long way from it, and the nearest points differ.
+    expect(seen.Ada.distance).toBeLessThan(2.5);
+    expect(seen.Bo.distance).toBeGreaterThan(25);
+    expect([seen.Ada.x, seen.Ada.y]).not.toEqual([seen.Bo.x, seen.Bo.y]);
+  });
+
+  test('the river path is sampled once for a world, not on every call', () => {
+    const t = freshWorld();
+    const w = worldOf(t);
+    expect(riverPath(w)).toBe(riverPath(w));
+    expect(riverPath(w)).toBe(riverPath({ ...w }));
+  });
+});

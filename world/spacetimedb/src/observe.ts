@@ -11,6 +11,7 @@ import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEA
 import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
 import { coldPerSecond } from './sim';
+import { nearestOnRiver } from './scenario';
 import { planeOverhead } from './rescue';
 import { canCraft, weaponOf } from './weapons';
 
@@ -229,6 +230,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       ? { rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken } }
       : { supplies: { rationsYouTookFromWreck: ensureScore(ctx, me.id).wreckTaken } }),
     map: { centre: { x: cx, y: cy }, radius: w.radius },
+    // The river is a landmark everyone knows: the nearest point of its centre line.
+    river: riverView(w, me),
     shelter: shelterView(ctx, me),
     wakeReason: reason,
     nearby: { agents, containers, resources, fires, wolves },
@@ -251,6 +254,11 @@ function rescueKnowledge(me: Agent, w: World) {
   if (w.rescueState !== 'waiting') return { ...base, state: w.rescueState };
   if (me.role !== 'pilot') return base;
   return { ...base, planeInSeconds: Math.max(0, round1((w.rescueAtMs - w.gameTimeMs) / 1000)) };
+}
+
+function riverView(w: World, me: Agent) {
+  const r = nearestOnRiver(w, me.x, me.y);
+  return { x: round1(r.x), y: round1(r.y), distance: round1(r.distance) };
 }
 
 // The shelter is a landmark everyone knows about, built or not.

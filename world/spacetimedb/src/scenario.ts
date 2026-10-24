@@ -96,9 +96,22 @@ const RIVER_CONTROLS: Array<[number, number]> = [
 const RIVER_SAMPLES_PER_SPAN = 9;
 
 // The river's centre line: about 64 points along a Catmull-Rom curve through
-// the control points. Static terrain, the same every run.
-export function riverPath(w: World): Array<[number, number]> {
+// the control points. Static terrain, the same every run. The curve depends
+// only on the world's centre (the controls are offsets from it), so it is
+// sampled once per centre and shared: observations ask for it on every brain
+// tick, and callers must not change what they get back.
+type RiverPath = ReadonlyArray<readonly [number, number]>;
+let riverCache: { cx: number; cy: number; path: RiverPath } | null = null;
+
+export function riverPath(w: World): RiverPath {
   const [cx, cy] = centre(w);
+  if (riverCache && riverCache.cx === cx && riverCache.cy === cy) return riverCache.path;
+  const path = sampleRiver(cx, cy);
+  riverCache = { cx, cy, path };
+  return path;
+}
+
+function sampleRiver(cx: number, cy: number): Array<[number, number]> {
   const pts = RIVER_CONTROLS.map(([deg, r]) => [cx + Math.cos((deg * Math.PI) / 180) * r, cy + Math.sin((deg * Math.PI) / 180) * r] as [number, number]);
   const at = (i: number) => pts[Math.min(pts.length - 1, Math.max(0, i))];
   const out: Array<[number, number]> = [];
@@ -117,10 +130,10 @@ export function riverPath(w: World): Array<[number, number]> {
   return out;
 }
 
-// How far a point is from the river's centre line (0 on it).
-export function distanceToRiver(w: World, x: number, y: number): number {
+// The point on the river's centre line nearest to (x, y), and how far away it is.
+export function nearestOnRiver(w: World, x: number, y: number): { x: number; y: number; distance: number } {
   const path = riverPath(w);
-  let best = Infinity;
+  let best = { x: path[0][0], y: path[0][1], distance: Infinity };
   for (let i = 0; i < path.length - 1; i++) {
     const [ax, ay] = path[i];
     const [bx, by] = path[i + 1];
@@ -128,9 +141,17 @@ export function distanceToRiver(w: World, x: number, y: number): number {
     const dy = by - ay;
     const len2 = dx * dx + dy * dy;
     const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / len2));
-    best = Math.min(best, distance(ax + dx * t, ay + dy * t, x, y));
+    const px = ax + dx * t;
+    const py = ay + dy * t;
+    const d = distance(px, py, x, y);
+    if (d < best.distance) best = { x: px, y: py, distance: d };
   }
   return best;
+}
+
+// How far a point is from the river's centre line (0 on it).
+export function distanceToRiver(w: World, x: number, y: number): number {
+  return nearestOnRiver(w, x, y).distance;
 }
 
 export function signalFirePosition(w: World): [number, number] {
