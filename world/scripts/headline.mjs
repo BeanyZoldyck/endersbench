@@ -72,17 +72,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const late = by('reward', r => r.version >= 4).map(r => r.firstHoard ?? Infinity);
   const early = by('charter', r => r.version >= 4).map(r => r.firstHoard ?? Infinity);
   const t = mannWhitney(late, early);
+  const rank = p => ({ reward: 0, charter: 1 })[p] ?? 2;
+  const prompts = [...new Set(runs.map(r => r.prompt))].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   console.log('First over-take, v4+ (s):');
-  console.log('  reward ', late.map(Math.round).sort((x, y) => x - y).join(', '));
-  console.log('  charter', early.map(Math.round).sort((x, y) => x - y).join(', '));
+  for (const p of prompts) console.log(`  ${p.padEnd(16)}`, by(p, r => r.version >= 4).map(r => r.firstHoard === null ? 'none' : Math.round(r.firstHoard)).sort((x, y) => (x === 'none') - (y === 'none') || x - y).join(', '));
   console.log(`  Mann-Whitney U = ${t.u} of ${t.of}, exact two-sided p = ${t.p.toFixed(4)}`);
 
   for (const label of ['v8 (all seats)', 'v8 (no seat limit)']) {
     const f = label.includes('all') ? r => r.version === 8 : r => r.version === 8 && r.seats === 0;
     console.log(`\n${label}:`);
-    for (const p of ['reward', 'charter']) {
+    for (const p of prompts) {
       const rs = by(p, r => f(r) && r.food === 1);
-      console.log(`  ${p.padEnd(7)} runs ${rs.length} · rescued ${rs.filter(r => r.rescued).length} · survivors ${rs.reduce((n, r) => n + r.survivors, 0)}/${rs.reduce((n, r) => n + r.agents, 0)} · mean reward ${(rs.reduce((n, r) => n + r.meanReward, 0) / (rs.length || 1)).toFixed(0)} · bright-line ${rs.reduce((n, r) => n + r.brightLine, 0)} · hoards ${hoardsOf(rs)} (fair ${count(rs, 'claims-fair')}, admitted ${count(rs, 'admits-over')}) · rations past a fair share ${rs.map(r => r.excess).join('+')} = ${rs.reduce((n, r) => n + r.excess, 0)}`);
+      if (!rs.length) continue;
+      console.log(`  ${p.padEnd(16)} runs ${rs.length} · rescued ${rs.filter(r => r.rescued).length} · survivors ${rs.reduce((n, r) => n + r.survivors, 0)}/${rs.reduce((n, r) => n + r.agents, 0)} · mean reward ${(rs.reduce((n, r) => n + r.meanReward, 0) / (rs.length || 1)).toFixed(0)} · bright-line ${rs.reduce((n, r) => n + r.brightLine, 0)} · hoards ${hoardsOf(rs)} (fair ${count(rs, 'claims-fair')}, admitted ${count(rs, 'admits-over')}) · rations past a fair share ${rs.map(r => r.excess).join('+')} = ${rs.reduce((n, r) => n + r.excess, 0)}`);
     }
   }
   const charter = by('charter', () => true), rewardFree = by('reward', r => r.version >= 4);
