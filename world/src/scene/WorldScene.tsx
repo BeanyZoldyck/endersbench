@@ -3,15 +3,21 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { MapControls } from '@react-three/drei';
 import type { OrbitControls as Controls } from 'three-stdlib';
 import * as THREE from 'three';
-import type { Agent, Message, World, ResourceNode, Container, Item } from '../module_bindings/types';
+import type { Agent, Message, World, ResourceNode, Container, Item, Structure, Mob, Hazard } from '../module_bindings/types';
 import { Environment } from './Environment';
 import { Critter } from './Critter';
-import { EventEffects, type Moment } from './SceneEvents';
+import { EventEffects, momentPriority, type Moment } from './SceneEvents';
+
+import type { Physics } from './contract';
+import { useGameClock } from './useGameClock';
+import { Atmosphere } from './Atmosphere';
+import { Fires, Wolves, Storm } from './Survival';
 
 export type CameraMode = 'audience' | 'explore' | 'follow';
 export type SceneProps = {
   world: World; agents: readonly Agent[]; messages: readonly Message[];
   nodes: readonly ResourceNode[]; containers: readonly Container[]; items: readonly Item[];
+  physics: Physics; structures: readonly Structure[]; mobs: readonly Mob[]; hazards: readonly Hazard[]; connected: boolean;
   selectedId?: bigint; mode: CameraMode; moments: Moment[];
   onSelect: (id: bigint) => void; onExplore: () => void;
   onClickTile: (x: number, y: number) => void;
@@ -19,7 +25,7 @@ export type SceneProps = {
 
 export function WorldScene(props: SceneProps) {
   const { world, agents, selectedId } = props;
-  const winter = world.phase === 'winter';
+  const readTime = useGameClock(world, props.connected);
   // One latest utterance per survivor; never more than two prominent bubbles.
   const lastWords = useMemo(() => {
     const latest = new Map<bigint, Message>();
@@ -28,19 +34,18 @@ export function WorldScene(props: SceneProps) {
       if (age < 0 || age > 7000) continue;
       if ((latest.get(message.fromAgentId)?.gameTimeMs ?? -Infinity) < message.gameTimeMs) latest.set(message.fromAgentId, message);
     }
-    return new Map([...latest.values()].sort((a, b) => b.gameTimeMs - a.gameTimeMs).slice(0, 2).map(m => [m.fromAgentId, m.text]));
+    return new Map([...latest.values()].sort((a, b) => b.gameTimeMs - a.gameTimeMs).slice(0, 2).map(m => [m.fromAgentId, m]));
   }, [props.messages, world.gameTimeMs]);
   return <div className="world" aria-label="Live forest world. Drag to explore, scroll to zoom, select a survivor to follow.">
     <Canvas shadows orthographic dpr={[1, 1.5]} camera={{ position: [80, 95, 110], zoom: 9, near: 0.1, far: 500 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
-      <color attach="background" args={[winter ? '#aabcc0' : '#a4ad91']} />
-      <fog attach="fog" args={[winter ? '#aabcc0' : '#a4ad91', 115, 255]} />
-      <hemisphereLight args={['#d9e5df', '#706650', 1.3]} />
-      <directionalLight castShadow position={[-35, 28, 20]} color={winter ? '#e3e6da' : '#ffe0a8'} intensity={winter ? 1.5 : 2.1}
-        shadow-mapSize={[1024, 1024]} shadow-camera-left={-55} shadow-camera-right={55} shadow-camera-top={55} shadow-camera-bottom={-55} shadow-camera-far={180} shadow-normalBias={0.08} shadow-bias={-0.0002} />
+      <Atmosphere world={world} hazards={props.hazards} readTime={readTime} />
       <CameraRig {...props} />
       <StaticShadows nodes={props.nodes} containers={props.containers} items={props.items} phase={world.phase} />
-      <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} onClickTile={props.onClickTile} />
-      {agents.map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} said={lastWords.get(a.id)} onSelect={props.onSelect} />)}
+      <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} physics={props.physics} onClickTile={props.onClickTile} />
+      {agents.map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
+      <Fires structures={props.structures} world={world} physics={props.physics} />
+      <Wolves mobs={props.mobs} world={world} physics={props.physics} />
+      <Storm hazards={props.hazards} readTime={readTime} />
       <EventEffects moments={props.moments} width={world.width} height={world.height} />
     </Canvas>
   </div>;
@@ -78,8 +83,8 @@ function CameraRig({ world, agents, containers, mode, selectedId, moments, onExp
     if (following) target.current.set(following.x - world.width / 2, 0, following.y - world.height / 2);
     else {
       const now = performance.now();
-      const recent = [...moments].sort((a, b) => (b.type === 'hit' ? 2 : 1) - (a.type === 'hit' ? 2 : 1) || b.born - a.born)[0];
-      const priority = recent?.type === 'hit' ? 2 : 1;
+      const recent = [...moments].sort((a, b) => momentPriority(b) - momentPriority(a) || b.born - a.born)[0];
+      const priority = recent ? momentPriority(recent) : 0;
       if (recent && recent.id !== shot.current.eventId && (now - shot.current.at > 6500 || (priority > shot.current.priority && now - shot.current.at > 3500))) {
         target.current.set((recent.from[0] + recent.to[0]) / 2 - world.width / 2, 0, (recent.from[1] + recent.to[1]) / 2 - world.height / 2);
         shot.current = { at: now, eventId: recent.id, priority };

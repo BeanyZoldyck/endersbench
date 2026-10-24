@@ -140,3 +140,24 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .preview-actions { display:flex; flex-wrap:wrap; gap:6px; }
 .preview-actions button { background:#e7e2ce; border:1px solid #bcc4a7; padding:8px; border-radius:5px; font-size:10px; }
 @media (max-width:850px) { .masthead p { max-width:200px; line-height:1.5; } }
+/* State-backed survival details. No model receives a special visual treatment. */
+.role-label { display:block; font-size:9px; color:#6d7b61; text-transform:capitalize; letter-spacing:.06em; margin:3px 0; }
+.backstory { font:italic 14px/1.5 Georgia,serif; color:#65755f; }
+.memory-panel { border-top:1px solid var(--line); margin-top:18px; }
+.memory-summary { padding-left:14px; color:#6a795f; font-size:10px; line-height:1.6; }
+.memories { max-height:240px; overflow:auto; scrollbar-width:thin; }
+.speech-channel { display:block; font-size:9px; font-style:normal; color:#6e7d78; margin-bottom:4px; }
+.bubble.whisper { background:#dce2dbef; border-style:dashed; color:#66756c; font-style:italic; }
+.whisper-record { color:#758079; background:#8294880a; }
+.condition-tag { font-size:9px; font-weight:400; color:#826c55; }
+.mob-label { font-size:9px; color:#e0e4d1; background:#354b42b8; padding:3px 6px; border-radius:8px; white-space:nowrap; }
+.rescue-countdown { font-size:10px; color:#68765e; font-variant-numeric:tabular-nums; }
+.rescue-banner { position:absolute; top:180px; left:50%; transform:translateX(-50%); z-index:3; background:#ede8d6ed; border:1px solid #7f937755; border-radius:12px; padding:14px 24px; color:#3c5844; font:20px Georgia,serif; text-align:center; }
+.rescue-banner.missed { color:#7c705d; }
+.mini-needs i:nth-child(3) { background:#9baec2; }
+.need:nth-child(3) meter::-webkit-meter-optimum-value { background:#91a5b2; }
+.need:nth-child(3) meter::-moz-meter-bar { background:#91a5b2; }
+.needs.compact { flex-wrap:wrap; row-gap:5px; }
+.compact .need { flex:1 0 30%; }
+@media (max-width:1000px) { .compact .need { flex-basis:43%; } .compact .need:nth-child(3) { max-width:48%; } }
+@media (max-width:650px) { .rescue-banner { top:170px; font-size:16px; width:90%; } .rescue-countdown { font-size:8px; } .world-status { gap:10px; } }
