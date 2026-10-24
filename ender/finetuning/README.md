@@ -1,11 +1,48 @@
 # Qwen3.8-27B on the Spark
 
+## 8-bit local inference
+
+`setup_q8.py` builds `llama-quantize` from the existing checkout and creates
+`models/Qwen3.8-27B-Q8_0.gguf` from the pinned BF16 GGUF. It retains BF16 GGUF and
+training safetensors, writes the source/output hashes and quantization provenance,
+and selects Q8_0 in `models/active-model.json`. `serve_llamacpp.sh` reads this
+selection on subsequent starts; it does not silently fall back to a different model.
+
+```bash
+cd ~/endersbench-finetune
+.venv/bin/python -u finetuning/setup_q8.py --threads 8 --parallel 4
+```
+
+The setup replaces only this project's model server and temporary cache bridge,
+not other inference services. Pause local inference clients before running it.
+The resulting server binds to `127.0.0.1:8080`, with four concurrent slots, 8,192
+tokens per slot, BF16 KV caches, prompt caching enabled, and no adapter. Model
+weights are Q8_0 (8-bit blocks with scale overhead), not BF16. Clients must also
+request prompt caching. `models/q8-validation.json` contains readiness checks
+and an actual decode smoke timing; `q8-setup.log` shows build/quantization progress.
+
+The earlier BF16 benchmark scripts intentionally reject a differently served
+GGUF. For a reproducible historical BF16 run, explicitly select the retained
+model rather than using the active Q8 default:
+
+```bash
+LLAMA_MODEL_PATH="$HOME/endersbench-finetune/models/Qwen3.8-27B-BF16.gguf" \
+LLAMA_MODEL_ALIAS=qwen38-27b-bf16 LLAMA_PARALLEL=1 LLAMA_CACHE_PROMPT=0 \
+bash finetuning/serve_llamacpp.sh
+```
+
+The OpenRouter continuation is separate from this local setup. Its completed
+result retains 11 local episodes and uses `qwen/qwen3.8-27b` for the remaining
+seven, with four concurrent API workers. Hosted precision/revision is unspecified;
+do not present the mixed result as an unchanged BF16 benchmark. Its report and
+raw per-request usage are saved under `openrouter-continuation-20261024T134558919964598Z`.
+
 ## Scope
 
 - Host: `asus@172.20.13.192` (`gx10-b29c`).
 - Remote directory: `/home/asus/endersbench-finetune`.
 - Model: `Qwen/Qwen3.8-27B`, Apache-2.0, BF16 base weights.
-- Inference: local llama.cpp CUDA server with BF16 GGUF. No Transformers inference or quantization.
+- Inference: llama.cpp CUDA; Q8_0 is selected by the 8-bit setup above. Historical baselines used BF16 GGUF.
 - Method: supervised fine-tuning (SFT) with low-rank adaptation (LoRA).
 - Output: a LoRA adapter. The export configuration can merge the adapter into a BF16 checkpoint.
 - No automatic training, model publication, or external experiment reports.
