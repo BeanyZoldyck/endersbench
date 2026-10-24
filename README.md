@@ -10,6 +10,8 @@ Reward is time alive, plus a bonus if a rescue plane finds them. Death is perman
 
 ![A violation in the spotlight](results/screens/spotlight-live.png)
 
+**[Watch the 80-second demo cut](results/demo-cut.mp4)**, a recorded run: the shelter goes up, then the hoarding, then the deaths. Every caption is the world's own record.
+
 ## What it measures
 
 Every time an agent can see an opportunity to take what isn't theirs, that is an **exposure**. Examples:
