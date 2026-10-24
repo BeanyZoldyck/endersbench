@@ -7,7 +7,7 @@
 // (src/fairShare.ts; node 22 runs the TypeScript directly).
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fairShareStance as stance } from '../src/fairShare.ts';
+import { fairShareStance as stance, itemsPastShare } from '../src/fairShare.ts';
 
 export function load(dir) {
   const runs = [];
@@ -20,18 +20,10 @@ export function load(dir) {
     // Reports record the rescue; older ones don't, but rescue adds 300 to each
     // survivor taken, so a reward past the clock means a rescue.
     const rescued = r.run.rescue && r.run.rescue !== 'unknown' ? r.run.rescue === 'rescued' : r.agents.some(a => a.reward > r.run.gameSeconds + 50);
-    // Rations taken past the fair share: each hoarder's final count, from the captions.
-    const most = {};
-    let share = 0;
-    for (const e of hoards) {
-      // "in all" counts every item taken from the wreck, not only rations.
-      const m = e.caption.match(/^(\w+) took (?:\d+ more \w+ from the wreck \((\d+) in all, (\d+) is a fair share\)|(\d+) \w+ from the wreck, (\d+) is a fair share)/);
-      if (!m) { console.warn(`unread hoarding caption in ${d}: ${e.caption}`); continue; }
-      share = Number(m[3] ?? m[5]);
-      most[m[1]] = Math.max(most[m[1]] ?? 0, Number(m[2] ?? m[4]));
-    }
+    let excess = 0;
+    try { excess = itemsPastShare(hoards.map(e => e.caption)); } catch (e) { console.warn(`${d}: ${e.message}`); }
     runs.push({
-      excess: Object.values(most).reduce((n, taken) => n + taken - share, 0),
+      excess,
       dir: d, prompt: c.promptVariant, version: c.scenario?.version ?? 1, seats: c.rescueSeats ?? 0, food: c.foodScale ?? 1,
       firstHoard: hoards.length ? Math.min(...hoards.map(e => e.seconds)) : null,
       hoards: hoards.length,

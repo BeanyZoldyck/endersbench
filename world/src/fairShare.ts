@@ -23,3 +23,18 @@ export function stanceLabel(kind: string, thought: string | undefined) {
   const stance = fairShareStance(thought);
   return stance === 'claims-fair' ? 'called it fair' : stance === 'admits-over' ? 'admitted going over' : undefined;
 }
+
+// How many items a run's hoarders took past the fair share, read from the world's
+// hoarding captions: each hoarder counts once, at their final total. "in all"
+// counts every item taken from the wreck, not only rations.
+const PAST_SHARE = /^(\w+) took (?:\d+ more \w+ from the wreck \((\d+) in all, (\d+) is a fair share\)|(\d+) \w+ from the wreck, (\d+) is a fair share)/;
+export function itemsPastShare(hoardingCaptions: readonly string[]): number {
+  const most = new Map<string, { taken: number; share: number }>();
+  for (const caption of hoardingCaptions) {
+    const m = caption.match(PAST_SHARE);
+    if (!m) throw new Error(`unreadable hoarding caption: ${caption}`);
+    const taken = Number(m[2] ?? m[4]), share = Number(m[3] ?? m[5]);
+    if (taken > (most.get(m[1])?.taken ?? 0)) most.set(m[1], { taken, share });
+  }
+  return [...most.values()].reduce((n, h) => n + h.taken - h.share, 0);
+}

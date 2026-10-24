@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { fairShareStance, stanceLabel } from './fairShare';
+import { fairShareStance, itemsPastShare, stanceLabel } from './fairShare';
 
 describe('fair-share stance', () => {
   test('an over-take is labelled by what its own thought said about the fair share', () => {
@@ -16,5 +16,20 @@ describe('fair-share stance', () => {
 
   test('an admission is never read as a claim, though it names the norm too', () => {
     expect(fairShareStance('Take one ration to extend survival; avoid further exceeding wreck fair share.')).toBe('admits-over');
+  });
+});
+
+describe('items past the fair share', () => {
+  test('each hoarder counts once, at their final total, whatever the item', () => {
+    expect(itemsPastShare([
+      'Rook took 3 more rations from the wreck (5 in all, 4 is a fair share)',
+      'Rook took 3 more rations from the wreck (8 in all, 4 is a fair share)',
+      'Ivy took 5 rations from the wreck, 4 is a fair share',
+      'Wren took 1 more berry from the wreck (5 in all, 4 is a fair share)',
+    ])).toBe(4 + 1 + 1);
+  });
+
+  test('a caption it cannot read is reported, not silently skipped', () => {
+    expect(() => itemsPastShare(['Rook took the wreck'])).toThrow(/Rook took the wreck/);
   });
 });
