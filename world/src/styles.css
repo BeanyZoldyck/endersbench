@@ -169,3 +169,43 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .glow-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 /* The wreck's title stays readable at night. */
 .wreck-label { background: #f0e4ccd9; padding: 4px 10px 5px; border-radius: 10px; box-shadow: 0 1px 6px #293f3926; }
+
+/* ── Layout: the game view, status bar, details and cast are separate regions, not overlays ── */
+.app { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto minmax(0,1fr) auto; grid-template-areas:"top top" "stage side" "dock dock"; gap:10px; padding:10px 16px; box-sizing:border-box; }
+.topbar { grid-area:top; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:36px; z-index:2; }
+.masthead { position:static; display:flex; align-items:center; gap:14px; pointer-events:auto; }
+.masthead h1 { font-size:20px; margin:0; letter-spacing:-.03em; }
+.masthead p { font-size:11px; margin:0; }
+.brand { font-size:9px; gap:6px; } .brand svg { width:18px; height:20px; }
+.edition { font-size:8px; margin-left:6px; padding-left:10px; }
+.world-status { position:static; flex-direction:row; align-items:center; gap:14px; }
+.season { gap:7px; } .season svg { width:18px; height:18px; }
+.season div { flex-direction:row; align-items:baseline; gap:8px; } .season span { font-size:8px; } .season strong { font-size:12px; }
+.utility button { padding:4px 9px; font-size:10px; }
+.rescue-banner { position:static; transform:none; font-size:12px; padding:4px 12px; border-radius:999px; white-space:nowrap; }
+.stage { grid-area:stage; position:relative; inset:auto; min-height:0; border-radius:14px; overflow:hidden; border:1px solid #293f3926; box-shadow:0 4px 20px #293f3914; }
+.stage .world { position:absolute; inset:0; }
+.detail-panel { grid-area:side; position:static; width:300px; max-height:none; overflow:auto; align-self:stretch; box-sizing:border-box; }
+.spectator-dock { grid-area:dock; position:static; pointer-events:auto; }
+.scene-tools { margin-bottom:8px; gap:14px; flex-wrap:wrap; }
+.event-caption { position:static; transform:none; margin:0 0 0 auto; padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:10px; }
+.glow-legend { position:static; flex-direction:row; align-items:center; gap:8px; font-size:10px; }
+.glow-legend ul { display:flex; gap:10px; padding:4px 10px; border-radius:999px; }
+.glow-legend button { padding:3px 9px; }
+.cast-heading { margin-bottom:6px; }
+.cast-card { padding:10px 12px; gap:10px; }
+.colophon { margin-top:2px; }
+/* Health, food and warmth as three vertical bars on each card. */
+.needs.vertical { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:flex-end; gap:6px; margin:0; flex:none; }
+.vneed { display:flex; flex-direction:column; align-items:center; gap:3px; font-size:8px; color:#75816a; }
+.vbar { width:8px; height:44px; border-radius:6px; background:#dadcc9; overflow:hidden; display:flex; align-items:flex-end; }
+.vbar i { display:block; width:100%; border-radius:6px; background:#829573; transition:height .3s ease; }
+.vneed:nth-child(2) .vbar i { background:#b59b67; }
+.vneed:nth-child(3) .vbar i { background:#91a5b2; }
+@media (max-width:850px) {
+  .app { grid-template-columns:minmax(0,1fr); grid-template-areas:"top" "stage" "side" "dock"; }
+  .topbar { flex-wrap:wrap; }
+  .detail-panel { width:auto; max-height:38dvh; }
+  .masthead p { display:none; }
+}
+.detail-panel { position:relative; } /* keeps its close button inside the panel */

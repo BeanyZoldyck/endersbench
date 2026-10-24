@@ -12,7 +12,7 @@ import type { Physics } from './contract';
 import { useGameClock } from './useGameClock';
 import { Atmosphere } from './Atmosphere';
 import { Fires, Wolves, Storm } from './Survival';
-import { CarriedGlows, ContainerGlows, GlowLegend, WreckTitle } from './ItemGlow';
+import { CarriedGlows, ContainerGlows, WreckTitle } from './ItemGlow';
 
 export type CameraMode = 'audience' | 'explore' | 'follow';
 export type SceneProps = {
@@ -52,7 +52,6 @@ export function WorldScene(props: SceneProps) {
       <Storm hazards={props.hazards} readTime={readTime} />
       <EventEffects moments={props.moments} width={world.width} height={world.height} />
     </Canvas>
-    <GlowLegend />
   </div>;
 }
 
