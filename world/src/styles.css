@@ -208,7 +208,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
   .detail-panel { width:auto; max-height:38dvh; }
   .masthead p { display:none; }
 }
-.detail-panel { position:relative; } /* keeps its close button inside the panel */
+.detail-panel { position:relative; top:auto; right:auto; } /* keeps its close button inside the panel; clears the old absolute offsets */
 
 /* The selected survivor's status card, anchored beside them in the scene.
    The frame carries the notch that points at them; the body scrolls. */
