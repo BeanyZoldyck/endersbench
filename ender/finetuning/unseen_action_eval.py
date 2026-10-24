@@ -122,6 +122,8 @@ def main():
     parser.add_argument("--overlap-file", type=Path, action="append", default=[])
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-new-tokens", type=int, default=96)
+    parser.add_argument("--development-recheck", action="store_true",
+                        help="Mark a previously inspected suite as development monitoring, not independent holdout")
     args = parser.parse_args()
     if not 1 <= args.max_new_tokens <= 256:
         parser.error("Use a bounded generation budget in [1,256]")
@@ -144,26 +146,45 @@ def main():
     if not audit["passed"]:
         raise ValueError("Overlap audit flagged cases; do not silently run them as unseen")
     sister = args.adapter/"retep"
-    training_manifest = json.loads((args.adapter.parent/"manifest.json").read_text())
-    if training_manifest.get("status") != "complete" or "six-step performance probe" not in training_manifest.get("purpose", ""):
-        raise ValueError("This comparison is scoped to a completed six-step financial probe, not another checkpoint")
-    training_steps = [json.loads(line) for line in (args.adapter.parent/"throughput.jsonl").read_text().splitlines()]
+    checkpoint = args.adapter.name.startswith("checkpoint-")
+    training_run = args.adapter.parent.parent if checkpoint else args.adapter.parent
+    training_manifest = json.loads((training_run/"manifest.json").read_text())
+    checkpoint_step = None
+    if checkpoint:
+        if not args.development_recheck:
+            raise ValueError("Checkpoint monitoring requires --development-recheck")
+        checkpoint_step = json.loads((args.adapter/"trainer_state.json").read_text())["global_step"]
+        sister_state = json.loads((sister/"retep-manifest.json").read_text())
+        if sister_state["optimizer_steps"] != checkpoint_step:
+            raise ValueError("Primary and sister checkpoints have differing steps")
+    purpose = training_manifest.get("purpose", "")
+    if training_manifest.get("status") not in (("complete", "training") if checkpoint else ("complete",)) or not (
+            "six-step performance probe" in purpose or purpose == "one-hour paired financial continuation"):
+        raise ValueError("Expected a completed, documented paired financial run")
+    if purpose == "one-hour paired financial continuation" and not args.development_recheck:
+        raise ValueError("The already inspected eight-case suite must be marked --development-recheck")
+    training_steps = [json.loads(line) for line in (training_run/"throughput.jsonl").read_text().splitlines()]
+    if checkpoint:
+        training_steps = [row for row in training_steps if row["step"] <= checkpoint_step]
     manifest = {"status": "loading", "started_at": datetime.now(timezone.utc).isoformat(),
                 "model": config["model_name_or_path"], "revision": config["model_revision"],
                 "precision": "native bitsandbytes LLM.int8; BF16 autocast; no W8A16 override",
                 "adapter": str(args.adapter), "adapter_sha256": digest(args.adapter/"adapter_model.safetensors"),
                 "retep_sha256": digest(sister/"adapter_model.safetensors"),
-                "adapter_training_run": str(args.adapter.parent),
-                "adapter_training_steps": max(row["step"] for row in training_steps),
+                "adapter_training_run": str(training_run),
+                "adapter_training_steps": training_manifest.get("prior_lineage_steps", 0) + max(row["step"] for row in training_steps),
+                "optimizer_steps_this_run": max(row["step"] for row in training_steps),
                 "adapter_training_input_tokens": training_steps[-1]["input_tokens_seen"],
                 "training_data_sha256": training_manifest["source_sha256"],
                 "full_epoch_trained": False, "script_sha256": digest(Path(__file__)), "cases_sha256": digest(args.cases),
+                "evaluation_role": "development_recheck" if args.development_recheck else "fresh_authored_diagnostic",
                 "generation": {"do_sample": False, "thinking": False, "seed": 42, "max_new_tokens": args.max_new_tokens},
                 "tools_executed": False, "judge": "Predeclared exact tool/argument rubric; assistant-authored, not human reviewed",
                 "limitations": ["One-turn proposed actions, not executed tools or task completion",
                     "Fresh authored texts with overlap screening, not proven semantic/pretraining independence",
                     "Eight obvious policy/accuracy probes can have ceiling effects; no statistical generalization claim",
-                    "Latest adapters have only six financial performance-probe updates, not a full training epoch"]}
+                    "This is not a completed full-epoch fine-tune",
+                    "Previously inspected prompts used after tuning are development checks, not independent holdout"]}
     from run_sft_demo import write_json
     write_json(args.output/"manifest.json", manifest)
     import torch

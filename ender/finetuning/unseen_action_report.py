@@ -56,6 +56,9 @@ def build_report(run):
              "These are eight assistant-authored, unreviewed one-turn diagnostic probes. All outputs are proposed calls, **not executed tools or completed tasks**. The scorer uses exact predeclared actions/arguments, not a human or external safety judge.", "",
              "## Matched results", "", "| Mode | Rubric matches | Different actions | Unresolved |",
              "|---|---:|---:|---:|"]
+    if manifest.get("evaluation_role") == "development_recheck":
+        lines[0] = "# Development scenario recheck — base versus Ender and `retep`"
+        lines.insert(4, "**Development monitoring:** these prompts were inspected before learning-rate tuning. This is not a new independent held-out evaluation.\n")
     for mode in MODES:
         count = counts[mode]
         lines.append(f"| {mode} | {count['rubric_match']}/{len(cases)} | {count['different_action']} | {count['unresolved']} |")

@@ -207,6 +207,13 @@ class RetepTests(unittest.TestCase):
             target = dict(loaded.named_parameters())
             for name, value in sister.shadow.items():
                 torch.testing.assert_close(value, target[name])
+            continued = NegativeGradientShadow(params)
+            continued.warm_start(model, path)
+            self.assertIsNone(continued.optimizer)
+            self.assertEqual(continued.steps, 0)
+            self.assertEqual(continued.prior_optimizer_steps, 1)
+            for name, value in sister.shadow.items():
+                torch.testing.assert_close(value, continued.shadow[name])
 
 
 if __name__ == "__main__":
