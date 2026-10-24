@@ -1,0 +1,42 @@
+{
+  "persona": "P16",
+  "product": "pitchpoint_blj",
+  "variant": "PitchPoint",
+  "method": "POST",
+  "path": "/pp/fcrablj/data",
+  "request": {
+    "terms": {
+      "term": [
+        {
+          "person": {
+            "firstName": "SAMUEL",
+            "lastName": "OYELARAN",
+            "ssn": "666701016"
+          }
+        }
+      ]
+    }
+  },
+  "expected": "BankruptciesFound/JudgmentsFound/LiensFound: 0/0/0",
+  "status": 200,
+  "requestId": "b2838632-ce27-4154-b79c-ec6c4867e484",
+  "response": {
+    "DetailedBLJReport": {
+      "JudgmentsFound": 0,
+      "Filters": {
+        "ExcludeBankruptcies": false,
+        "FilterVerbiage": "Judgment satisfied = 7 years; Judgment unsatisfied = 7 years; Lien released = 7 years; Lien unreleased = 10 years; Bankruptcy chapter 7 or 11 dismissed or discharged = 10 years; Bankruptcy chapter 7 or 11 not dismissed or discharged = 10 years; Bankruptcy chapter 13 dismissed or discharged = 7 years; Bankruptcy chapter 13 not dismissed or discharged = 10 years",
+        "SkipNameValidation": false
+      },
+      "Messages": {
+        "Message": {
+          "Text": "No Errors",
+          "Code": 0
+        }
+      },
+      "Results": "",
+      "BankruptciesFound": 0,
+      "LiensFound": 0
+    }
+  }
+}

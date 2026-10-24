@@ -1,0 +1,32 @@
+{
+  "persona": "P15",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "NICOLE",
+      "last": "FARRAGUT",
+      "ssn": "666-70-1015",
+      "dob": "03-30-1983",
+      "zip": "97218"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "7ba661d9-d446-4359-923a-b5b71cbdb959",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "FARRAGUT,NICOLE"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

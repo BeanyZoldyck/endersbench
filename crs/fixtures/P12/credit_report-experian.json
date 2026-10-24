@@ -1,0 +1,75 @@
+{
+  "persona": "P12",
+  "product": "credit_report",
+  "variant": "Experian",
+  "method": "POST",
+  "path": "/experian/credit-report/standard/exp-prequal-vantage4",
+  "request": {
+    "firstName": "VICTOR",
+    "lastName": "ANAND",
+    "ssn": "666701012",
+    "addresses": [
+      {
+        "addressLine1": "55 WATER ST FL 20",
+        "city": "NEW YORK",
+        "state": "NY",
+        "postalCode": "10041",
+        "borrowerResidencyType": "Current"
+      }
+    ]
+  },
+  "expected": "(TU / EFX / EXP): NoFileReturnedNoHit at all three bureaus",
+  "status": 200,
+  "requestId": "37ddc6fc-2d62-4396-98d1-171f23956ccc",
+  "response": {
+    "requestData": {
+      "firstName": "VICTOR",
+      "lastName": "ANAND",
+      "ssn": "666701012",
+      "addresses": [
+        {
+          "borrowerResidencyType": "Current",
+          "addressLine1": "55 WATER ST FL 20",
+          "city": "NEW YORK",
+          "state": "NY",
+          "postalCode": "10041"
+        }
+      ]
+    },
+    "repositoryIncluded": {
+      "transunion": false,
+      "experian": true,
+      "equifax": false
+    },
+    "responseDetail": {
+      "dateRequested": "2026-10-24T07:12:00.299798Z",
+      "requestingParty": {
+        "name": "CALHACKS13"
+      },
+      "creditBureauContact": {
+        "name": "CREDIT REPORTING SERVICES, INC",
+        "address": {
+          "addressLine1": "1024 IRON POINT ROAD",
+          "city": "FOLSOM",
+          "state": "CA",
+          "postalCode": "95630"
+        }
+      }
+    },
+    "responseAlertMessages": [],
+    "creditFiles": [
+      {
+        "creditFileDetail": {
+          "borrowerSourceType": "Borrower",
+          "creditFileInfileDate": "2026-10-18",
+          "creditFileResultStatusType": "NoFileReturnedNoHit",
+          "sourceType": "Experian"
+        }
+      }
+    ],
+    "summaries": {
+      "tradeSummary": {},
+      "derogatorySummary": {}
+    }
+  }
+}

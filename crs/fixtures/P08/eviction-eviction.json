@@ -1,0 +1,32 @@
+{
+  "persona": "P08",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "PRIYA",
+      "last": "VENKATESAN",
+      "ssn": "666-70-1008",
+      "dob": "07-27-1981",
+      "zip": "60657"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "0b06c262-7689-443f-8e8c-b4b1f2f99093",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "VENKATESAN,PRIYA"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

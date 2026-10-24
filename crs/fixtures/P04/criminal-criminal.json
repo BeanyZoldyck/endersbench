@@ -1,0 +1,32 @@
+{
+  "persona": "P04",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "TOMAS",
+      "last": "LINDQVIST",
+      "ssn": "666-70-1004",
+      "dob": "01-30-1990",
+      "zip": "98101"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "c561b689-4ab8-44fd-aaf9-3f6c1e6311eb",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "LINDQVIST,TOMAS"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

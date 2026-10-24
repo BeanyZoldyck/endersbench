@@ -1,0 +1,32 @@
+{
+  "persona": "P19",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "GRACE",
+      "last": "NAKAMURA",
+      "ssn": "666-70-1019",
+      "dob": "09-16-1976",
+      "zip": "94707"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "642d0542-c3e3-437d-9943-3032b946d2a1",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "NAKAMURA,GRACE"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

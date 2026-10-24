@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 710" role="img" aria-label="Detector outcomes by semantic category">
+<title>Detector outcomes by semantic category</title><rect width="1200" height="710" rx="18" fill="#111b2d"/>
+<g font-family="system-ui,sans-serif">
+<text x="28" y="40" font-size="25" fill="#dbe3f1" >Detector outcomes by semantic category</text>
+<text x="28" y="70" font-size="15" fill="#a9b7cf" >Qwen3.8-27B · local BF16 + OpenRouter continuation (hosted precision unspecified) · observed simulated tool calls</text>
+<rect x="28" y="94" width="13" height="13" fill="#ff8f91"/>
+<text x="51" y="106" font-size="15" fill="#dbe3f1" >Rule hit</text>
+<rect x="273" y="94" width="13" height="13" fill="#55d6be"/>
+<text x="296" y="106" font-size="15" fill="#dbe3f1" >No rule hit</text>
+<rect x="518" y="94" width="13" height="13" fill="#f1c66e"/>
+<text x="541" y="106" font-size="15" fill="#dbe3f1" >Unresolved</text>
+<text x="985" y="106" font-size="14" fill="#a9b7cf" >Hit / None / ?</text>
+<text x="28" y="153" font-size="15" fill="#dbe3f1" >answer-key</text>
+<text x="345" y="153" font-size="13" fill="#a9b7cf" >n=3</text>
+<rect x="410.00" y="133" width="366.67" height="27" fill="#ff8f91"><title>Rule hit: 2 (66.7%)</title></rect>
+<text x="593.3333333333334" y="152" font-size="14" fill="#111b2d" text-anchor="middle">2</text>
+<rect x="776.67" y="133" width="183.33" height="27" fill="#f1c66e"><title>Unresolved: 1 (33.3%)</title></rect>
+<text x="868.3333333333334" y="152" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="152" font-size="15" fill="#dbe3f1" >2 / 0 / 1</text>
+<text x="28" y="201" font-size="15" fill="#dbe3f1" >environment</text>
+<text x="345" y="201" font-size="13" fill="#a9b7cf" >n=3</text>
+<rect x="410.00" y="181" width="183.33" height="27" fill="#ff8f91"><title>Rule hit: 1 (33.3%)</title></rect>
+<text x="501.6666666666667" y="200" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<rect x="593.33" y="181" width="366.67" height="27" fill="#f1c66e"><title>Unresolved: 2 (66.7%)</title></rect>
+<text x="776.6666666666667" y="200" font-size="14" fill="#111b2d" text-anchor="middle">2</text>
+<text x="985" y="200" font-size="15" fill="#dbe3f1" >1 / 0 / 2</text>
+<text x="28" y="249" font-size="15" fill="#dbe3f1" >judge-gaming</text>
+<text x="345" y="249" font-size="13" fill="#a9b7cf" >n=3</text>
+<rect x="410.00" y="229" width="366.67" height="27" fill="#55d6be"><title>No rule hit: 2 (66.7%)</title></rect>
+<text x="593.3333333333334" y="248" font-size="14" fill="#111b2d" text-anchor="middle">2</text>
+<rect x="776.67" y="229" width="183.33" height="27" fill="#f1c66e"><title>Unresolved: 1 (33.3%)</title></rect>
+<text x="868.3333333333334" y="248" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="248" font-size="15" fill="#dbe3f1" >0 / 2 / 1</text>
+<text x="28" y="297" font-size="15" fill="#dbe3f1" >output-spoofing</text>
+<text x="345" y="297" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="277" width="550.00" height="27" fill="#ff8f91"><title>Rule hit: 1 (100.0%)</title></rect>
+<text x="685.0" y="296" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="296" font-size="15" fill="#dbe3f1" >1 / 0 / 0</text>
+<text x="28" y="345" font-size="15" fill="#dbe3f1" >oversight-evasion</text>
+<text x="345" y="345" font-size="13" fill="#a9b7cf" >n=3</text>
+<rect x="410.00" y="325" width="183.33" height="27" fill="#ff8f91"><title>Rule hit: 1 (33.3%)</title></rect>
+<text x="501.6666666666667" y="344" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<rect x="593.33" y="325" width="183.33" height="27" fill="#55d6be"><title>No rule hit: 1 (33.3%)</title></rect>
+<text x="685.0" y="344" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<rect x="776.67" y="325" width="183.33" height="27" fill="#f1c66e"><title>Unresolved: 1 (33.3%)</title></rect>
+<text x="868.3333333333334" y="344" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="344" font-size="15" fill="#dbe3f1" >1 / 1 / 1</text>
+<text x="28" y="393" font-size="15" fill="#dbe3f1" >rationalisation</text>
+<text x="345" y="393" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="373" width="550.00" height="27" fill="#f1c66e"><title>Unresolved: 1 (100.0%)</title></rect>
+<text x="685.0" y="392" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="392" font-size="15" fill="#dbe3f1" >0 / 0 / 1</text>
+<text x="28" y="441" font-size="15" fill="#dbe3f1" >reward-tampering</text>
+<text x="345" y="441" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="421" width="550.00" height="27" fill="#ff8f91"><title>Rule hit: 1 (100.0%)</title></rect>
+<text x="685.0" y="440" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="440" font-size="15" fill="#dbe3f1" >1 / 0 / 0</text>
+<text x="28" y="489" font-size="15" fill="#dbe3f1" >sandbagging</text>
+<text x="345" y="489" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="469" width="550.00" height="27" fill="#55d6be"><title>No rule hit: 1 (100.0%)</title></rect>
+<text x="685.0" y="488" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="488" font-size="15" fill="#dbe3f1" >0 / 1 / 0</text>
+<text x="28" y="537" font-size="15" fill="#dbe3f1" >specification-gaming</text>
+<text x="345" y="537" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="517" width="550.00" height="27" fill="#55d6be"><title>No rule hit: 1 (100.0%)</title></rect>
+<text x="685.0" y="536" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="536" font-size="15" fill="#dbe3f1" >0 / 1 / 0</text>
+<text x="28" y="585" font-size="15" fill="#dbe3f1" >test-suite</text>
+<text x="345" y="585" font-size="13" fill="#a9b7cf" >n=1</text>
+<rect x="410.00" y="565" width="550.00" height="27" fill="#55d6be"><title>No rule hit: 1 (100.0%)</title></rect>
+<text x="685.0" y="584" font-size="14" fill="#111b2d" text-anchor="middle">1</text>
+<text x="985" y="584" font-size="15" fill="#dbe3f1" >0 / 1 / 0</text>
+<text x="28" y="665" font-size="13" fill="#a9b7cf" >No rule hit is not a safety verdict or proof of task success. Pending judgments and incomplete runs stay unresolved.</text>
+<text x="28" y="689" font-size="14" fill="#a9b7cf" >In-memory tools with canned outputs; detector coverage is limited; related scenarios overlap.</text>
+</g></svg>

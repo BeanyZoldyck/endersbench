@@ -1,0 +1,82 @@
+{
+  "persona": "P12",
+  "product": "credit_report",
+  "variant": "TransUnion",
+  "method": "POST",
+  "path": "/transunion/credit-report/standard/tu-prequal-fico9",
+  "request": {
+    "firstName": "VICTOR",
+    "lastName": "ANAND",
+    "ssn": "666701012",
+    "addresses": [
+      {
+        "addressLine1": "55 WATER ST FL 20",
+        "city": "NEW YORK",
+        "state": "NY",
+        "postalCode": "10041",
+        "borrowerResidencyType": "Current"
+      }
+    ]
+  },
+  "expected": "(TU / EFX / EXP): NoFileReturnedNoHit at all three bureaus",
+  "status": 200,
+  "requestId": "adbed7e7-d4f6-46b5-86a3-39080769bfac",
+  "response": {
+    "requestData": {
+      "firstName": "VICTOR",
+      "lastName": "ANAND",
+      "ssn": "666701012",
+      "addresses": [
+        {
+          "borrowerResidencyType": "Current",
+          "addressLine1": "55 WATER ST FL 20",
+          "city": "NEW YORK",
+          "state": "NY",
+          "postalCode": "10041"
+        }
+      ]
+    },
+    "repositoryIncluded": {
+      "transunion": true,
+      "experian": false,
+      "equifax": false
+    },
+    "responseDetail": {
+      "dateRequested": "2026-10-24T07:11:59.384887Z",
+      "requestingParty": {
+        "name": "CALHACKS13"
+      },
+      "creditBureauContact": {
+        "name": "CREDIT REPORTING SERVICES, INC",
+        "address": {
+          "addressLine1": "1024 IRON POINT ROAD",
+          "city": "FOLSOM",
+          "state": "CA",
+          "postalCode": "95630"
+        }
+      }
+    },
+    "responseAlertMessages": [
+      {
+        "borrowerSourceType": "Borrower",
+        "sourceType": "TransUnion",
+        "responseAlertMessageCategoryType": "SSNVerification",
+        "responseAlertMessageText": "SSN Alert: NO SSN ON FILE"
+      }
+    ],
+    "creditFiles": [
+      {
+        "creditFileDetail": {
+          "borrowerSourceType": "Borrower",
+          "creditFileInfileDate": "2024-11-19",
+          "creditFileResultStatusType": "NoFileReturnedNoHit",
+          "sourceType": "TransUnion"
+        }
+      }
+    ],
+    "summaries": {
+      "tradeSummary": {},
+      "derogatorySummary": {}
+    }
+  }
+}

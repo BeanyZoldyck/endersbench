@@ -1,0 +1,32 @@
+{
+  "persona": "P06",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101006"
+  },
+  "expected": "one result for the persona",
+  "status": 200,
+  "requestId": "46402d0b-a50f-47e3-8846-44144f17e055",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "ANGELA",
+          "lastName": "MORRISSEY",
+          "houseNo": "960",
+          "streetName": "MAPLEWOOD AVE",
+          "address": "960 MAPLEWOOD AVE",
+          "city": "COLUMBUS",
+          "state": "OH",
+          "postalCode": "43209"
+        }
+      ]
+    }
+  }
+}

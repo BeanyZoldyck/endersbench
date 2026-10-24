@@ -1,0 +1,83 @@
+{
+  "persona": "P04",
+  "product": "fraud_finder",
+  "variant": "FraudFinder",
+  "method": "POST",
+  "path": "/fraud-finder/fraud-finder",
+  "request": {
+    "firstName": "TOMAS",
+    "lastName": "LINDQVIST",
+    "phoneNumber": "5550101004",
+    "email": "tomas.lindqvist@example.com",
+    "ipAddress": "203.0.113.14",
+    "address": {
+      "addressLine1": "415 PINE ST UNIT 12",
+      "city": "SEATTLE",
+      "state": "WA",
+      "postalCode": "98101"
+    }
+  },
+  "expected": "risk.score 18 (low), email 1 yr. Send name, phone, email and address; ipAddress is free.",
+  "status": 200,
+  "requestId": "272cfd8c-53ba-4798-8624-fbcd8e75db6d",
+  "response": {
+    "eam": {
+      "date_first_seen": "2025-09-05",
+      "longevity": 2,
+      "velocity": 2,
+      "popularity": 1
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 18,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P04-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "47.61",
+        "longitude": "-122.33"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "5 miles"
+      },
+      "phone": {
+        "line_type": "mobile",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "tomas.lindqvist@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

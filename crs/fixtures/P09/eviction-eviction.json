@@ -1,0 +1,32 @@
+{
+  "persona": "P09",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "DEREK",
+      "last": "HOLLOWAY",
+      "ssn": "666-70-1009",
+      "dob": "02-11-1986",
+      "zip": "80204"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "0619f795-f633-4497-81d1-2dfcde1fa86d",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "HOLLOWAY,DEREK"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

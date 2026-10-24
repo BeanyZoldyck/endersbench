@@ -1,0 +1,32 @@
+{
+  "persona": "P17",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "ELENA",
+      "last": "CASTELLANOS",
+      "ssn": "666-70-1017",
+      "dob": "11-20-1987",
+      "zip": "75206"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "3edb6423-9761-4e2d-90d4-cb414f700bbb",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "CASTELLANOS,ELENA"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

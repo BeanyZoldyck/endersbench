@@ -1,0 +1,32 @@
+{
+  "persona": "P03",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "JASMINE",
+      "last": "REYES",
+      "ssn": "666-70-1003",
+      "dob": "06-21-2004",
+      "zip": "94704"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "501cdfef-34d1-44a9-b735-a0ca39545ef3",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "REYES,JASMINE"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

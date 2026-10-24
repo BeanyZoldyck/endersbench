@@ -1,0 +1,32 @@
+{
+  "persona": "P02",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101002"
+  },
+  "expected": "one result for the persona",
+  "status": 200,
+  "requestId": "30ae075f-7c58-42b2-953a-b35593dd5294",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "DANIEL",
+          "lastName": "WHITFIELD",
+          "houseNo": "88",
+          "streetName": "LAKESHORE BLVD",
+          "address": "88 LAKESHORE BLVD",
+          "city": "AUSTIN",
+          "state": "TX",
+          "postalCode": "78746"
+        }
+      ]
+    }
+  }
+}

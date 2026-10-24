@@ -1,0 +1,32 @@
+{
+  "persona": "P15",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101015"
+  },
+  "expected": "one result for the persona",
+  "status": 200,
+  "requestId": "2ba9f827-645c-42ff-b1b3-3aaf7431fe28",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "NICOLE",
+          "lastName": "FARRAGUT",
+          "houseNo": "7700",
+          "streetName": "NE 72ND AVE",
+          "address": "7700 NE 72ND AVE",
+          "city": "PORTLAND",
+          "state": "OR",
+          "postalCode": "97218"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "persona": "P20",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "DOLORES",
+      "last": "WHITCOMB",
+      "ssn": "666-70-1020",
+      "dob": "05-04-1952",
+      "zip": "93109"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "2a44e918-239c-4c19-926e-a814fffcaa82",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "WHITCOMB,DOLORES"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}
