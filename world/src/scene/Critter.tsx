@@ -1,5 +1,5 @@
 import { boundaryFog } from './boundaryFog';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,12 +7,18 @@ import type { Agent, Message, World } from '../module_bindings/types';
 import type { ReadGameTime } from './useGameClock';
 import { toScene } from './Environment';
 
-export function Critter({ agent, world, selected, said, addressedTo, radius, readTime, connected, onSelect }: {
+// Survivors are drawn larger than their collision circle so they read at a
+// distance; the physics radius is unchanged.
+export const CRITTER_SCALE = 1.35;
+
+export function Critter({ agent, world, selected, said, addressedTo, radius: bodyRadius, readTime, connected, onSelect, card }: {
   agent: Agent; world: World; selected: boolean; said?: Message; addressedTo?: Agent; radius: number; readTime: ReadGameTime; connected: boolean; onSelect: (id: bigint) => void;
+  card?: ReactNode;
 }) {
+  const radius = bodyRadius * CRITTER_SCALE;
   const root = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), eyes = useRef<THREE.Group>(null);
   const feet = useRef<THREE.Group>(null);
-  const bubble = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null), cardBox = useRef<HTMLDivElement>(null);
   const projected = useMemo(() => new THREE.Vector3(), []);
   const latest = useRef(agent); latest.current = agent;
   // Hold initial position: subsequent snapshots are interpolated in useFrame.
@@ -40,6 +46,18 @@ export function Critter({ agent, world, selected, said, addressedTo, radius, rea
       const halfWidth = bubble.current.offsetWidth / 2;
       const clamped = THREE.MathUtils.clamp(screenX, halfWidth + 12, state.size.width - halfWidth - 12);
       bubble.current.style.transform = `translateX(${clamped - screenX}px)`;
+    }
+    if (cardBox.current) {
+      // The status card sits beside the survivor, flipping sides and sliding
+      // vertically so it never leaves the view.
+      projected.set(root.current.position.x, radius * 1.2, root.current.position.z).project(state.camera);
+      const sx = (projected.x + 1) * state.size.width / 2, sy = (1 - projected.y) * state.size.height / 2;
+      const w = cardBox.current.offsetWidth, h = cardBox.current.offsetHeight, gap = 34;
+      const x = sx + gap + w > state.size.width - 12 && sx - gap - w > 12 ? -gap - w : gap;
+      const y = THREE.MathUtils.clamp(sy - h * 0.35, 12, Math.max(12, state.size.height - h - 12)) - sy;
+      cardBox.current.style.transform = `translate(${x}px, ${y}px)`;
+      cardBox.current.dataset.side = x < 0 ? 'left' : 'right';
+      cardBox.current.style.setProperty('--pip', `${THREE.MathUtils.clamp(-y, 18, h - 18)}px`);
     }
     const speed = Math.hypot(a.vx, a.vy);
     const stunned = a.stunnedUntilMs > readTime();
@@ -89,6 +107,9 @@ export function Critter({ agent, world, selected, said, addressedTo, radius, rea
       <mesh position={[-0.72, -0.5, -0.4]} rotation={[0, 0, -0.3]} scale={[0.24, 0.35, 0.2]}><sphereGeometry args={[1, 12, 8]} /><meshStandardMaterial {...boundaryFog} color="#b8a583" roughness={1} transparent={ghost} opacity={opacity} /></mesh>
     </group>
     {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent opacity={0.85} /></mesh>}
+    {card && <Html position={[0, radius * 1.2, 0]} zIndexRange={[30, 20]}>
+      <div ref={cardBox} className="agent-card" style={{ '--agent-color': agent.color } as CSSProperties}><div className="agent-card-body">{card}</div></div>
+    </Html>}
     <Html position={[0, radius * 2.7 + 0.35, 0]} center zIndexRange={[12, 8]} style={{ pointerEvents: 'none' }}>
       <div className="tag-stack">
         {said && <div ref={bubble} className={`bubble ${said.channel === 'whisper' ? 'whisper' : ''}`}>{said.channel === 'whisper' && <span className="speech-channel">🔒 Whisper{addressedTo ? ` to ${addressedTo.name}` : ''}</span>}{said.text.length > 120 ? `${said.text.slice(0, 117)}…` : said.text}</div>}

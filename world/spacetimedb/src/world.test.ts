@@ -18,6 +18,7 @@ const {
   humanAct,
   onDisconnect,
   setRunning,
+  resetExperiment,
 } = moduleExports;
 
 // Game times on the default day: the run starts mid-morning, night is 90-162 s.
@@ -1632,5 +1633,56 @@ describe('human players', () => {
     t.withReducerTx(stranger, ctx => onDisconnect(ctx, {}));
 
     expect(([...t.db.agent.iter()] as any[]).map(a => a.name)).toEqual(['Ada']);
+  });
+});
+
+describe('resetting the experiment', () => {
+  function messy() {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    t.withReducerTx(stranger, ctx => joinAsHuman(ctx, { name: 'Judge' }));
+    advance(t, 30_000);
+    setAgent(t, 'Ada', { hp: 0, alive: false });
+    const w = wreck(t);
+    for (const i of [...t.db.item.iter()] as any[]) if (i.containerId === w.id) t.db.item.id.delete(i.id);
+    t.db.ethicsEvent.insert({ id: 0n, agentId: agentNamed(t, 'Bo').id, victimAgentId: 0n, tier: 1, kind: 'theft', caption: 'x', temptationId: 0n, gameTimeMs: 1 });
+    t.withReducerTx(publisher, ctx => setRunning(ctx, { running: false }));
+    return t;
+  }
+
+  test('anyone watching can restart the run from a fresh world with the same model survivors', () => {
+    const t = messy();
+    const before = ([...t.db.agent.iter()] as any[]).filter(a => a.kind === 'llm').map(a => [a.name, a.modelId]);
+
+    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+
+    const w = t.db.world.id.find(0)!;
+    expect(w.gameTimeMs).toBe(0);
+    expect(w.running).toBe(true);
+    expect(t.db.tickTimer.count()).toBe(1n);
+    expect(t.db.brainTimer.count()).toBe(1n);
+    const agents = [...t.db.agent.iter()] as any[];
+    expect(agents.map(a => [a.name, a.modelId])).toEqual(before);
+    expect(agents.every(a => a.alive && a.hp === 100 && a.x === a.homeX && a.y === a.homeY)).toBe(true);
+    expect(stored(t, wreck(t).id, 'ration')).toBe(R.WRECK_RATIONS);
+    expect(events(t)).toEqual([]);
+    expect(scoreOf(t, 'Bo').violations).toBe(0);
+    expect(t.db.score.count()).toBe(2n);
+    expect([...t.db.structure.iter()].find((s: any) => s.kind === 'campfire')!.lit).toBe(true);
+  });
+
+  test('the harness keeps its claim and serves the new run', () => {
+    const t = messy();
+    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+
+    advance(t, 100);
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const req = [...t.db.decisionRequest.iter()].find((r: any) => r.status === 'pending') as any;
+    t.withReducerTx(harness, ctx =>
+      submitDecision(ctx, { requestId: req.id, action: JSON.stringify({ name: 'idle', args: {} }), thought: 'fresh start', latencyMs: 5 })
+    );
+
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('done');
   });
 });

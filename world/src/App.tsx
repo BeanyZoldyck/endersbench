@@ -74,11 +74,29 @@ export default function App() {
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const run = (action: Promise<unknown>) => { setError(''); void action.catch(e => setError(e instanceof Error ? e.message : String(e))); };
+  const deselect = () => { setSelectedId(undefined); setMode('audience'); };
+  const resetExperiment = () => {
+    if (!conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
+    deselect();
+    run(conn.reducers.resetExperiment({}));
+  };
+  // Lives beside the survivor in the scene, so it follows them around.
+  const selectedCard = selected && <>
+    <button className="close" aria-label="Close survivor details" onClick={deselect}>×</button>
+    <div className="selected-title"><Portrait agent={selected} /><div><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
+    {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
+    <Needs agent={selected} />
+    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
+    <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
+    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
+    <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
+    <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
+  </>;
 
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
     </div>
     <div className="topbar">
@@ -92,7 +110,7 @@ export default function App() {
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
-      <nav className="utility" aria-label="Viewer tools"><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -108,15 +126,6 @@ export default function App() {
         {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [62, 74], kind: 'berries', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
-    </aside>}
-    {selected && !panel && <aside className="detail-panel survivor-panel"><button className="close" aria-label="Close survivor details" onClick={() => { setSelectedId(undefined); setMode('audience'); }}>×</button><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><div className="selected-title"><Portrait agent={selected} /><div><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
-      {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
-      <Needs agent={selected} />
-      <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
-      {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
-      <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
-      {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
-      <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
     </aside>}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>

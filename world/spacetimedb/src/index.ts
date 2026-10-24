@@ -127,7 +127,8 @@ function logAction(ctx: Ctx, agentId: bigint, requestId: bigint, action: string,
   });
 }
 
-export const init = spacetimedb.init(ctx => {
+// A fresh clearing at game time zero: map, supplies, hazards, clock running.
+function startRun(ctx: Ctx) {
   ctx.db.world.insert({
     id: 0,
     tick: 0n,
@@ -147,11 +148,35 @@ export const init = spacetimedb.init(ctx => {
     rescueAtMs: RESCUE_AT_MS,
     rescueState: 'waiting',
   });
-  ctx.db.admin.insert({ identity: ctx.sender });
   publishMeta(ctx);
   seedWorld(ctx);
   updateFairShare(ctx);
   startTimers(ctx);
+}
+
+function addSurvivor(ctx: Ctx, name: string, modelId: string) {
+  const a = newAgent(ctx, { name, kind: 'llm', modelId, x: 0, y: 0 });
+  const { homeX, homeY, role, backstory } = settleSurvivor(ctx, a.id, name);
+  ctx.db.agent.id.update({ ...ctx.db.agent.id.find(a.id)!, x: homeX, y: homeY, targetX: homeX, targetY: homeY, homeX, homeY, role, backstory });
+  updateFairShare(ctx);
+}
+
+export const init = spacetimedb.init(ctx => {
+  ctx.db.admin.insert({ identity: ctx.sender });
+  startRun(ctx);
+});
+
+// Restart the experiment: the same model survivors in a fresh clearing at
+// time zero. Humans leave and rejoin; the harness keeps its claim and simply
+// answers the new run's requests. Open to every viewer, like joining as a human.
+export const resetExperiment = spacetimedb.reducer(ctx => {
+  const roster = [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').sort((a, b) => Number(a.id - b.id));
+  stopTimers(ctx);
+  const d = ctx.db;
+  for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
+    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score]) table.clear();
+  startRun(ctx);
+  for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
 });
 
 // Advances the world by real elapsed time × timeScale. This is the fast body.
@@ -273,10 +298,7 @@ export const claimHarness = spacetimedb.reducer(ctx => {
 export const spawnAgent = spacetimedb.reducer({ name: t.string(), modelId: t.string() }, (ctx, { name, modelId }) => {
   requireWorkerOrAdmin(ctx);
   if (ctx.db.agent.name.find(name)) return;
-  const a = newAgent(ctx, { name, kind: 'llm', modelId, x: 0, y: 0 });
-  const { homeX, homeY, role, backstory } = settleSurvivor(ctx, a.id, name);
-  ctx.db.agent.id.update({ ...ctx.db.agent.id.find(a.id)!, x: homeX, y: homeY, targetX: homeX, targetY: homeY, homeX, homeY, role, backstory });
-  updateFairShare(ctx);
+  addSurvivor(ctx, name, modelId);
 });
 
 export const setTimeScale = spacetimedb.reducer({ timeScale: t.f64() }, (ctx, { timeScale }) => {

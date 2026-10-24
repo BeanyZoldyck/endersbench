@@ -6,6 +6,7 @@ import type { Agent, Container, Item, World } from '../module_bindings/types';
 import type { Physics } from './contract';
 import { toScene } from './Environment';
 import { boundaryFog } from './boundaryFog';
+import { CRITTER_SCALE } from './Critter';
 import { GLOW, glowFor, type GlowKind } from './glow';
 
 // Item highlights instead of text labels: anything holding items glows in the
@@ -73,7 +74,7 @@ export function ContainerGlows({ world, containers, items, physics }: { world: W
 export function CarriedGlows({ world, agents, items, physics }: { world: World; agents: readonly Agent[]; items: readonly Item[]; physics: Physics }) {
   return <group name="carried-glows">{agents.filter(a => a.alive).map(a => {
     const glow = glowFor(items.filter(i => i.agentId === a.id));
-    return glow ? <Carried key={String(a.id)} agent={a} world={world} radius={physics.agentRadius} color={glow.color} intensity={glow.intensity} /> : null;
+    return glow ? <Carried key={String(a.id)} agent={a} world={world} radius={physics.agentRadius * CRITTER_SCALE} color={glow.color} intensity={glow.intensity} /> : null;
   })}</group>;
 }
 

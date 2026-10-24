@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { MapControls } from '@react-three/drei';
 import type { OrbitControls as Controls } from 'three-stdlib';
@@ -22,6 +22,8 @@ export type SceneProps = {
   selectedId?: bigint; mode: CameraMode; moments: Moment[];
   onSelect: (id: bigint) => void; onExplore: () => void;
   onClickTile: (x: number, y: number) => void;
+  // The selected survivor's status card, drawn beside them in the scene.
+  selectedCard?: ReactNode;
 };
 
 export function WorldScene(props: SceneProps) {
@@ -43,7 +45,7 @@ export function WorldScene(props: SceneProps) {
       <CameraRig {...props} />
       <StaticShadows nodes={props.nodes} containers={props.containers} items={props.items} phase={world.phase} />
       <Environment world={world} nodes={props.nodes} containers={props.containers} items={props.items} agents={agents} physics={props.physics} onClickTile={props.onClickTile} />
-      {agents.map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
+      {agents.map(a => <Critter key={String(a.id)} agent={a} world={world} selected={a.id === selectedId} radius={props.physics.agentRadius} readTime={readTime} connected={props.connected} card={a.id === selectedId ? props.selectedCard : undefined} said={lastWords.get(a.id)} addressedTo={agents.find(other => other.id === lastWords.get(a.id)?.toAgentId)} onSelect={props.onSelect} />)}
       <ContainerGlows world={world} containers={props.containers} items={props.items} physics={props.physics} />
       <CarriedGlows world={world} agents={agents} items={props.items} physics={props.physics} />
       <WreckTitle world={world} physics={props.physics} />

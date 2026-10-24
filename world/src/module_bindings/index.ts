@@ -40,6 +40,7 @@ import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
 import HumanSayReducer from "./human_say_reducer";
 import JoinAsHumanReducer from "./join_as_human_reducer";
+import ResetExperimentReducer from "./reset_experiment_reducer";
 import SetRunningReducer from "./set_running_reducer";
 import SetTimeScaleReducer from "./set_time_scale_reducer";
 import SpawnAgentReducer from "./spawn_agent_reducer";
@@ -310,6 +311,7 @@ const reducersSchema = __reducers(
   __reducerSchema("human_move_to", HumanMoveToReducer),
   __reducerSchema("human_say", HumanSayReducer),
   __reducerSchema("join_as_human", JoinAsHumanReducer),
+  __reducerSchema("reset_experiment", ResetExperimentReducer),
   __reducerSchema("set_running", SetRunningReducer),
   __reducerSchema("set_time_scale", SetTimeScaleReducer),
   __reducerSchema("spawn_agent", SpawnAgentReducer),

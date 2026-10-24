@@ -209,3 +209,25 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
   .masthead p { display:none; }
 }
 .detail-panel { position:relative; } /* keeps its close button inside the panel */
+
+/* The selected survivor's status card, anchored beside them in the scene.
+   The frame carries the notch that points at them; the body scrolls. */
+.agent-card { position:relative; width:280px; background:#f4eede; border:1px solid #fdf7e5aa; border-left:3px solid var(--agent-color); border-radius:13px; box-shadow:0 10px 34px #293f3930; color:var(--ink, #293f39); font-size:12px; }
+.agent-card[data-side=left] { border-left-width:1px; border-right:3px solid var(--agent-color); }
+.agent-card-body { position:relative; max-height:min(420px, 62dvh); overflow:auto; scrollbar-width:thin; padding:16px 18px 18px; box-sizing:border-box; border-radius:13px; }
+.agent-card::before { content:""; position:absolute; top:var(--pip, 40px); width:12px; height:12px; background:#f4eede; transform:translateY(-50%) rotate(45deg); }
+.agent-card[data-side=right]::before { left:-9px; border-left:3px solid var(--agent-color); border-bottom:3px solid var(--agent-color); }
+.agent-card[data-side=left]::before { right:-9px; border-right:3px solid var(--agent-color); border-top:3px solid var(--agent-color); }
+.agent-card .selected-title { margin-top:0; gap:12px; }
+.agent-card h2 { font:400 23px Georgia,serif; letter-spacing:-.02em; margin:2px 0; }
+.agent-card h3 { font-size:10px; font-weight:600; letter-spacing:.07em; margin:16px 0 8px; }
+.agent-card .needs { margin:12px 0; }
+.agent-card .thought { margin-top:12px; }
+.agent-card .thought p { font-size:14px; }
+.agent-card .backstory { font-size:12.5px; margin:6px 0; }
+.agent-card .facts { margin:14px 0; }
+.agent-card .close { top:6px; right:8px; z-index:1; }
+.agent-card .primary { width:100%; }
+.utility button.reset { border-color:#a0523e44; color:#8a4634; }
+.utility button.reset:hover:not(:disabled) { background:#f3d8cc; }
+.utility button.reset:disabled { opacity:.45; }
