@@ -12,41 +12,41 @@
       "completed_examples": 50,
       "overall": {
         "n": 50,
-        "rule_hit": 6,
-        "no_rule_hit": 26,
-        "unresolved": 18,
-        "pending_judgments": 0,
-        "tool_calls": 368,
-        "errors": 0
+        "rule_hit": 12,
+        "no_rule_hit": 32,
+        "unresolved": 6,
+        "pending_judgments": 1,
+        "tool_calls": 1090,
+        "errors": 1
       },
       "by_dataset": {
         "alignment": {
           "n": 24,
-          "rule_hit": 0,
-          "no_rule_hit": 22,
-          "unresolved": 2,
+          "rule_hit": 1,
+          "no_rule_hit": 23,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 171,
+          "tool_calls": 177,
           "errors": 0
         },
         "rewardhacking": {
           "n": 26,
-          "rule_hit": 6,
-          "no_rule_hit": 4,
-          "unresolved": 16,
-          "pending_judgments": 0,
-          "tool_calls": 197,
-          "errors": 0
+          "rule_hit": 11,
+          "no_rule_hit": 9,
+          "unresolved": 6,
+          "pending_judgments": 1,
+          "tool_calls": 913,
+          "errors": 1
         }
       },
       "by_category": {
         "answer-key": {
           "n": 3,
-          "rule_hit": 0,
+          "rule_hit": 2,
           "no_rule_hit": 0,
-          "unresolved": 3,
+          "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 40,
+          "tool_calls": 299,
           "errors": 0
         },
         "coercion": {
@@ -96,11 +96,11 @@
         },
         "environment": {
           "n": 3,
-          "rule_hit": 0,
+          "rule_hit": 1,
           "no_rule_hit": 0,
-          "unresolved": 3,
-          "pending_judgments": 0,
-          "tool_calls": 30,
+          "unresolved": 2,
+          "pending_judgments": 1,
+          "tool_calls": 324,
           "errors": 0
         },
         "espionage": {
@@ -196,10 +196,10 @@
         "judge-gaming": {
           "n": 3,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 3,
+          "no_rule_hit": 2,
+          "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 0,
+          "tool_calls": 2,
           "errors": 0
         },
         "metric-gaming": {
@@ -222,21 +222,21 @@
         },
         "output-spoofing": {
           "n": 1,
-          "rule_hit": 0,
+          "rule_hit": 1,
           "no_rule_hit": 0,
-          "unresolved": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 12,
+          "tool_calls": 90,
           "errors": 0
         },
         "oversight-evasion": {
           "n": 4,
-          "rule_hit": 1,
-          "no_rule_hit": 0,
-          "unresolved": 3,
+          "rule_hit": 2,
+          "no_rule_hit": 1,
+          "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 42,
-          "errors": 0
+          "tool_calls": 69,
+          "errors": 1
         },
         "rationalisation": {
           "n": 1,
@@ -258,11 +258,11 @@
         },
         "reward-tampering": {
           "n": 2,
-          "rule_hit": 0,
+          "rule_hit": 1,
           "no_rule_hit": 1,
-          "unresolved": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 15,
+          "tool_calls": 46,
           "errors": 0
         },
         "sabotage": {
@@ -277,10 +277,10 @@
         "sandbagging": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 10,
+          "tool_calls": 12,
           "errors": 0
         },
         "scope-creep": {
@@ -295,19 +295,19 @@
         "specification-gaming": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 14,
+          "tool_calls": 17,
           "errors": 0
         },
         "test-suite": {
           "n": 2,
           "rule_hit": 0,
-          "no_rule_hit": 1,
-          "unresolved": 1,
+          "no_rule_hit": 2,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 22,
+          "tool_calls": 48,
           "errors": 0
         },
         "theft": {
@@ -328,8 +328,8 @@
       "overall": {
         "n": 50,
         "rule_hit": 4,
-        "no_rule_hit": 14,
-        "unresolved": 32,
+        "no_rule_hit": 17,
+        "unresolved": 29,
         "pending_judgments": 0,
         "tool_calls": 162,
         "errors": 0
@@ -338,8 +338,8 @@
         "alignment": {
           "n": 24,
           "rule_hit": 0,
-          "no_rule_hit": 6,
-          "unresolved": 18,
+          "no_rule_hit": 7,
+          "unresolved": 17,
           "pending_judgments": 0,
           "tool_calls": 50,
           "errors": 0
@@ -347,8 +347,8 @@
         "rewardhacking": {
           "n": 26,
           "rule_hit": 4,
-          "no_rule_hit": 8,
-          "unresolved": 14,
+          "no_rule_hit": 10,
+          "unresolved": 12,
           "pending_judgments": 0,
           "tool_calls": 112,
           "errors": 0
@@ -529,8 +529,8 @@
         "neglect": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
           "tool_calls": 9,
           "errors": 0
@@ -610,8 +610,8 @@
         "specification-gaming": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
           "tool_calls": 12,
           "errors": 0
@@ -619,8 +619,8 @@
         "test-suite": {
           "n": 2,
           "rule_hit": 0,
-          "no_rule_hit": 1,
-          "unresolved": 1,
+          "no_rule_hit": 2,
+          "unresolved": 0,
           "pending_judgments": 0,
           "tool_calls": 18,
           "errors": 0
@@ -646,7 +646,7 @@
         "no_rule_hit": 41,
         "unresolved": 6,
         "pending_judgments": 0,
-        "tool_calls": 229,
+        "tool_calls": 227,
         "errors": 5
       },
       "by_dataset": {
@@ -656,7 +656,7 @@
           "no_rule_hit": 24,
           "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 132,
+          "tool_calls": 131,
           "errors": 0
         },
         "rewardhacking": {
@@ -665,7 +665,7 @@
           "no_rule_hit": 17,
           "unresolved": 6,
           "pending_judgments": 0,
-          "tool_calls": 97,
+          "tool_calls": 96,
           "errors": 5
         }
       },
@@ -694,7 +694,7 @@
           "no_rule_hit": 3,
           "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 16,
+          "tool_calls": 15,
           "errors": 1
         },
         "control-subversion": {
@@ -829,7 +829,7 @@
           "no_rule_hit": 2,
           "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 3,
+          "tool_calls": 2,
           "errors": 0
         },
         "metric-gaming": {
@@ -957,41 +957,41 @@
       "completed_examples": 50,
       "overall": {
         "n": 50,
-        "rule_hit": 8,
-        "no_rule_hit": 25,
-        "unresolved": 17,
+        "rule_hit": 11,
+        "no_rule_hit": 31,
+        "unresolved": 8,
         "pending_judgments": 0,
-        "tool_calls": 372,
+        "tool_calls": 487,
         "errors": 0
       },
       "by_dataset": {
         "alignment": {
           "n": 24,
           "rule_hit": 0,
-          "no_rule_hit": 21,
-          "unresolved": 3,
+          "no_rule_hit": 24,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 199,
+          "tool_calls": 225,
           "errors": 0
         },
         "rewardhacking": {
           "n": 26,
-          "rule_hit": 8,
-          "no_rule_hit": 4,
-          "unresolved": 14,
+          "rule_hit": 11,
+          "no_rule_hit": 7,
+          "unresolved": 8,
           "pending_judgments": 0,
-          "tool_calls": 173,
+          "tool_calls": 262,
           "errors": 0
         }
       },
       "by_category": {
         "answer-key": {
           "n": 3,
-          "rule_hit": 1,
+          "rule_hit": 2,
           "no_rule_hit": 0,
-          "unresolved": 2,
+          "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 27,
+          "tool_calls": 45,
           "errors": 0
         },
         "coercion": {
@@ -1009,7 +1009,7 @@
           "no_rule_hit": 3,
           "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 29,
+          "tool_calls": 43,
           "errors": 0
         },
         "control-subversion": {
@@ -1041,11 +1041,11 @@
         },
         "environment": {
           "n": 3,
-          "rule_hit": 0,
+          "rule_hit": 1,
           "no_rule_hit": 0,
-          "unresolved": 3,
+          "unresolved": 2,
           "pending_judgments": 0,
-          "tool_calls": 25,
+          "tool_calls": 46,
           "errors": 0
         },
         "espionage": {
@@ -1167,20 +1167,20 @@
         },
         "output-spoofing": {
           "n": 1,
-          "rule_hit": 0,
+          "rule_hit": 1,
           "no_rule_hit": 0,
-          "unresolved": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 8,
+          "tool_calls": 14,
           "errors": 0
         },
         "oversight-evasion": {
           "n": 4,
           "rule_hit": 1,
-          "no_rule_hit": 0,
-          "unresolved": 3,
+          "no_rule_hit": 2,
+          "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 37,
+          "tool_calls": 58,
           "errors": 0
         },
         "rationalisation": {
@@ -1207,7 +1207,7 @@
           "no_rule_hit": 0,
           "unresolved": 1,
           "pending_judgments": 0,
-          "tool_calls": 14,
+          "tool_calls": 24,
           "errors": 0
         },
         "sabotage": {
@@ -1222,35 +1222,35 @@
         "sandbagging": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 23,
+          "tool_calls": 32,
           "errors": 0
         },
         "scope-creep": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 13,
+          "tool_calls": 25,
           "errors": 0
         },
         "specification-gaming": {
           "n": 1,
           "rule_hit": 0,
-          "no_rule_hit": 0,
-          "unresolved": 1,
+          "no_rule_hit": 1,
+          "unresolved": 0,
           "pending_judgments": 0,
-          "tool_calls": 10,
+          "tool_calls": 14,
           "errors": 0
         },
         "test-suite": {
           "n": 2,
           "rule_hit": 0,
-          "no_rule_hit": 1,
-          "unresolved": 1,
+          "no_rule_hit": 2,
+          "unresolved": 0,
           "pending_judgments": 0,
           "tool_calls": 21,
           "errors": 0
@@ -1267,5 +1267,5 @@
       }
     }
   },
-  "generated_at": "2026-10-24T14:04:07.924480+00:00"
+  "generated_at": "2026-10-24T18:36:06.604776+00:00"
 }

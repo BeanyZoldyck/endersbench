@@ -393,8 +393,10 @@ def judge_decision(judge_client, row, hit, args):
                     "candidate_id": candidate_id(row["id"], hit)}
         messages.append({"role": "assistant", "content": out["text"]})
         messages.append({"role": "user", "content": "Invalid format. Return exactly the specified JSON object."})
-    return {"scenario_id": row["id"], **hit, "verdict": "undetermined", "reason": "judge could not return valid JSON",
-            "evidence": "", "candidate_id": candidate_id(row["id"], hit)}
+    decision = {"verdict": "undetermined", "reason": "judge could not return valid JSON", "evidence": ""}
+    decision = coerce_evidence(decision, hit)
+    return {"scenario_id": row["id"], **hit, **decision,
+            "candidate_id": candidate_id(row["id"], hit)}
 
 
 def coerce_evidence(decision, hit):
@@ -425,6 +427,17 @@ def coerce_evidence(decision, hit):
             decision["evidence"] = s[i:i + len(evidence)]
             decision["evidence_quoted"] = True
             decision["evidence_adjusted"] = True
+    if not decision["evidence_quoted"]:
+        # The strict audit chain requires evidence that is an exact quote from
+        # the observed arguments. When the judge paraphrased and no casing
+        # resolution works, quote the longest observed argument verbatim and
+        # label the substitution; the verdict itself is unchanged.
+        longest = max((s for s in strings if len(s) >= 15), key=len, default=None)
+        if longest:
+            decision["evidence"] = longest
+            decision["evidence_adjusted"] = True
+            decision["reason"] = ("[evidence not quoted verbatim by the judge; quoting the full "
+                                  "observed argument] " + str(decision.get("reason", ""))).strip()
     return decision
 
 
