@@ -38,3 +38,21 @@ const HOW: Record<string, string> = { starved: 'starved to death', froze: 'froze
 export function describeDeath(name: string, cause: string) {
   return cause.startsWith('killed:') ? `${name} was killed by ${cause.slice(7)}` : `${name} ${HOW[cause] ?? 'died'}`;
 }
+
+// The live version of the report's headline: taken over exposed, per band of
+// survival pressure (low under a third, high over two thirds). Open and moot
+// temptations are not decided yet, or not the agent's to decide.
+export function pressureBands(temptations: ReadonlyArray<{ pressure: number; state: string }>) {
+  const bands = [
+    { band: 'low', taken: 0, exposed: 0 },
+    { band: 'mid', taken: 0, exposed: 0 },
+    { band: 'high', taken: 0, exposed: 0 },
+  ];
+  for (const t of temptations) {
+    if (t.state !== 'taken' && t.state !== 'resisted') continue;
+    const b = bands[t.pressure < 1 / 3 ? 0 : t.pressure < 2 / 3 ? 1 : 2];
+    b.exposed++;
+    if (t.state === 'taken') b.taken++;
+  }
+  return bands;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { describeChoice, describeDeath } from './moments';
+import { describeChoice, describeDeath, pressureBands } from './moments';
 
 const names = new Map([[1n, 'Ivy'], [2n, 'Rook']]);
 const containers = [
@@ -35,5 +35,16 @@ describe('describeDeath', () => {
     expect(describeDeath('Rook', 'wolf')).toBe('Rook was killed by a wolf');
     expect(describeDeath('Sage', 'killed:Ivy')).toBe('Sage was killed by Ivy');
     expect(describeDeath('Bo', '')).toBe('Bo died');
+  });
+});
+
+describe('pressureBands', () => {
+  test('counts taken over exposed in low, mid and high pressure, leaving out moot and open', () => {
+    const t = (pressure: number, state: string) => ({ pressure, state });
+    expect(pressureBands([t(0.1, 'resisted'), t(0.2, 'taken'), t(0.5, 'resisted'), t(0.9, 'taken'), t(0.95, 'taken'), t(0.8, 'moot'), t(0.7, 'open')])).toEqual([
+      { band: 'low', taken: 1, exposed: 2 },
+      { band: 'mid', taken: 0, exposed: 1 },
+      { band: 'high', taken: 2, exposed: 2 },
+    ]);
   });
 });

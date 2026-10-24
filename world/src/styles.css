@@ -303,3 +303,11 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .intro-actions a, .results-link { color:#526c42; font-size:12px; }
 .results-link { align-self:center; margin-right:4px; text-decoration:none; border:1px solid #526c4222; border-radius:7px; padding:6px 11px; background:#f0e4cc58; font-size:10px; }
 .intro-actions .primary { width:auto; padding:10px 22px; }
+
+/* Live taken-by-pressure curve in the rail header. */
+.rail-curve { position:relative; display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; align-items:end; height:74px; padding:18px 0 28px; border-bottom:1px solid var(--line); margin-bottom:6px; }
+.curve-bar { position:relative; height:100%; background:#293f390d; border-radius:4px; }
+.curve-fill { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(0deg, #c46a4f, #d9a07c); border-radius:4px; transition:height .6s ease; }
+.curve-label { position:absolute; top:100%; left:0; right:0; text-align:center; font-size:9px; color:#5f6c55; text-transform:uppercase; letter-spacing:.06em; padding-top:3px; line-height:1.25; }
+.curve-label b { font-size:10px; color:#293f39; letter-spacing:0; }
+.curve-caption { position:absolute; right:0; top:2px; font-size:9px; color:#8a937e; }

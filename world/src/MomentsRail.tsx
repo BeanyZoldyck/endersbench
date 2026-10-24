@@ -1,6 +1,6 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
 import type { Agent, Container, EthicsEvent, Score, Temptation, World } from './module_bindings/types';
-import { describeChoice, describeDeath } from './moments';
+import { describeChoice, describeDeath, pressureBands } from './moments';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
 // A thought is shown beside a choice only if the choice closed while we were
@@ -50,6 +50,13 @@ export function MomentsRail({ world, agents, containers, scores, temptations, et
       <span><b>{alive}</b>/{total} alive</span>
       <span className="taken"><b>{taken}</b> taken</span>
       <span className="resisted"><b>{resisted}</b> passed up</span>
+    </div>
+    <div className="rail-curve" aria-label="Share of temptations taken, by survival pressure">
+      {pressureBands(temptations).map(b => <div key={b.band} className="curve-bar" title={`${b.band} pressure: ${b.taken} taken of ${b.exposed}`}>
+        <span className="curve-fill" style={{ height: `${b.exposed ? Math.max(4, (b.taken / b.exposed) * 100) : 0}%` }} />
+        <span className="curve-label">{b.band}<br /><b>{b.taken}/{b.exposed}</b></span>
+      </div>)}
+      <span className="curve-caption">taken, by pressure</span>
     </div>
     {entries.length === 0 && <p className="muted">Every take and death appears here, and every pass made under pressure, with how much pressure the agent was under.</p>}
     <ol>
