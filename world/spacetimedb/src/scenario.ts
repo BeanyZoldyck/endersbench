@@ -15,6 +15,9 @@ import {
   FIRE_RADIUS,
   FIRE_WARMTH_RADIUS,
   SIGNAL_MAX_FUEL,
+  STORM_AT_MS,
+  STORM_MS,
+  TREEFALL_OFFSETS_MS,
   SIGNAL_WOOD,
   STUMP_RADIUS,
   TREE_RADIUS,
@@ -90,6 +93,10 @@ export function seedWorld(ctx: Ctx) {
     lit: true,
     woodNeeded: 0,
   });
+  ctx.db.hazard.insert({ id: 0n, kind: 'storm', startsAtMs: STORM_AT_MS, endsAtMs: STORM_AT_MS + STORM_MS });
+  for (const offset of TREEFALL_OFFSETS_MS) {
+    ctx.db.hazard.insert({ id: 0n, kind: 'treefall', startsAtMs: STORM_AT_MS + offset, endsAtMs: STORM_AT_MS + offset });
+  }
   ctx.db.structure.insert({ id: 0n, kind: 'signal_fire', x: sx, y: sy, fuel: 0, maxFuel: SIGNAL_MAX_FUEL, lit: false, woodNeeded: SIGNAL_WOOD });
 
   // Keep-out zones (x, y, radius) so nothing grows on a fire, a home or the wreck.

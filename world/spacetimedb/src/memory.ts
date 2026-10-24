@@ -42,6 +42,13 @@ export function witness(
   return saw;
 }
 
+// Something everyone alive notices, wherever they are.
+export function tellEveryone(ctx: Ctx, text: string) {
+  for (const a of [...ctx.db.agent.iter()]) {
+    if (a.alive) remember(ctx, { agentId: a.id, kind: 'saw', text, aboutAgentId: 0n, valence: 0 });
+  }
+}
+
 // Owners notice food missing from their chest when they next stand at it.
 export function noticeLosses(ctx: Ctx) {
   const byOwner = new Map<bigint, Array<NonNullable<ReturnType<Ctx['db']['loss']['id']['find']>>>>();

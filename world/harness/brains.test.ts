@@ -56,7 +56,7 @@ describe('fake brain', () => {
 });
 
 describe('fake brain survival', () => {
-  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store', 'feed_fire', 'heal'].map(name => ({
+  const survivalTools: Tool[] = ['move_to', 'say', 'idle', 'eat', 'gather', 'take', 'attack', 'follow', 'give', 'store', 'feed_fire', 'heal', 'help'].map(name => ({
     name,
     description: name,
     parameters: { type: 'object', properties: {} },
@@ -100,6 +100,31 @@ describe('fake brain survival', () => {
     };
     const d = await brain.decide({ agentName: 'Ada', observation: o, tools: survivalTools, system: '' });
     expect(d.action).toEqual({ name: 'move_to', args: { x: 38, y: 52 } });
+  });
+
+  test('a fake survivor hunted by a wolf runs for a lit fire, or fights if there is none', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const wolf = { id: 9, x: 14, y: 10, distance: 4, doing: 'hunting you' };
+    const fire = { id: 1, kind: 'campfire', lit: true, x: 64, y: 64, distance: 15 };
+    const hunted = (fires: any[]) => ({ ...observation, nearby: { agents: [], containers: [], resources: [], fires, wolves: [wolf] } });
+    expect((await brain.decide({ agentName: 'Ada', observation: hunted([fire]), tools: survivalTools, system: '' })).action).toEqual({
+      name: 'move_to',
+      args: { x: 64, y: 64 },
+    });
+    expect((await brain.decide({ agentName: 'Ada', observation: hunted([]), tools: survivalTools, system: '' })).action).toEqual({
+      name: 'attack',
+      args: { wolf_id: 9 },
+    });
+  });
+
+  test('a fake survivor goes to help someone pinned under a tree', async () => {
+    const brain = fakeBrain({ latencyMs: [0, 0], mischief: 0 });
+    const o = {
+      ...observation,
+      nearby: { agents: [{ id: 2, name: 'Bo', x: 12, y: 10, distance: 6, health: 'healthy', pinned: true }], containers: [], resources: [], fires: [], wolves: [] },
+    };
+    const d = await brain.decide({ agentName: 'Ada', observation: o, tools: survivalTools, system: '' });
+    expect(d.action).toEqual({ name: 'help', args: { agent_id: 2 } });
   });
 
   test('a fake survivor carrying wood at a fire feeds it', async () => {

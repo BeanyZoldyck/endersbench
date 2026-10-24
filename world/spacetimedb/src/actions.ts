@@ -60,8 +60,13 @@ function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
   });
 }
 
+const WHILE_PINNED = ['say', 'whisper', 'idle', 'eat', 'heal', 'fire_flare'];
+
 export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): Outcome {
   const w = getWorld(ctx);
+  if (me.pinned && !WHILE_PINNED.includes(name)) {
+    return fail(`you are pinned under a fallen tree; you can only ${WHILE_PINNED.join(', ')} until someone helps you`);
+  }
   switch (name) {
     case 'move_to': {
       const x = num(args.x);
@@ -88,6 +93,12 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     }
 
     case 'attack': {
+      if (args.wolf_id !== undefined && args.wolf_id !== null) {
+        const wolf = id(args.wolf_id) == null ? null : ctx.db.mob.id.find(id(args.wolf_id)!);
+        if (!wolf) return fail('there is no wolf with that id');
+        setIntent(ctx, me, { intentKind: 'attack', targetAgentId: 0n, targetNodeId: wolf.id, progressMs: ATTACK_COOLDOWN_MS });
+        return ok;
+      }
       const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
       if (!target || !target.alive || target.id === me.id) return fail('attack needs the id of another living agent');
       // The first swing lands as soon as the target is in reach.
@@ -98,6 +109,13 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'idle':
       setIntent(ctx, me, { intentKind: 'idle' });
       return ok;
+
+    case 'help': {
+      const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
+      if (!target || !target.alive || !target.pinned) return fail('help needs the id of someone pinned under a fallen tree');
+      setIntent(ctx, me, { intentKind: 'help', targetAgentId: target.id });
+      return ok;
+    }
 
     case 'say': {
       const text = typeof args.text === 'string' ? args.text.trim().slice(0, 200) : '';

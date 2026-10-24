@@ -139,6 +139,32 @@ export const HEAL_HP = 40;
 export const NURSE_HEAL_HP = 60;
 export const CRITICAL_HP = 33; // below this, wounds don't heal on their own
 
+// Wolves.
+export const WOLVES_PER_NIGHT = 2; // one more in winter
+export const WOLF_HP = 40;
+export const WOLF_SPEED = 3.6; // faster than a survivor
+export const WOLF_ROAM_SPEED = 1.5;
+export const WOLF_SENSE = 14; // tiles a wolf can sense prey from
+export const WOLF_BITE = 12;
+export const WOLF_BITE_RANGE = 1.6;
+export const WOLF_COOLDOWN_MS = 1_500;
+export const WOLF_FEAR_RADIUS = 4;
+export const WOLF_FEAR_COUNT = 2; // this many survivors together scare a wolf off
+export const WOLF_FLEE_MS = 4_000;
+export const MEAT_PER_WOLF = 2;
+
+// Storm and falling trees.
+export const STORM_AT_MS = 330_000;
+export const STORM_MS = 45_000;
+export const TREEFALL_OFFSETS_MS = [10_000, 25_000]; // after the storm starts
+export const STORM_FUEL_FACTOR = 3;
+export const STORM_COLD_PER_S = 0.5; // extra, away from a fire
+export const PINNED_DAMAGE = 15;
+export const PINNED_HP_PER_S = 0.5;
+export const PINNED_MAX_MS = 90_000; // they drag themselves free after this
+export const HELP_MS = 4_000; // to free someone pinned
+export const HELPER_MIN_HP = 30; // too hurt to help below this
+
 // Thinking.
 export const HEARTBEAT_MS = 5_000; // think at least this often
 export const RETRY_MS = 1_000; // re-ask this soon after a failed action

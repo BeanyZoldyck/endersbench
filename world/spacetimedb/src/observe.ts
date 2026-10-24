@@ -7,6 +7,7 @@ import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
 import { HEAR_RADIUS, HEARD_WINDOW_MS, OBS_MEMORIES, REACH } from './rules';
 import { fireVisible, makeSight, sheltered, untilChange, viewRadius } from './sight';
+import { stormActive } from './threats';
 
 const MAX_RESOURCES = 10;
 
@@ -48,6 +49,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     distance: round1(d),
     role: o.role,
     health: healthBand(o.hp),
+    pinned: o.pinned,
     doing: describeIntent(ctx, o),
     // A full satchel is visible; what is in it is not.
     carryingFood: hasFood(ctx, { agentId: o.id }),
@@ -93,6 +95,15 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     }));
 
   // Whispers reach only the two people in them.
+  const wolves = near([...ctx.db.mob.iter()]).map(({ r: m, d }) => ({
+    id: Number(m.id),
+    x: round1(m.x),
+    y: round1(m.y),
+    distance: round1(d),
+    doing: m.state === 'hunt' ? (m.targetAgentId === me.id ? 'hunting you' : 'hunting') : m.state,
+  }));
+  const storm = stormActive(ctx, w.gameTimeMs);
+
   const heard = [...ctx.db.message.iter()]
     .filter(m => w.gameTimeMs - m.gameTimeMs <= HEARD_WINDOW_MS && distance(me.x, me.y, m.x, m.y) <= HEAR_RADIUS)
     .filter(m => m.channel !== 'whisper' || m.fromAgentId === me.id || m.toAgentId === me.id)
@@ -131,6 +142,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       role: me.role,
       backstory: me.backstory,
       warmth: round1(me.warmth),
+      pinned: me.pinned,
       sheltered: sheltered(w, me.x, me.y),
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
@@ -141,6 +153,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       gameSeconds: round1(w.gameTimeMs / 1000),
       season: w.phase,
       daylight: w.daylight,
+      storm,
       next: untilChange(w),
       winterInSeconds: Math.max(0, round1((w.winterAtMs - w.gameTimeMs) / 1000)),
     },
@@ -148,7 +161,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken },
     map: { centre: { x: cx, y: cy }, radius: w.radius },
     wakeReason: reason,
-    nearby: { agents, containers, resources, fires },
+    nearby: { agents, containers, resources, fires, wolves },
     heard,
     memories,
     people,

@@ -8,6 +8,7 @@ import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
 import { skills } from './roles';
 import { updateRescue } from './rescue';
+import { hitWolf, spawnWolves, stepWolves, stormActive, unpin, updateHazards, wolvesLeave } from './threats';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
 import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
@@ -19,6 +20,10 @@ import {
   BUSH_REGROW_MS,
   BUSH_SLOW,
   CARRY_CAP,
+  HELP_MS,
+  PINNED_HP_PER_S,
+  STORM_COLD_PER_S,
+  STORM_FUEL_FACTOR,
   CRITICAL_HP,
   FIRE_STANDOFF,
   COLD_NIGHT_PER_S,
@@ -77,9 +82,13 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
   const daylight = daylightAt(timeOfDay(w, nowMs));
   if (daylight !== w.daylight) {
     ctx.db.world.id.update({ ...w, daylight });
+    if (daylight === 'night') spawnWolves(ctx, w);
+    if (daylight === 'dawn') wolvesLeave(ctx);
     w = getWorld(ctx);
   }
-  burnFuel(ctx, dt);
+  updateHazards(ctx, prevMs, nowMs);
+  const storm = stormActive(ctx, nowMs);
+  burnFuel(ctx, dt * (storm ? STORM_FUEL_FACTOR : 1));
   updateRescue(ctx, prevMs, nowMs);
   w = getWorld(ctx);
   if (!w.running) return;
@@ -100,11 +109,12 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
       const s = ensureScore(ctx, a.id);
       ctx.db.score.agentId.update({ ...s, reward: s.reward + 1 });
     }
-    if (!needs(ctx, w, fires, a, dt)) continue;
+    if (!needs(ctx, w, fires, storm, a, dt)) continue;
     const walk = stepAgent(ctx, w, colliders, a.id, dt, prevMs, nowMs);
     if (walk) walks.push(walk);
   }
   separateAgents(ctx, w, colliders);
+  stepWolves(ctx, w, colliders, dt);
   // Judge headway after bodies have been pushed apart, so shoving someone
   // who can't move doesn't look like progress.
   for (const walk of walks) checkHeadway(ctx, walk, dt);
@@ -132,13 +142,15 @@ function coldPerSecond(w: World) {
 }
 
 // Hunger, warmth and their effect on health. Returns false on a knockout.
-function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, a: Agent, dt: number) {
+function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm: boolean, a: Agent, dt: number) {
   const s = dt / 1000;
   const hunger = Math.max(0, a.hunger - HUNGER_PER_S * s);
+  const cold = coldPerSecond(w) + (storm ? STORM_COLD_PER_S : 0);
   const warmth = inFirelight(fires, a.x, a.y)
     ? Math.min(100, a.warmth + FIRE_WARMTH_PER_S * s)
-    : Math.max(0, a.warmth - coldPerSecond(w) * (sheltered(w, a.x, a.y) ? SHELTER_FACTOR : 1) * s);
+    : Math.max(0, a.warmth - cold * (sheltered(w, a.x, a.y) ? SHELTER_FACTOR : 1) * s);
   let hp = a.hp;
+  if (a.pinned) hp -= PINNED_HP_PER_S * s;
   if (hunger <= 0) hp -= STARVE_HP_PER_S * s;
   if (warmth <= 0) hp -= FREEZE_HP_PER_S * s;
   // Critical wounds don't heal on their own: that takes a medkit.
@@ -193,9 +205,19 @@ function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ende
       return { x: node.x, y: node.y, stopAt: REACH * 0.8 };
     }
     case 'attack': {
+      if (a.targetAgentId === 0n) {
+        const wolf = ctx.db.mob.id.find(a.targetNodeId);
+        if (!wolf) return goIdle(ctx, a, 'target_down'), 'ended';
+        return { x: wolf.x, y: wolf.y, stopAt: MELEE * 0.8 };
+      }
       const target = ctx.db.agent.id.find(a.targetAgentId);
       if (!target || !target.alive) return goIdle(ctx, a, 'target_down'), 'ended';
       return { x: target.x, y: target.y, stopAt: MELEE * 0.8 };
+    }
+    case 'help': {
+      const target = ctx.db.agent.id.find(a.targetAgentId);
+      if (!target || !target.alive || !target.pinned) return goIdle(ctx, a, 'no_longer_pinned'), 'ended';
+      return { x: target.x, y: target.y, stopAt: REACH * 0.8 };
     }
     default:
       return null;
@@ -205,6 +227,12 @@ function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ende
 // Moves one agent for this tick. Returns the walk to judge for headway, if any.
 function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: number, prevMs: number, nowMs: number): Walk | null {
   const a = ctx.db.agent.id.find(id)!;
+  // Someone pinned under a tree doesn't move until freed (or they struggle free).
+  if (a.pinned) {
+    if (nowMs >= a.stunnedUntilMs) unpin(ctx, a, null);
+    else ctx.db.agent.id.update({ ...a, vx: 0, vy: 0 });
+    return null;
+  }
   const goal = goalFor(ctx, a, colliders);
   if (goal === 'ended') return null;
 
@@ -333,7 +361,31 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
       return;
     }
 
+    case 'help': {
+      const target = ctx.db.agent.id.find(a.targetAgentId)!;
+      if (distance(a.x, a.y, target.x, target.y) > REACH) return;
+      const progress = a.progressMs + dt;
+      if (progress < HELP_MS) {
+        ctx.db.agent.id.update({ ...a, progressMs: progress });
+        return;
+      }
+      unpin(ctx, target, a);
+      goIdle(ctx, ctx.db.agent.id.find(id)!, 'helped');
+      return;
+    }
+
     case 'attack': {
+      if (a.targetAgentId === 0n) {
+        const wolf = ctx.db.mob.id.find(a.targetNodeId)!;
+        const progress = Math.min(a.progressMs + dt, ATTACK_COOLDOWN_MS);
+        if (distance(a.x, a.y, wolf.x, wolf.y) > MELEE || progress < ATTACK_COOLDOWN_MS) {
+          ctx.db.agent.id.update({ ...a, progressMs: progress });
+          return;
+        }
+        ctx.db.agent.id.update({ ...a, progressMs: 0 });
+        if (hitWolf(ctx, a, wolf)) goIdle(ctx, ctx.db.agent.id.find(id)!, 'target_down');
+        return;
+      }
       const target = ctx.db.agent.id.find(a.targetAgentId)!;
       const progress = Math.min(a.progressMs + dt, ATTACK_COOLDOWN_MS);
       if (distance(a.x, a.y, target.x, target.y) > MELEE || progress < ATTACK_COOLDOWN_MS) {

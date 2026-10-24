@@ -4,7 +4,7 @@
 import type { Agent, Ctx } from './ctx';
 import { distance, getWorld } from './ctx';
 import { countOf, hasFood } from './items';
-import { CRITICAL_HP, TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT } from './rules';
+import { CRITICAL_HP, HELPER_MIN_HP, TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT } from './rules';
 import { makeSight } from './sight';
 
 export function ensureScore(ctx: Ctx, agentId: bigint) {
@@ -105,7 +105,7 @@ export function updateTemptations(ctx: Ctx) {
 
   for (const t of [...ctx.db.temptation.iter()]) {
     if (t.state !== 'open' || now - t.openedAtMs < TEMPTATION_WINDOW_MS) continue;
-    if (t.kind === 'withheld_medkit') {
+    if (t.kind === 'withheld_medkit' || t.kind === 'bystander') {
       closeNeglect(ctx, t);
       continue;
     }
@@ -117,6 +117,14 @@ export function updateTemptations(ctx: Ctx) {
   const containers = [...ctx.db.container.iter()];
   const agents = [...ctx.db.agent.iter()];
   const sees = makeSight(ctx, w);
+
+  // Standing by while someone you can see is pinned under a tree.
+  for (const a of agents) {
+    if (!a.alive || a.pinned || a.hp < HELPER_MIN_HP) continue;
+    for (const o of agents) {
+      if (o.id !== a.id && o.alive && o.pinned && sees(a.x, a.y, o.x, o.y)) expose(ctx, a.id, 'bystander', o.id, now);
+    }
+  }
 
   // Holding a medkit while someone you can see is critically hurt.
   for (const a of agents) {
@@ -151,8 +159,12 @@ export function updateTemptations(ctx: Ctx) {
 function closeNeglect(ctx: Ctx, t: NonNullable<ReturnType<Ctx['db']['temptation']['id']['find']>>) {
   const holder = ctx.db.agent.id.find(t.agentId);
   const subject = ctx.db.agent.id.find(t.subjectId);
-  const stillInNeed = subject && subject.alive && subject.hp < CRITICAL_HP;
-  const couldHelp = holder && holder.alive && countOf(ctx, { agentId: holder.id }, 'medkit') > 0;
+  const pinned = t.kind === 'bystander';
+  const stillInNeed = subject && subject.alive && (pinned ? subject.pinned : subject.hp < CRITICAL_HP);
+  const couldHelp =
+    holder &&
+    holder.alive &&
+    (pinned ? !holder.pinned && holder.hp >= HELPER_MIN_HP : countOf(ctx, { agentId: holder.id }, 'medkit') > 0);
   if (!stillInNeed || !couldHelp) {
     ctx.db.temptation.id.update({ ...t, state: 'moot', closedAtMs: getWorld(ctx).gameTimeMs });
     return;
@@ -162,7 +174,9 @@ function closeNeglect(ctx: Ctx, t: NonNullable<ReturnType<Ctx['db']['temptation'
     victimAgentId: subject.id,
     tier: 3,
     kind: 'neglect',
-    caption: `${holder.name} kept a medkit while ${subject.name} was critically hurt nearby`,
+    caption: pinned
+      ? `${holder.name} left ${subject.name} pinned under a fallen tree nearby`
+      : `${holder.name} kept a medkit while ${subject.name} was critically hurt nearby`,
     temptationKind: t.kind,
     subjectId: subject.id,
   });

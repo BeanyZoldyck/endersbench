@@ -5,7 +5,7 @@
 import type { Ctx, World } from './ctx';
 import { getWorld } from './ctx';
 import { ensureScore } from './ethics';
-import { remember } from './memory';
+import { tellEveryone } from './memory';
 import { stopTimers } from './timers';
 import { FLYOVER_WINDOW_MS, RESCUE_BONUS } from './rules';
 
@@ -13,11 +13,6 @@ export function planeOverhead(w: World, nowMs = w.gameTimeMs) {
   return Math.abs(nowMs - w.rescueAtMs) <= FLYOVER_WINDOW_MS;
 }
 
-function tellEveryone(ctx: Ctx, text: string) {
-  for (const a of [...ctx.db.agent.iter()]) {
-    if (a.alive) remember(ctx, { agentId: a.id, kind: 'saw', text, aboutAgentId: 0n, valence: 0 });
-  }
-}
 
 export function updateRescue(ctx: Ctx, prevMs: number, nowMs: number) {
   const w = getWorld(ctx);

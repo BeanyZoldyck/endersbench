@@ -179,6 +179,22 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         }
       }
 
+      // Danger first: a hunting wolf sends you to the nearest lit fire, or into a fight.
+      const fires0: any[] = o.nearby?.fires ?? [];
+      const hunter = (o.nearby?.wolves ?? []).find((w: any) => w.doing === 'hunting you');
+      if (hunter) {
+        const refuge = fires0.filter(f => f.lit).sort((a, b) => a.distance - b.distance)[0];
+        const d = refuge
+          ? act('move_to', { x: refuge.x, y: refuge.y }, 'wolf! run to the fire')
+          : act('attack', { wolf_id: hunter.id }, 'fight off the wolf');
+        if (d) return d;
+      }
+      const pinned = agents.filter(a => a.pinned).sort((a, b) => a.distance - b.distance)[0];
+      if (pinned && !me.pinned) {
+        const d = act('help', { agent_id: pinned.id }, `${pinned.name} is trapped`);
+        if (d) return d;
+      }
+
       const critical = agents.filter(a => a.health === 'critical').sort((a, b) => a.distance - b.distance)[0];
       if (inv.medkit && critical && critical.distance <= 2) {
         const d = act('heal', { agent_id: critical.id }, `${critical.name} needs help`);

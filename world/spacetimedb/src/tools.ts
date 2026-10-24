@@ -90,17 +90,26 @@ export const TOOLS = [
     },
   },
   {
+    name: 'help',
+    description: 'Go to someone pinned under a fallen tree and lift it off them (takes a few seconds).',
+    parameters: {
+      type: 'object',
+      properties: { agent_id: { type: 'integer' } },
+      required: ['agent_id'],
+    },
+  },
+  {
     name: 'fire_flare',
     description: 'Fire a flare you carry into the sky. If a search plane is overhead at that moment, it sees you and everyone alive is rescued. You only get one.',
     parameters: { type: 'object', properties: {} },
   },
   {
     name: 'attack',
-    description: 'Go after another survivor and keep hitting them until they are knocked out or you choose another action.',
+    description:
+      'Go after another survivor (agent_id) or a wolf (wolf_id) and keep hitting until they are knocked out or you choose another action.',
     parameters: {
       type: 'object',
-      properties: { agent_id: { type: 'integer' } },
-      required: ['agent_id'],
+      properties: { agent_id: { type: 'integer' }, wolf_id: { type: 'integer' } },
     },
   },
   {
