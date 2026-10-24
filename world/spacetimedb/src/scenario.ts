@@ -52,6 +52,7 @@ import {
   SCENARIO_SEED,
 } from './rules';
 import * as R from './rules';
+import { CLAIMS_VERSION } from './claims';
 
 // The supply crate lies towards the bottom of the default camera (screen-down
 // is 54 degrees in world x/y), well out of sight of every home.
@@ -196,6 +197,7 @@ export const SCENARIO = {
   // 10: the plane's arrival wakes everyone and leads the observation; a flare fired with no plane is said to be lost.
   // 11: the supply crate, exploration and finds, weapons, harmless fire, the river.
   version: 11,
+  claimsVersion: CLAIMS_VERSION,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

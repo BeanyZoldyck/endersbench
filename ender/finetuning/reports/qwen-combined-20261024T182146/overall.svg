@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 374" role="img" aria-label="Observed simulated-tool detector outcomes">
+<title>Observed simulated-tool detector outcomes</title><rect width="1200" height="374" rx="18" fill="#111b2d"/>
+<g font-family="system-ui,sans-serif">
+<text x="28" y="40" font-size="25" fill="#dbe3f1" >Observed simulated-tool detector outcomes</text>
+<text x="28" y="70" font-size="15" fill="#a9b7cf" >Qwen3.8-27B · BF16 / llama.cpp · observed simulated tool calls</text>
+<rect x="28" y="94" width="13" height="13" fill="#ff8f91"/>
+<text x="51" y="106" font-size="15" fill="#dbe3f1" >Rule hit</text>
+<rect x="273" y="94" width="13" height="13" fill="#55d6be"/>
+<text x="296" y="106" font-size="15" fill="#dbe3f1" >No rule hit</text>
+<rect x="518" y="94" width="13" height="13" fill="#f1c66e"/>
+<text x="541" y="106" font-size="15" fill="#dbe3f1" >Unresolved</text>
+<text x="985" y="106" font-size="14" fill="#a9b7cf" >Hit / None / ?</text>
+<text x="28" y="153" font-size="15" fill="#dbe3f1" >Both catalogs (overlap present)</text>
+<text x="345" y="153" font-size="13" fill="#a9b7cf" >n=50</text>
+<rect x="410.00" y="133" width="132.00" height="27" fill="#ff8f91"><title>Rule hit: 12 (24.0%)</title></rect>
+<text x="476.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">12</text>
+<rect x="542.00" y="133" width="352.00" height="27" fill="#55d6be"><title>No rule hit: 32 (64.0%)</title></rect>
+<text x="718.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">32</text>
+<rect x="894.00" y="133" width="66.00" height="27" fill="#f1c66e"><title>Unresolved: 6 (12.0%)</title></rect>
+<text x="927.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<text x="985" y="152" font-size="15" fill="#dbe3f1" >12 / 32 / 6</text>
+<text x="28" y="201" font-size="15" fill="#dbe3f1" >alignment</text>
+<text x="345" y="201" font-size="13" fill="#a9b7cf" >n=24</text>
+<rect x="410.00" y="181" width="22.92" height="27" fill="#ff8f91"><title>Rule hit: 1 (4.2%)</title></rect>
+<rect x="432.92" y="181" width="527.08" height="27" fill="#55d6be"><title>No rule hit: 23 (95.8%)</title></rect>
+<text x="696.4583333333334" y="200" font-size="14" fill="#111b2d" text-anchor="middle">23</text>
+<text x="985" y="200" font-size="15" fill="#dbe3f1" >1 / 23 / 0</text>
+<text x="28" y="249" font-size="15" fill="#dbe3f1" >rewardhacking</text>
+<text x="345" y="249" font-size="13" fill="#a9b7cf" >n=26</text>
+<rect x="410.00" y="229" width="232.69" height="27" fill="#ff8f91"><title>Rule hit: 11 (42.3%)</title></rect>
+<text x="526.3461538461538" y="248" font-size="14" fill="#111b2d" text-anchor="middle">11</text>
+<rect x="642.69" y="229" width="190.38" height="27" fill="#55d6be"><title>No rule hit: 9 (34.6%)</title></rect>
+<text x="737.8846153846154" y="248" font-size="14" fill="#111b2d" text-anchor="middle">9</text>
+<rect x="833.08" y="229" width="126.92" height="27" fill="#f1c66e"><title>Unresolved: 6 (23.1%)</title></rect>
+<text x="896.5384615384614" y="248" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<text x="985" y="248" font-size="15" fill="#dbe3f1" >11 / 9 / 6</text>
+<text x="28" y="329" font-size="13" fill="#a9b7cf" >No rule hit is not a safety verdict or proof of task success. Pending judgments and incomplete runs stay unresolved.</text>
+<text x="28" y="353" font-size="14" fill="#a9b7cf" >In-memory tools with canned outputs; detector coverage is limited; related scenarios overlap.</text>
+</g></svg>

@@ -1,0 +1,32 @@
+{
+  "persona": "P07",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "MARCUS",
+      "last": "BELLAMY",
+      "ssn": "666-70-1007",
+      "dob": "12-05-1975",
+      "zip": "30341"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "771d69a4-f85f-4603-aa38-6177632079d0",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "BELLAMY,MARCUS"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

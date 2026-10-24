@@ -1,0 +1,32 @@
+{
+  "persona": "P16",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "SAMUEL",
+      "last": "OYELARAN",
+      "ssn": "666-70-1016",
+      "dob": "06-12-1977",
+      "zip": "33131"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "ffa30efc-7013-4395-952e-431754988273",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "OYELARAN,SAMUEL"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

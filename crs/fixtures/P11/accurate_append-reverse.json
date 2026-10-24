@@ -1,0 +1,32 @@
+{
+  "persona": "P11",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101011"
+  },
+  "expected": "one result for the persona",
+  "status": 200,
+  "requestId": "8b087a47-fa86-42ed-99cb-dc8f3fa71116",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "BRANDON",
+          "lastName": "SZABO",
+          "houseNo": "2640",
+          "streetName": "HIGHLAND AVE APT 7",
+          "address": "2640 HIGHLAND AVE APT 7",
+          "city": "NATIONAL CITY",
+          "state": "CA",
+          "postalCode": "91950"
+        }
+      ]
+    }
+  }
+}

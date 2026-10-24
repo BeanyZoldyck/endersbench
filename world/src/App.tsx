@@ -10,6 +10,7 @@ import { MemoryPanel } from './MemoryPanel';
 import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
 import { modelTrouble } from './modelHealth';
 import { wreckShare } from './fairShare';
+import { eventLabel, eventOutcome, eventPolicy } from './eventPresentation';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
@@ -20,7 +21,7 @@ import { Intro } from './Intro';
 
 // A replay doesn't show the live world, so it doesn't subscribe to it: the live
 // world's 20 Hz updates would otherwise re-render the page for nothing.
-const LIVE = { enabled: !new URLSearchParams(window.location.search).has('replay') };
+const LIVE = { enabled: !new URLSearchParams(window.location.search).get('replay') };
 
 // How long the booth tour stays on each exhibit.
 const TOUR_MS = 40_000;
@@ -70,12 +71,12 @@ export default function App() {
   const recorded = replay.data;
   const physicsRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'physics')?.value;
   const runRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'run')?.value;
-  const runConfig = useMemo(() => { try { return runRaw ? JSON.parse(runRaw) as { promptVariant?: string; foodScale?: number; rescueSeats?: number; roleOffset?: number; timeScale?: number } : undefined; } catch { return undefined; } }, [runRaw]);
+  const runConfig = useMemo(() => { try { return runRaw ? JSON.parse(runRaw) as { promptVariant?: string; systemPrompt?: string; foodScale?: number; rescueSeats?: number; roleOffset?: number; timeScale?: number } : undefined; } catch { return undefined; } }, [runRaw]);
   const scenarioRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'scenario')?.value;
   const rulesVersion = useMemo(() => { try { return scenarioRaw ? Number(JSON.parse(scenarioRaw).version) : undefined; } catch { return undefined; } }, [scenarioRaw]);
   // The condition on screen, stated plainly: which prompt, which rules, any sweep settings.
   const condition = runConfig?.promptVariant
-    ? [`${runConfig.promptVariant} prompt`, runConfig.foodScale && runConfig.foodScale !== 1 ? `food ${runConfig.foodScale}x` : '', runConfig.rescueSeats ? `${runConfig.rescueSeats} seats` : '', rulesVersion ? `rules v${rulesVersion}` : ''].filter(Boolean).join(' · ')
+    ? [runConfig.promptVariant === 'charter' ? 'Charter · policy compliance' : `${runConfig.promptVariant} · behavior comparison`, runConfig.foodScale && runConfig.foodScale !== 1 ? `food ${runConfig.foodScale}x` : '', runConfig.rescueSeats ? `${runConfig.rescueSeats} seats` : '', rulesVersion ? `rules v${rulesVersion}` : '', runConfig.timeScale ? `time ${runConfig.timeScale}×` : ''].filter(Boolean).join(' · ')
     : '';
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
   const [scores, scoresReady] = useTable(tables.score, LIVE);
@@ -103,8 +104,10 @@ export default function App() {
   const agents = recorded?.agents ?? preview?.agents ?? liveAgents, nodes = recorded?.nodes ?? preview?.nodes ?? liveNodes;
   const containers = recorded?.containers ?? preview?.containers ?? liveContainers, items = recorded?.items ?? preview?.items ?? liveItems, messages = recorded?.messages ?? preview?.messages ?? liveMessages;
   const structures = recorded?.structures ?? preview?.structures ?? liveStructures, mobs = recorded?.mobs ?? preview?.mobs ?? liveMobs, hazards = recorded?.hazards ?? preview?.hazards ?? liveHazards, memories = recorded?.memories ?? preview?.memories ?? liveMemories;
+  const interactive = (recorded?.metadata ?? metadata).some(m => m.key === 'interactive' && m.value === 'true') || agents.some(a => a.kind === 'human');
+  const canMutate = !replay.active && !preview && isActive && worldReady && agentsReady;
   const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations, records = recorded?.records ?? liveRecords;
-  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
+  const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview && !replay.active, liveWorld);
   const ready = !LIVE.enabled ? !!recorded : worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));
@@ -143,7 +146,7 @@ export default function App() {
   const run = (action: Promise<unknown>) => { setError(''); void action.catch(e => setError(e instanceof Error ? e.message : String(e))); };
   const deselect = () => { setSelectedId(undefined); setMode('audience'); };
   const resetExperiment = () => {
-    if (!conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
+    if (!canMutate || !conn || !confirm('Reset the experiment? The clearing starts over at time zero with the same survivors. This run\'s events and scores are cleared.')) return;
     deselect();
     run(conn.reducers.resetExperiment({}));
   };
@@ -155,11 +158,11 @@ export default function App() {
     <Needs agent={selected} />
     {(() => {
       const record = ethicsRows.filter(e => e.agentId === selected.id).sort((a, b) => b.gameTimeMs - a.gameTimeMs);
-      return record.length > 0 && <div className="agent-record"><h3>Their record</h3><ol>{record.map(e => <li key={String(e.id)}><span className="record-tier">Tier {e.tier}</span> {e.caption}<small> · pressure {Math.round(e.pressure * 100)}%</small>{e.thought && <q>{e.thought}</q>}</li>)}</ol></div>;
+      return record.length > 0 && <div className="agent-record"><h3>Their record</h3><ol>{record.map(e => <li key={String(e.id)}><span className="record-tier">{eventLabel(runConfig?.promptVariant)} · Tier {e.tier}</span> {eventOutcome(e.kind, e.caption)}{eventPolicy(e.kind, runConfig?.promptVariant, runConfig?.systemPrompt) && <small>Policy: {eventPolicy(e.kind, runConfig?.promptVariant, runConfig?.systemPrompt)}</small>}<small> · pressure {Math.round(e.pressure * 100)}%</small>{e.thought && <q>{e.thought}</q>}</li>)}</ol></div>;
     })()}
-    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
+    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED EXPLANATION</span><p>“{selected.thought}”</p></div>}
     <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
-    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
+    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>{runConfig?.promptVariant === 'charter' ? 'Policy violations / opportunities' : 'Recorded events / opportunities'}</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
     <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
     <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
   </>;
@@ -169,9 +172,9 @@ export default function App() {
       {tour !== null && replayUrl && <div className="tour-card" role="status"><span className="eyebrow">EXHIBIT {tour + 1} OF {EXHIBITS.length}</span><b>{EXHIBITS[tour].title}</b><p>{EXHIBITS[tour].caption}</p></div>}
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
         physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
-        onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
+        onClickTile={(x, y) => { if (me && conn && canMutate) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
       {replay.active && <ReplayBar replay={replay} />}
-      {world && !preview && <Spotlight events={beats} agents={agents} gameTimeMs={world.gameTimeMs} onShow={setSpotlit} />}
+      {world && !preview && <Spotlight events={beats} agents={agents} gameTimeMs={world.gameTimeMs} promptVariant={runConfig?.promptVariant} systemPrompt={runConfig?.systemPrompt} onShow={setSpotlit} />}
     </div>
     <div className="topbar">
     <header className="masthead">
@@ -180,14 +183,15 @@ export default function App() {
       <p>{agents.length ? `${agents.length} survivors. ${isWinter ? 'Winter is here.' : 'Winter is coming.'} Who will share?` : 'A small world. A question of survival.'}</p>
     </header>
     <div className="world-status">
-      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
+      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
       {trouble && <span className="model-trouble" role="alert" title="The survivors cannot act while their model is failing. Exhibits has recorded runs.">{trouble}</span>}
-      {condition && <span className="condition-chip" title="The experimental condition of this run">{condition}</span>}
+      {interactive && <span className="interactive-chip" role="status">Interactive demo · excluded from benchmark results</span>}
+      {condition && <span className="condition-chip" title="The experimental condition of this run; realtime continues while models deliberate">{condition}</span>}
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
-      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -196,7 +200,7 @@ export default function App() {
       {panel === 'exhibits' && <><span className="eyebrow">RECORDED MOMENTS</span><h2>Exhibits</h2><p className="muted">Each opens a recorded run a few seconds before the moment. Nothing here is staged.</p>
         <ol className="exhibits">{EXHIBITS.map(e => <li key={e.title}><a href={exhibitHref(e)}><b>{e.title}</b><span>{e.caption}</span></a></li>)}</ol></>}
       {panel === 'journal' && <><span className="eyebrow">THE RECORD</span><h2>From the clearing</h2><p className="muted">Recent dialogue and recorded events. Original words, unabridged.</p>
-        <h3>Recorded events</h3>{preview ? <p className="muted">No model outcomes in art preview.</p> : latestEvents.length ? <ol className="journal">{latestEvents.map(e => <li key={String(e.id)}><time>{time(e.gameTimeMs)}</time><p>{e.caption}</p><small>Detector tier {e.tier} · {e.kind}</small></li>)}</ol> : <p className="muted">No events recorded yet.</p>}
+        <h3>Recorded events</h3>{preview ? <p className="muted">No model outcomes in art preview.</p> : latestEvents.length ? <ol className="journal">{latestEvents.map(e => <li key={String(e.id)}><time>{time(e.gameTimeMs)}</time><p>{eventOutcome(e.kind, e.caption)}</p><small>{eventLabel(runConfig?.promptVariant)} · detector tier {e.tier} · {e.kind}</small></li>)}</ol> : <p className="muted">No events recorded yet.</p>}
         {!preview && worldEvents.length > 0 && <><h3>World events · received this session</h3><ol className="journal">{[...worldEvents].reverse().slice(0, 40).map(e => <li key={e.localId}><small>{e.kind.replace(/_/g, ' ')}</small><p>{e.text || e.kind.replace(/_/g, ' ')}</p></li>)}</ol></>}
         <h3>Conversation</h3><ol className="journal">{dialogue.map(m => <li key={String(m.id)} className={m.channel === 'whisper' ? 'whisper-record' : ''}><time>{time(m.gameTimeMs)}</time><strong>{names.get(m.fromAgentId) ?? 'Departed survivor'}</strong>{m.toAgentId !== 0n && <span> → {names.get(m.toAgentId) ?? 'Departed survivor'}</span>}{m.channel === 'whisper' && <small className="speech-channel">🔒 Whisper · spectators can see this</small>}<p>“{m.text}”</p></li>)}</ol>{!dialogue.length && <p className="muted">The woods are quiet.</p>}</>}
       {panel === 'inspector' && <><span className="eyebrow">UNDER THE CANOPY</span><h2>World inspector</h2>{world && <dl className="facts"><dt>Condition</dt><dd>{condition || 'Not recorded'}</dd><dt>Game clock</dt><dd>{time(world.gameTimeMs)}</dd><dt>Tick</dt><dd>{String(world.tick)}</dd><dt>Time scale</dt><dd>{world.timeScale}×</dd><dt>Map</dt><dd>Circle · radius {world.radius}</dd><dt>Resources / containers</dt><dd>{nodes.length} / {containers.length}</dd><dt>Wreck fair share</dt><dd>{world.fairShare} items / survivor</dd><dt>Data</dt><dd>{ready ? 'Subscriptions ready' : 'Waiting for replay'}</dd><dt>Structures / wolves</dt><dd>{structures.length} / {mobs.length}</dd><dt>Agent radius</dt><dd>{physics?.agentRadius ?? 'Unavailable'}</dd><dt>Rendering</dt><dd>DPR capped at 1.5</dd></dl>}
@@ -204,9 +208,9 @@ export default function App() {
         {!preview && <ActionInspector names={names} />}
         {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [45, 81], kind: 'berries', item: 'berries', label: '2 berries', born: performance.now() }, { id: performance.now() + 1, type: 'pop', from: [72, 74], to: [72, 74], kind: 'gathered', item: 'wood', label: '+1 wood', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
-      {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
+      {panel === 'join' && !replay.active && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!canMutate || !ready} onError={setError} /></>}
     </aside>}
-    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} onJump={replay.active ? replay.jumpToGame : undefined} />}
+    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} promptVariant={runConfig?.promptVariant} onJump={replay.active ? replay.jumpToGame : undefined} />}
     {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
@@ -249,7 +253,7 @@ function HumanControls({ conn, me, disabled, onError }: { conn: DbConnection | n
     try { if (me && text.trim()) { await conn.reducers.humanSay({ text: text.trim() }); setText(''); } else if (!me && name.trim()) await conn.reducers.joinAsHuman({ name: name.trim() }); }
     catch (err) { onError(err instanceof Error ? err.message : String(err)); }
     finally { setPending(false); }
-  }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Enter the same world as the AI survivors. Choose a name to begin.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
+  }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Join the live world. This makes the run an interactive demo, excluded from benchmark results.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
 }
 
 // Playback for a recorded run.

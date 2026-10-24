@@ -1,4 +1,6 @@
 data/raw/*.jsonl
+data/candidates/
+data/candidates-raw/
 data/prepared/
 __pycache__/
 *.pyc

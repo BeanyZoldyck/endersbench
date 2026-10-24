@@ -20,7 +20,13 @@ dataset: alignment_train
 eval_dataset: alignment_validation
 template: qwen3_8
 enable_thinking: false
-cutoff_len: 1000
+# Was 1,000, copied from NVIDIA's Llama 8B demo; that cut every finance turn.
+# Finance rows with cards run 1,800-3,100 tokens; with the full CRS responses
+# (finance:label --raw-crs) 1,800-12,600, p95 8,500 (estimates). 16,384 fits
+# all of them and stays under the llama.cpp server's --ctx-size (32,768).
+# Memory at this length is untested on the Spark: if a test run runs out,
+# 8,192 fits every card row and 95% of the raw rows.
+cutoff_len: 16384
 preprocessing_num_workers: 4
 dataloader_num_workers: 0
 packing: false

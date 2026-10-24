@@ -1,0 +1,32 @@
+{
+  "persona": "P18",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "TERRENCE",
+      "last": "ABERNATHY",
+      "ssn": "666-70-1018",
+      "dob": "02-29-1980",
+      "zip": "60608"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "c9f0e39d-86c4-4ca2-b917-8e86f8f48b7f",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "ABERNATHY,TERRENCE"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}

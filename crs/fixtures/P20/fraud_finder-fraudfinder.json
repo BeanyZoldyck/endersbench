@@ -1,0 +1,83 @@
+{
+  "persona": "P20",
+  "product": "fraud_finder",
+  "variant": "FraudFinder",
+  "method": "POST",
+  "path": "/fraud-finder/fraud-finder",
+  "request": {
+    "firstName": "DOLORES",
+    "lastName": "WHITCOMB",
+    "phoneNumber": "5550101020",
+    "email": "dolores.whitcomb@example.com",
+    "ipAddress": "203.0.113.30",
+    "address": {
+      "addressLine1": "612 OCEAN VIEW DR",
+      "city": "SANTA BARBARA",
+      "state": "CA",
+      "postalCode": "93109"
+    }
+  },
+  "expected": "risk.score 8 (low), landline. Send name, phone, email and address; ipAddress is free.",
+  "status": 200,
+  "requestId": "c4bd3899-cbf5-49c2-867a-ef8d1ba3888a",
+  "response": {
+    "eam": {
+      "date_first_seen": "2014-05-04",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 5
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 8,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P20-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "34.42",
+        "longitude": "-119.70"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "5 miles"
+      },
+      "phone": {
+        "line_type": "landline",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "dolores.whitcomb@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

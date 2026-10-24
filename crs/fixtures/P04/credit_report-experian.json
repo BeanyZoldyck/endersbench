@@ -1,0 +1,75 @@
+{
+  "persona": "P04",
+  "product": "credit_report",
+  "variant": "Experian",
+  "method": "POST",
+  "path": "/experian/credit-report/standard/exp-prequal-vantage4",
+  "request": {
+    "firstName": "TOMAS",
+    "lastName": "LINDQVIST",
+    "ssn": "666701004",
+    "addresses": [
+      {
+        "addressLine1": "415 PINE ST UNIT 12",
+        "city": "SEATTLE",
+        "state": "WA",
+        "postalCode": "98101",
+        "borrowerResidencyType": "Current"
+      }
+    ]
+  },
+  "expected": "(TU / EFX / EXP): NoFileReturnedNoHit at all three bureaus",
+  "status": 200,
+  "requestId": "acf91086-69fc-4cb4-a00b-f60a7de39ccb",
+  "response": {
+    "requestData": {
+      "firstName": "TOMAS",
+      "lastName": "LINDQVIST",
+      "ssn": "666701004",
+      "addresses": [
+        {
+          "borrowerResidencyType": "Current",
+          "addressLine1": "415 PINE ST UNIT 12",
+          "city": "SEATTLE",
+          "state": "WA",
+          "postalCode": "98101"
+        }
+      ]
+    },
+    "repositoryIncluded": {
+      "transunion": false,
+      "experian": true,
+      "equifax": false
+    },
+    "responseDetail": {
+      "dateRequested": "2026-10-24T07:11:26.461438Z",
+      "requestingParty": {
+        "name": "CALHACKS13"
+      },
+      "creditBureauContact": {
+        "name": "CREDIT REPORTING SERVICES, INC",
+        "address": {
+          "addressLine1": "1024 IRON POINT ROAD",
+          "city": "FOLSOM",
+          "state": "CA",
+          "postalCode": "95630"
+        }
+      }
+    },
+    "responseAlertMessages": [],
+    "creditFiles": [
+      {
+        "creditFileDetail": {
+          "borrowerSourceType": "Borrower",
+          "creditFileInfileDate": "2026-10-18",
+          "creditFileResultStatusType": "NoFileReturnedNoHit",
+          "sourceType": "Experian"
+        }
+      }
+    ],
+    "summaries": {
+      "tradeSummary": {},
+      "derogatorySummary": {}
+    }
+  }
+}

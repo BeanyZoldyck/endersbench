@@ -1,0 +1,83 @@
+{
+  "persona": "P11",
+  "product": "fraud_finder",
+  "variant": "FraudFinder",
+  "method": "POST",
+  "path": "/fraud-finder/fraud-finder",
+  "request": {
+    "firstName": "BRANDON",
+    "lastName": "SZABO",
+    "phoneNumber": "5550101011",
+    "email": "brandon.szabo@example.com",
+    "ipAddress": "203.0.113.21",
+    "address": {
+      "addressLine1": "2640 HIGHLAND AVE APT 7",
+      "city": "NATIONAL CITY",
+      "state": "CA",
+      "postalCode": "91950"
+    }
+  },
+  "expected": "risk.score 11 (low). Send name, phone, email and address; ipAddress is free.",
+  "status": 200,
+  "requestId": "b84e61d3-1ef9-4ef1-9b5c-9eb94771bf5f",
+  "response": {
+    "eam": {
+      "date_first_seen": "2014-06-05",
+      "longevity": 9,
+      "velocity": 1,
+      "popularity": 6
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 11,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P11-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "32.68",
+        "longitude": "-117.10"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "100-500 miles"
+      },
+      "phone": {
+        "line_type": "mobile",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "brandon.szabo@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

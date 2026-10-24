@@ -7,7 +7,8 @@ import type { Report } from './report.js';
 import { aggregate, atAGlance, renderResultsHtml, renderResultsMarkdown } from './results.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const runsDir = path.join(here, '..', 'runs');
+const runsDir = path.resolve(process.env.RESULTS_RUNS_DIR ?? path.join(here, '..', 'runs'));
+const outDir = path.resolve(process.env.RESULTS_OUT_DIR ?? runsDir);
 
 function isReport(value: unknown): value is Report {
   if (!value || typeof value !== 'object') return false;
@@ -33,10 +34,10 @@ function readReports() {
   return reports;
 }
 
-fs.mkdirSync(runsDir, { recursive: true });
+fs.mkdirSync(outDir, { recursive: true });
 const reports = readReports();
 const results = aggregate(reports);
-fs.writeFileSync(path.join(runsDir, 'RESULTS.md'), renderResultsMarkdown(results));
-fs.writeFileSync(path.join(runsDir, 'results.html'), renderResultsHtml(results));
-console.log(`Wrote ${path.join(runsDir, 'RESULTS.md')} and results.html from ${reports.length} run${reports.length === 1 ? '' : 's'}.`);
+fs.writeFileSync(path.join(outDir, 'RESULTS.md'), renderResultsMarkdown(results));
+fs.writeFileSync(path.join(outDir, 'results.html'), renderResultsHtml(results));
+console.log(`Wrote ${path.join(outDir, 'RESULTS.md')} and results.html from ${reports.length} run${reports.length === 1 ? '' : 's'}.`);
 for (const line of atAGlance(results)) console.log(`\n${line.replace(/: /, ':\n  ').replace(/; /g, '\n  ')}`);

@@ -26,7 +26,7 @@ function snapshot(conn: DbConnection): Rows {
     decisions: [...conn.db.decisionRequest.iter()],
     records: [...conn.db.record.iter()],
     discoveries: [...conn.db.discovery.iter()],
-    run: { ...parseRun(conn.db.meta.key.find('run')?.value), scenario: parseRun(conn.db.meta.key.find('scenario')?.value) },
+    run: { ...parseRun(conn.db.meta.key.find('run')?.value), scenario: parseRun(conn.db.meta.key.find('scenario')?.value), interactive: conn.db.meta.key.find('interactive')?.value === 'true' },
   };
 }
 

@@ -1,0 +1,21 @@
+{
+  "persona": "P13",
+  "product": "accurate_append",
+  "variant": "Reverse",
+  "method": "POST",
+  "path": "/accurate-append/reverse",
+  "request": {
+    "phoneNumber": "5550101013"
+  },
+  "expected": "empty list (no match)",
+  "status": 200,
+  "requestId": "27046707-f51b-4192-bf5b-31282d34a03c",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": []
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "source_model": "Qwen/Qwen3.8-27B",
+  "source_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "outtype": "q8_0",
+  "quantization": "Q8_0",
+  "llamacpp_commit": "6b9ba4f2e8c1436511956f0b3c309e2c9e642071",
+  "source_gguf": "/home/asus/endersbench-finetune/models/Qwen3.8-27B-BF16.gguf",
+  "source_gguf_sha256": "8b89fc6ca6857f7a1a579c211bf664d883ed7388bc2906ead6b07bdc5cbfa883",
+  "gguf_bytes": 28595763904,
+  "gguf_sha256": "8d81622f446b6af667a002ec6b116238ee694ecbc643c9dfb2810044ef5bd8a0",
+  "quantized_at": "2026-10-24T13:50:20.869504+00:00",
+  "quantizer_command": [
+    "/home/asus/endersbench-finetune/llama.cpp/build/bin/llama-quantize",
+    "/home/asus/endersbench-finetune/models/Qwen3.8-27B-BF16.gguf",
+    "/home/asus/endersbench-finetune/models/Qwen3.8-27B-Q8_0.partial.gguf",
+    "Q8_0",
+    "8"
+  ],
+  "note": "8-bit block quantization with scale overhead; not identical to the BF16 checkpoint."
+}

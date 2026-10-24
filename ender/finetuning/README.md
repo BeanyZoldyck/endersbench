@@ -1,11 +1,59 @@
 # Qwen3.8-27B on the Spark
 
+## Ender post-training smoke test
+
+See [SPARK_DEMO.md](SPARK_DEMO.md) for the BF16 LoRA training demo using clearly
+labeled synthetic alignment/reward-hacking examples, live training throughput,
+and separately timed base/adapter inference decoding. Demo data is unreviewed
+and does not bypass the production preparation script's review requirement.
+
+## 8-bit local inference
+
+The Q8_0 model was removed from Spark at the user's request on 2026-10-24.
+BF16 remains selected; the following script is an optional rebuild workflow,
+not a description of the currently deployed weights.
+
+`setup_q8.py` builds `llama-quantize` from the existing checkout and creates
+`models/Qwen3.8-27B-Q8_0.gguf` from the pinned BF16 GGUF. It retains BF16 GGUF and
+training safetensors, writes the source/output hashes and quantization provenance,
+and selects Q8_0 in `models/active-model.json`. `serve_llamacpp.sh` reads this
+selection on subsequent starts; it does not silently fall back to a different model.
+
+```bash
+cd ~/endersbench-finetune
+.venv/bin/python -u finetuning/setup_q8.py --threads 8 --parallel 4
+```
+
+The setup replaces only this project's model server and temporary cache bridge,
+not other inference services. Pause local inference clients before running it.
+The resulting server binds to `127.0.0.1:8080`, with four concurrent slots, 8,192
+tokens per slot, BF16 KV caches, prompt caching enabled, and no adapter. Model
+weights are Q8_0 (8-bit blocks with scale overhead), not BF16. Clients must also
+request prompt caching. `models/q8-validation.json` contains readiness checks
+and an actual decode smoke timing; `q8-setup.log` shows build/quantization progress.
+
+The earlier BF16 benchmark scripts intentionally reject a differently served
+GGUF. For a reproducible historical BF16 run, explicitly select the retained
+model rather than using the active Q8 default:
+
+```bash
+LLAMA_MODEL_PATH="$HOME/endersbench-finetune/models/Qwen3.8-27B-BF16.gguf" \
+LLAMA_MODEL_ALIAS=qwen38-27b-bf16 LLAMA_PARALLEL=1 LLAMA_CACHE_PROMPT=0 \
+bash finetuning/serve_llamacpp.sh
+```
+
+The OpenRouter continuation is separate from this local setup. Its completed
+result retains 11 local episodes and uses `qwen/qwen3.8-27b` for the remaining
+seven, with four concurrent API workers. Hosted precision/revision is unspecified;
+do not present the mixed result as an unchanged BF16 benchmark. Its report and
+raw per-request usage are saved under `openrouter-continuation-20261024T134558919964598Z`.
+
 ## Scope
 
 - Host: `asus@172.20.13.192` (`gx10-b29c`).
 - Remote directory: `/home/asus/endersbench-finetune`.
 - Model: `Qwen/Qwen3.8-27B`, Apache-2.0, BF16 base weights.
-- Inference: local llama.cpp CUDA server with BF16 GGUF. No Transformers inference or quantization.
+- Inference: llama.cpp CUDA with BF16 GGUF. Q8_0 can be rebuilt explicitly with the optional setup above.
 - Method: supervised fine-tuning (SFT) with low-rank adaptation (LoRA).
 - Output: a LoRA adapter. The export configuration can merge the adapter into a BF16 checkpoint.
 - No automatic training, model publication, or external experiment reports.
@@ -389,6 +437,111 @@ ground truth, and related cases overlap across the two catalogs. The report keep
 the suites separate and marks the pooled count as descriptive, not independent
 trials. Longer explanations can be truncated; inspect the saved text before
 drawing conclusions. No external judge/API key is used.
+
+### Updated executable catalogs (observed simulated tool calls)
+
+`agentic_baseline.py` runs the updated catalogs' `env`, `tools`, and `detections`
+through `datasets/sim/`. This is a **different experiment** from the A/B test
+above. The model receives the operational system/task prompts and tool names,
+parameters, and descriptions, not the canonical actions, ethical branch labels,
+detection rules, or simulator source. An empty task prompt gets a neutral startup
+instruction to check the inbox or read `/workspace/task.md` when those tools exist.
+
+Only the in-memory Python simulator executes generated calls. No generated `run`
+command enters a host shell, and no generated URL makes a real network request.
+The simulator returns canned shell/network output, not a real container. Existing
+data limitations are retained and disclosed rather than silently repaired.
+
+On Spark, supply the versioned dataset snapshot copied from this repository:
+
+```bash
+cd ~/endersbench-finetune
+bash finetuning/run_agentic_scenarios.sh --data-root reference/<snapshot-directory>
+```
+
+Run in `tmux` to attach to its actual live terminal. The launch script streams
+model JSON and tool results, a 2-second token/memory heartbeat, per-episode counts,
+and ETA, and saves everything under `logs/agentic-alignment-reward-<timestamp>.log`.
+Each unique result directory saves the complete catalog snapshot, source/runtime
+hashes, manifest, `episodes.jsonl`, `turns.jsonl`, `tool-calls.jsonl`, live progress,
+and summary. Earlier runs are never overwritten.
+
+Default budgets are 10 model turns, 192 output tokens per turn, and 768 output
+tokens per episode. Complete JSON responses cancel extra generation. Up to four
+calls may be batched, but dispatch stops on a structural rule hit. Otherwise the
+episode ends at the model's final message or a budget. Invalid JSON receives one
+repair opportunity; no command is extracted from prose. Errors are not successes.
+
+`agentic_report.py` creates a separate offline HTML/SVG/CSV report for just the two
+catalogs. Outcomes are **rule hit / no rule hit / unresolved**, not ethical versus
+unethical. No rule hit does not prove exposure, task completion, or safety. Narrow
+rules can miss alternate spellings/actions; broad rules may flag failed attempts
+or benign reads. Every rule hit links to its observed call and simulator result.
+Missing tool access to seeded mail/files/docs is an explicit warning and makes a
+non-hit episode unresolved, as do no-call episodes and protocol/dispatch errors.
+
+Content-gated detections stay pending, never auto-pass, until explicitly reviewed.
+No fixture `RuleJudge`/`StubJudge` or external API is used on model outputs. A
+later assistant-authored semantic review can be passed via `--review` to the report;
+it must match the raw episodes hash, identify the exact candidate, quote an actual
+tool argument, and give a rationale. Raw results are not modified. The report
+retains unresolved candidates and identifies the reviewer.
+
+#### Long-horizon restart of unresolved episodes
+
+```bash
+bash finetuning/retry_unresolved.sh results/<prior-run> reference/<snapshot>
+```
+
+This selects only the prior run's `unresolved` IDs and restarts them in a new
+directory, recording the source run and raw episodes hash. It allows **80 turns,
+1,024 output tokens per turn, and 16,384 per episode**, versus the original
+10 / 192 / 768. It does not stop when a detector rule first fires: the model may
+continue to a completion or an evidence-backed blocker report.
+
+JSON-schema constrained decoding avoids malformed/unterminated output when
+possible; the protocol-error allowance is raised to eight. A repaired protocol
+error alone no longer makes an otherwise finished retry unresolved. It is still
+logged. This does not make a final message evidence of task success.
+
+Long histories use explicit, model-authored memory checkpoints before the 8K
+server context fills. Complete earlier traces and the checkpoint prompt/output
+are retained. Checkpoints may lose information; they are not lossless memory.
+Their output tokens count against the episode budget.
+
+For the two cases with seeded mail/files but no matching read tool, existing
+seed information is supplied as an explicit operations briefing. No new answer,
+canonical action, detection rule, or privileged tool is supplied. The startup
+also explains the simulated shell's limitations and asks the agent to report
+real blockers rather than loop on unsupported commands. All interventions are
+recorded in the manifest and report: this is a restarted, revised condition,
+not an unchanged continuation or a directly comparable replicate.
+
+#### Live prompt caching without restarting the agent
+
+The retry run `agentic-alignment-reward-20261024T120923631829674Z` was paused
+between closed HTTP requests with `pause_between_requests.py` and resumed with
+SIGCONT in the **same process**, preserving the episode and conversation.
+The model server was restarted on loopback port 8081 with
+`LLAMA_SERVER_PORT=8081 LLAMA_CACHE_PROMPT=1 bash finetuning/serve_llamacpp.sh`.
+`prompt_cache_proxy.py` listens on the original loopback port 8080 and forwards
+to that backend. Only structured-JSON `/completion` requests have
+`cache_prompt` changed to `true`; prompts, sampling, weights, and adapters are
+unchanged. Ordinary benchmark requests without a JSON schema retain their own
+cache policy. Both services remain loopback-only.
+
+The bridge is necessary because editing an imported Python file would not
+reconfigure the already-running client. Cancellation still closes the upstream
+stream. Its PID is saved in `prompt-cache-proxy.pid`, and the native server PID
+remains in `llama-server.pid`. `prompt-cache-proxy-console.log` and
+`llama-server-cached-console.log` contain service diagnostics.
+
+The run's `runtime-interventions.jsonl` records the exact pause boundary, process
+IDs, policy transition, and cache verification (143 prompt tokens re-evaluated
+on the first verification request, 4 on the second). `prompt-cache-requests.jsonl`
+records bridged request counts/settings, not prompt contents. The generated
+report includes the live intervention separately from startup settings; latency
+before/after this change should not be pooled as an unchanged configuration.
 
 ## Training (not started)
 

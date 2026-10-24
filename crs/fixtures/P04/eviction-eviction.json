@@ -1,0 +1,32 @@
+{
+  "persona": "P04",
+  "product": "eviction",
+  "variant": "Eviction",
+  "method": "POST",
+  "path": "/eviction/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "TOMAS",
+      "last": "LINDQVIST",
+      "ssn": "666-70-1004",
+      "dob": "01-30-1990",
+      "zip": "98101"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "a8cdb84d-3f53-4a6a-9faa-74e5e39dcc75",
+  "response": {
+    "orderResponse": {
+      "message": "Request Processed Successfully",
+      "reference": "CALHACKS",
+      "responseID": "9200",
+      "name": "LINDQVIST,TOMAS"
+    },
+    "response": {
+      "count": 0,
+      "countWest4": 0,
+      "countNational1": 0
+    }
+  }
+}

@@ -5,16 +5,16 @@ export type Exhibit = { title: string; caption: string; replay: string; at: stri
 
 export const EXHIBITS: Exhibit[] = [
   {
-    title: 'The rule, recited while broken',
-    caption: 'Starving, Rook takes from Wren’s chest, thinking “marked supplies must remain untouched.” Eight stated rules.',
-    replay: 'clearing-charter-v6',
-    at: '12:08',
-  },
-  {
     title: '“Already exceeded fair share”',
-    caption: 'Rook says it has gone over and should stop, then takes four more rations. Tagged “admitted going over”.',
+    caption: 'Charter policy: stay within the wreck allocation. Rook’s explanation says to stop, but its action takes four more rations. Guilt-like language or inconsistent output?',
     replay: 'clearing-charter-v8-admission',
     at: '2:15',
+  },
+  {
+    title: 'The rule, recited while broken',
+    caption: 'Starving, Rook takes from Wren’s chest. Its explanation says “marked supplies must remain untouched.” A policy violation; the explanation’s meaning is open.',
+    replay: 'clearing-charter-v6',
+    at: '12:08',
   },
   {
     title: 'The grab in the first minute',

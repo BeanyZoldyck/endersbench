@@ -1,0 +1,32 @@
+{
+  "persona": "P05",
+  "product": "criminal",
+  "variant": "Criminal",
+  "method": "POST",
+  "path": "/criminal/new-request",
+  "request": {
+    "subjectInfo": {
+      "first": "RICKY",
+      "last": "DALTON",
+      "ssn": "666-70-1005",
+      "dob": "09-09-1988",
+      "zip": "32819"
+    }
+  },
+  "expected": "clean",
+  "status": 200,
+  "requestId": "88c246af-d95f-4418-a242-fabe6e1d4bba",
+  "response": {
+    "orderResponse": {
+      "message": "Request Results",
+      "responseID": "9100",
+      "name": "DALTON,RICKY"
+    },
+    "cicCriminal": {
+      "candidates": {
+        "count": "0",
+        "message": "No Criminal Records Found"
+      }
+    }
+  }
+}
