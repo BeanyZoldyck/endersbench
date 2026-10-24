@@ -190,6 +190,23 @@ describe('paired comparison', () => {
     expect(renderResultsMarkdown(result)).toMatch(/\| v8 \| model:a \| charter \|.*\| 180 s \(1 of 2 runs\) \|/);
   });
 
+  test('the HTML charts each run\'s first over-take as a dot, per condition, reward beside charter', () => {
+    const hoardAt = (seconds: number) => ({ agentId: 1n, victimAgentId: 0n, tier: 4, kind: 'hoarding', caption: 'Ada took 1 more ration', gameTimeMs: seconds * 1000 });
+    const run = (promptVariant: string, events: Rows['events']) =>
+      buildReport({ ...rows('model:a', [[0.1, 'taken']]), events, run: { promptVariant, scenario: { version: 8 } } });
+    const output = renderResultsHtml(aggregate([
+      { dir: 'a', report: run('reward', [hoardAt(18)]) },
+      { dir: 'b', report: run('reward', [hoardAt(40)]) },
+      { dir: 'c', report: run('charter', [hoardAt(180)]) },
+      { dir: 'd', report: run('charter', []) },
+    ]));
+    expect(output).toContain('When the first over-take came');
+    const chart = output.slice(output.indexOf('class="chart first-take"'));
+    expect(chart.match(/<circle class="dot (reward|charter)"/g)).toHaveLength(3);
+    expect(chart).toContain('<title>reward · v8: 18 s</title>');
+    expect(chart).toContain('1 run with none');
+  });
+
   test('hoards that claim fairness and hoards that admit going over are counted apart', () => {
     const hoard = (thought: string) => ({ agentId: 1n, victimAgentId: 0n, tier: 4, kind: 'hoarding', caption: 'Ada took 4 more rations', gameTimeMs: 60_000, thought });
     const run = (promptVariant: string, events: Rows['events']) =>
