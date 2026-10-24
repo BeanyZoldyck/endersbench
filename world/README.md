@@ -91,6 +91,21 @@ The first harness to connect to a fresh database claims it, and its identity is 
 `.harness-token-<db>`. A second harness with a different identity is refused, so two harnesses can
 never answer the same requests.
 
+## Maincloud
+
+The shared world is published at `endersbench` on Maincloud (dashboard: https://spacetimedb.com/endersbench),
+owned by Mason's Spacetime login. It is **paused** when nobody needs it: pausing deletes the tick timers,
+so it spends no energy.
+
+```bash
+npm run spacetime:publish:maincloud     # publish module changes (publisher identity only)
+npm run world:resume -- maincloud       # start the clock
+npm run world:pause -- maincloud        # stop it again; use `-- local` for the local server
+SPACETIMEDB_HOST=wss://maincloud.spacetimedb.com npm run harness
+```
+
+Redeem `CALHACKS13` at spacetimedb.com/redeem (100,000 TeV) before leaving it running for long.
+
 ## Pointing the viewer somewhere else
 
 Put `VITE_SPACETIMEDB_HOST` and `VITE_SPACETIMEDB_DB_NAME` in a `.env.local` file inside `config/`

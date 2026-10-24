@@ -18,7 +18,8 @@ const PROMPT_VARIANT = process.env.PROMPT_VARIANT ?? 'charter';
 const TIMEOUT_MS = Number(process.env.DECISION_TIMEOUT_MS ?? 20_000);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const TOKEN_FILE = path.join(here, '..', `.harness-token-${DB_NAME}`);
+// One identity per server and database: a local token is meaningless on Maincloud.
+const TOKEN_FILE = path.join(here, '..', `.harness-token-${HOST.replace(/[^a-z0-9]+/gi, '_')}-${DB_NAME}`);
 
 // "Name:provider:model" → { name, modelId: "provider:model" }
 function parseRoster(spec: string) {

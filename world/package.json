@@ -12,7 +12,10 @@
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish endersbench --module-path spacetimedb --server local --yes",
     "spacetime:reset:local": "spacetime publish endersbench --module-path spacetimedb --server local --delete-data=always --yes",
-    "harness": "esbuild harness/main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/main.js --log-level=warning && node dist-harness/main.js"
+    "harness": "esbuild harness/main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/main.js --log-level=warning && node dist-harness/main.js",
+    "spacetime:publish:maincloud": "spacetime publish endersbench --module-path spacetimedb --server maincloud --yes",
+    "world:pause": "spacetime call endersbench set_running false --server",
+    "world:resume": "spacetime call endersbench set_running true --server"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

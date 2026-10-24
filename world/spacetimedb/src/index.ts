@@ -256,10 +256,17 @@ export const setTimeScale = spacetimedb.reducer({ timeScale: t.f64() }, (ctx, { 
   ctx.db.world.id.update({ ...w, timeScale: Math.min(Math.max(timeScale, 0.05), 4) });
 });
 
+// Pausing deletes the timers, so a paused world costs no Maincloud energy.
+// Resuming restarts the clock from now, with no time jump.
 export const setRunning = spacetimedb.reducer({ running: t.bool() }, (ctx, { running }) => {
   requireWorkerOrAdmin(ctx);
-  ctx.db.world.id.update({ ...getWorld(ctx), running });
-  if (running) startTimers(ctx);
+  ctx.db.world.id.update({ ...getWorld(ctx), running, lastTickAt: ctx.timestamp });
+  if (running) {
+    startTimers(ctx);
+    return;
+  }
+  for (const timer of [...ctx.db.tickTimer.iter()]) ctx.db.tickTimer.scheduledId.delete(timer.scheduledId);
+  for (const timer of [...ctx.db.brainTimer.iter()]) ctx.db.brainTimer.scheduledId.delete(timer.scheduledId);
 });
 
 export const joinAsHuman = spacetimedb.reducer({ name: t.string() }, (ctx, { name }) => {

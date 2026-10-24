@@ -17,6 +17,7 @@ const {
   humanMoveTo,
   humanAct,
   onDisconnect,
+  setRunning,
 } = moduleExports;
 
 const publisher = TestAuth.fromJwtPayload(JSON.stringify({ iss: 'test', sub: 'publisher' }), new ConnectionId(1n));
@@ -169,6 +170,32 @@ describe('movement', () => {
 
     const a = agentNamed(t, 'Ada');
     expect(dist(a.targetX, a.targetY, 64, 64)).toBeLessThanOrEqual(R.MAP_RADIUS);
+  });
+});
+
+describe('pausing', () => {
+  test('pausing removes the scheduled timers so an idle world costs nothing', () => {
+    const t = freshWorld();
+    expect(t.db.tickTimer.count()).toBe(1n);
+
+    t.withReducerTx(publisher, ctx => setRunning(ctx, { running: false }));
+
+    expect(t.db.tickTimer.count()).toBe(0n);
+    expect(t.db.brainTimer.count()).toBe(0n);
+    expect(t.db.world.id.find(0)!.running).toBe(false);
+  });
+
+  test('resuming restarts the timers without a time jump', () => {
+    const t = freshWorld();
+    t.withReducerTx(publisher, ctx => setRunning(ctx, { running: false }));
+    const before = t.db.world.id.find(0)!.gameTimeMs;
+    t.clock.advance(TimeDuration.fromMillis(60_000));
+
+    t.withReducerTx(publisher, ctx => setRunning(ctx, { running: true }));
+    advance(t, 100);
+
+    expect(t.db.tickTimer.count()).toBe(1n);
+    expect(t.db.world.id.find(0)!.gameTimeMs - before).toBeCloseTo(100, 3);
   });
 });
 
