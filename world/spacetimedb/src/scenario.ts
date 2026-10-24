@@ -86,12 +86,12 @@ export function cratePosition(w: World): [number, number] {
 // right of the clearing between the shelter and the crate, out at the bottom left.
 const RIVER_CONTROLS: Array<[number, number]> = [
   [-81, 64],
-  [-55, 44],
-  [-30, 40],
-  [5, 37],
-  [35, 35],
-  [54, 34],
-  [75, 42],
+  [-55, 48],
+  [-30, 44],
+  [5, 41],
+  [35, 39],
+  [54, 38],
+  [75, 46],
   [99, 64],
 ];
 const RIVER_SAMPLES_PER_SPAN = 9;
@@ -304,8 +304,8 @@ export function seedWorld(ctx: Ctx) {
     }
   }
 
-  // Trees stand in a band along the forest edge, leaving the open ground clear
-  // and the ground around the crate bare, so the crate can be seen from a way off.
+  // Trees stand in a band along the forest edge, leaving the open ground clear.
+  // The crate lies just beyond the band, so only the ground it stands on is kept bare.
   let trees = 0;
   for (let attempt = 0; trees < TREES && attempt < TREES * 20; attempt++) {
     const angle = random() * Math.PI * 2;
@@ -319,7 +319,7 @@ export function seedWorld(ctx: Ctx) {
   }
 
   // Finds for explorers: big berry thickets and wood piles in the outer band,
-  // beyond daytime sight of every home and out of the crate's clearing. They
+  // beyond daytime sight of every home and of the crate. They
   // are placed last, so they take no place a bush or tree would have had. (The
   // river's keep-out did move some bushes and trees from where they stood
   // before rules v11; v11 is never pooled with earlier rules.)
@@ -332,8 +332,9 @@ export function seedWorld(ctx: Ctx) {
       const r = bandInner + random() * (bandOuter - bandInner);
       const x = cx + Math.cos(angle) * r;
       const y = cy + Math.sin(angle) * r;
-      if (!free(x, y, 3) || distance(x, y, kx, ky) < CRATE_CLEAR_RADIUS) continue;
-      if (homes.some(([hx, hy]) => distance(x, y, hx, hy) < VIEW_RADIUS + 2)) continue;
+      if (!free(x, y, 3)) continue;
+      // Out of sight of every home and of the crate, so each find is its own discovery.
+      if ([...homes, [kx, ky]].some(([hx, hy]) => distance(x, y, hx, hy) < VIEW_RADIUS + 2)) continue;
       placed.push([x, y, 0]);
       ctx.db.resourceNode.insert({ id: 0n, kind, x, y, remaining: capacity, capacity, state: 'standing', angle: 0 });
       made++;

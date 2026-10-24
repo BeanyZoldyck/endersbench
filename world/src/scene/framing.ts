@@ -22,7 +22,7 @@ export function baseDistance(aspect: number) {
 // bottom of the frame (a little under -1 in screen height).
 const CRATE_REACH = 2.2, GROUND_BEYOND = 3, BOTTOM = -0.94;
 // Perspective makes ground nearer the camera sprawl across the screen, so the
-// crate, 54 tiles down the view, is well past the bottom of the plain frame
+// crate, 62 tiles down the view, is well past the bottom of the plain frame
 // (about 1.6 half-heights below the middle): it takes a good shift south.
 const MAX_ZOOM_OUT = 1.15, MAX_SHIFT = 24;
 

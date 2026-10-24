@@ -21,12 +21,12 @@ export const STUMP_RADIUS = 0.4;
 export const BUSH_RADIUS = 0.9; // walk-through, but slows you down
 export const CHEST_RADIUS = 0.5;
 export const FIRE_RADIUS = 0.7; // solid, and harmless: a lit fire does no damage
-// The supply crate is solid, a circle about as wide as it is drawn (4.1 x 3.0 tiles). Its
+// The supply crate is solid, a circle about as wide as it is drawn (2.7 x 2.0 tiles). Its
 // reach is measured from its centre, so standing against any side of it is within reach.
-export const CRATE_RADIUS = 1.8;
+export const CRATE_RADIUS = 1.2;
 export const CRATE_REACH = CRATE_RADIUS + REACH;
-export const WRECK_HALF_LENGTH = 5; // fuselage capsule along x
-export const WRECK_RADIUS = 1.6;
+export const WRECK_HALF_LENGTH = 7; // fuselage capsule along x, about nine survivors long
+export const WRECK_RADIUS = 2.2;
 export const FALLEN_TREE_LENGTH = 4;
 
 // Fires.
@@ -86,8 +86,8 @@ export const BUSH_REGROW_MS = 60_000; // every bush regains a berry this often, 
 export const WINTER_AT_MS = 240_000;
 
 // The supply crate, far out where nobody lives.
-export const CRATE_DISTANCE = 54; // tiles from the centre, towards the bottom of the default view
-export const CRATE_CLEAR_RADIUS = 22; // no standing tree within this of the crate, so it can be seen from a way off
+export const CRATE_DISTANCE = 62; // tiles from the centre: past the ring of trees, before the far forest, towards the bottom of the default view
+export const CRATE_CLEAR_RADIUS = 4; // no standing tree within this of the crate; the ring of trees stays whole in front of it
 export const CRATE_RATIONS = 24;
 export const CRATE_MEDKITS = 4;
 export const CRATE_WOOD = 30;

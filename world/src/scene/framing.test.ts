@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { FOV, VIEW, baseDistance, defaultFrame, establishingTarget } from './framing';
 
-// The module puts the crate 54 tiles from the centre, straight down the default
+// The module puts the crate 62 tiles from the centre, straight down the default
 // view: world (+0.59, +0.81) from the centre, which is the scene's x/z too.
-const crate = { x: 54 * 0.5878, z: 54 * 0.809 };
+const crate = { x: 62 * 0.5878, z: 62 * 0.809 };
 const ASPECTS = [1.5, 1.78, 1.91, 2.2];
 const down = new THREE.Vector3(VIEW.x, 0, VIEW.z).normalize();
 

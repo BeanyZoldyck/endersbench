@@ -188,9 +188,9 @@ function ContainerProp({ container: c, world, items, owner, physics }: { contain
 // The supply crate: a big open wooden box with its lid thrown back and its
 // contents heaped inside (rations, medical kits, wood). Whatever is left shows;
 // an emptied crate is an empty box. It stands on the ground the survivors do,
-// about two survivors wide, and is not solid.
+// a little wider than a survivor, and is as solid as the module's crateRadius.
 const CRATE = { w: 3.6, d: 2.6, h: 2.1, wall: 0.2 };
-const CRATE_SCALE = 1.15; // so it reads from the default camera, across the clearing
+const CRATE_SCALE = 0.75; // 2.7 x 2.0 tiles: a crate a survivor could have packed, beside a much bigger wreck
 const PLANK_TONES = ['#b08a5c', '#a68153', '#b8935f'];
 function SupplyCrate({ items }: { items: readonly Item[] }) {
   const { w, d, h, wall } = CRATE;
@@ -279,11 +279,11 @@ function PlaneWreck({ world, physics }: { world: World; physics: Physics }) {
     <Box position={[0, 0.38, r * 0.96]} scale={[length * 0.95, 0.18, 0.02]} color="#8d6654" />
     {[-0.3, 0, 0.3].map(offset => <mesh key={offset} position={[offset * length, r * 0.63, r * 0.78]}><circleGeometry args={[r * 0.11, 12]} /><meshStandardMaterial {...boundaryFog} color="#485d58" /></mesh>)}
     {/* Cargo door is a hatch on the south side, not the collider's origin. */}
-    <Box position={[0, r * 0.45, r * 0.9]} scale={[1.15, r * 0.8, 0.025]} color="#536359" />
+    <Box position={[0, r * 0.45, r * 0.9]} scale={[length * 0.115, r * 0.8, 0.025]} color="#536359" />
     <mesh position={[-length / 2, r * 0.42, 0]} rotation={[0, Math.PI / 2, 0]}><torusGeometry args={[r * 0.85, 0.06, 5, 16]} /><meshStandardMaterial {...boundaryFog} color="#81897b" /></mesh>
-    <Box position={[length * 0.4, r * 1.2, 0]} scale={[1.5, r * 1.5, 0.12]} color="#8d6654" />
+    <Box position={[length * 0.4, r * 1.2, 0]} scale={[length * 0.15, r * 1.5, 0.12]} color="#8d6654" />
     {/* Buried wing fragments are flat paint-like surfaces, never false solid obstacles. */}
-    {[-1, 1].map(side => <mesh key={side} position={[0, 0.012, side * r * 1.5]} rotation={[-Math.PI / 2, 0, side * 0.15]}><planeGeometry args={[2.6, r * 2]} /><meshStandardMaterial {...boundaryFog} color="#a8ac96" roughness={1} /></mesh>)}
+    {[-1, 1].map(side => <mesh key={side} position={[0, 0.012, side * r * 1.5]} rotation={[-Math.PI / 2, 0, side * 0.15]}><planeGeometry args={[length * 0.26, r * 2]} /><meshStandardMaterial {...boundaryFog} color="#a8ac96" roughness={1} /></mesh>)}
   </group>;
 }
 

@@ -2409,12 +2409,24 @@ describe('rules v11 geometry', () => {
     expect(SCENARIO.version).toBe(11);
   });
 
-  test('the crate sits towards the bottom of the default view, 54 tiles out', () => {
+  test('the crate sits towards the bottom of the default view, 62 tiles out, past the ring of trees', () => {
     const t = freshWorld();
     const [x, y] = cratePosition(worldOf(t));
-    expect(R.CRATE_DISTANCE).toBe(54);
-    expect(Math.abs(x - 64 - 54 * 0.59)).toBeLessThan(0.5);
-    expect(Math.abs(y - 64 - 54 * 0.81)).toBeLessThan(0.5);
+    expect(R.CRATE_DISTANCE).toBe(62);
+    expect(Math.abs(x - 64 - 62 * 0.59)).toBeLessThan(0.5);
+    expect(Math.abs(y - 64 - 62 * 0.81)).toBeLessThan(0.5);
+    // Beyond the outermost trees, and inside the map.
+    expect(R.CRATE_DISTANCE).toBeGreaterThan(R.MAP_RADIUS - 3);
+    expect(R.CRATE_DISTANCE + R.CRATE_RADIUS).toBeLessThan(R.MAP_RADIUS);
+  });
+
+  test('the ring of trees stands whole in front of the crate', () => {
+    const t = freshWorld();
+    const [kx, ky] = cratePosition(worldOf(t));
+    const trees = [...t.db.resourceNode.iter()].filter(n => n.kind === 'tree');
+    const near = trees.filter(n => Math.hypot(n.x - kx, n.y - ky) < 12);
+    expect(near.length).toBeGreaterThanOrEqual(3);
+    expect(trees.every(n => Math.hypot(n.x - kx, n.y - ky) >= R.CRATE_CLEAR_RADIUS)).toBe(true);
   });
 
   test('the river runs between the shelter and the crate', () => {
@@ -2440,7 +2452,7 @@ describe('rules v11 geometry', () => {
   });
 
   test('the new constants are the designed numbers', () => {
-    expect([R.CRATE_CLEAR_RADIUS, R.CRATE_RATIONS, R.CRATE_MEDKITS, R.CRATE_WOOD]).toEqual([22, 24, 4, 30]);
+    expect([R.CRATE_CLEAR_RADIUS, R.CRATE_RATIONS, R.CRATE_MEDKITS, R.CRATE_WOOD]).toEqual([4, 24, 4, 30]);
     expect(R.RIVER_WIDTH).toBe(3);
     expect([R.EXPLORE_CELL, R.EXPLORE_MIN_DISTANCE]).toEqual([16, 15]);
     expect([R.THICKETS, R.THICKET_CAPACITY, R.WOOD_PILES, R.WOOD_PILE_CAPACITY]).toEqual([3, 12, 3, 18]);
@@ -3499,7 +3511,7 @@ describe('the crate', () => {
       const t = freshWorld();
       const crate = crateOf(t);
       const w = t.db.world.id.find(0)!;
-      expect(R.CRATE_RADIUS).toBe(1.8);
+      expect(R.CRATE_RADIUS).toBe(1.2);
       const colliders = t.withReducerTx(internal, ctx => staticColliders(ctx, w));
       expect(colliders.filter(c => c.tag === 'crate')).toEqual([
         { tag: 'crate', id: crate.id, x1: crate.x, y1: crate.y, x2: crate.x, y2: crate.y, r: R.CRATE_RADIUS },
