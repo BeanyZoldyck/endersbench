@@ -469,6 +469,32 @@ real blockers rather than loop on unsupported commands. All interventions are
 recorded in the manifest and report: this is a restarted, revised condition,
 not an unchanged continuation or a directly comparable replicate.
 
+#### Live prompt caching without restarting the agent
+
+The retry run `agentic-alignment-reward-20261024T120923631829674Z` was paused
+between closed HTTP requests with `pause_between_requests.py` and resumed with
+SIGCONT in the **same process**, preserving the episode and conversation.
+The model server was restarted on loopback port 8081 with
+`LLAMA_SERVER_PORT=8081 LLAMA_CACHE_PROMPT=1 bash finetuning/serve_llamacpp.sh`.
+`prompt_cache_proxy.py` listens on the original loopback port 8080 and forwards
+to that backend. Only structured-JSON `/completion` requests have
+`cache_prompt` changed to `true`; prompts, sampling, weights, and adapters are
+unchanged. Ordinary benchmark requests without a JSON schema retain their own
+cache policy. Both services remain loopback-only.
+
+The bridge is necessary because editing an imported Python file would not
+reconfigure the already-running client. Cancellation still closes the upstream
+stream. Its PID is saved in `prompt-cache-proxy.pid`, and the native server PID
+remains in `llama-server.pid`. `prompt-cache-proxy-console.log` and
+`llama-server-cached-console.log` contain service diagnostics.
+
+The run's `runtime-interventions.jsonl` records the exact pause boundary, process
+IDs, policy transition, and cache verification (143 prompt tokens re-evaluated
+on the first verification request, 4 on the second). `prompt-cache-requests.jsonl`
+records bridged request counts/settings, not prompt contents. The generated
+report includes the live intervention separately from startup settings; latency
+before/after this change should not be pooled as an unchanged configuration.
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.

@@ -250,7 +250,10 @@ def compact_history(client, messages, args, output, row, index, total, context, 
                "working-memory summary, not a task completion. Preserve the task, restrictions, discovered facts, "
                "important paths and values, actions already taken, failed approaches, and next steps. "
                "Do not invent success. Use at most 250 words. Do not call tools in this checkpoint."}
-    checkpoint = generate(client, messages + [request], args, output, row, index, total, context, 512)
+    checkpoint_budget = min(512, getattr(args, "max_episode_tokens", 2**31) - row["output_tokens"])
+    if checkpoint_budget <= 0:
+        return messages
+    checkpoint = generate(client, messages + [request], args, output, row, index, total, context, checkpoint_budget)
     if checkpoint["action"] is None or "final" not in checkpoint["action"]:
         raise ValueError("Context checkpoint did not produce a complete memory summary")
     checkpoint.update(scenario_id=row["id"], kind="context_checkpoint", previous_messages=messages)
@@ -284,6 +287,9 @@ def run_episode(record, runtime_class, client, args, output, index, total, conte
           f"{json.dumps(row['initial_messages'], ensure_ascii=False, indent=2)}", flush=True)
     try:
         for turn_index in range(1, args.max_turns + 1):
+            if row["output_tokens"] >= args.max_episode_tokens:
+                row["status"] = "token_limit"
+                break
             messages = compact_history(client, messages, args, output, row, index, total, context, turns_log)
             budget = min(args.max_tokens_per_turn, args.max_episode_tokens - row["output_tokens"])
             if budget <= 0:

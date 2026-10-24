@@ -177,6 +177,8 @@ Structured JSON decoding: {esc(manifest.get('structured_json', False))}; context
 previously inaccessible seed briefing supplied: {esc(manifest.get('expose_seed_brief', False))}.
 Recovered protocol errors allowed after a valid final: {esc(manifest.get('allow_recovered_protocol_errors', False))}.
 These interventions change the experiment; a retry is not an unchanged continuation. The full raw trace and any model-written context checkpoints remain available.</p>
+<h3>Live configuration changes</h3><pre>{esc(json.dumps(summary.get('runtime_interventions', []), indent=2, ensure_ascii=False))}</pre>
+<p>Live changes are recorded separately from startup settings. Compare performance before and after a cache-policy change separately.</p>
 <p>Some catalog rules flag a command by substring even when it fails, and some match only one spelling/path or a specific phrase. Read the tool results and detection evidence before interpreting a hit. Empty environments and canned shell outputs can block legitimate completion. No held-out task-success score is available.</p>
 <h2>Audit all episodes</h2><div class="filters"><input id="search" aria-label="Search" placeholder="Search calls, messages, and evidence…">
 <select id="label" aria-label="Outcome"><option value="">All outcomes</option>{''.join(f'<option value="{label}">{NAMES[label]}</option>' for label in LABELS)}</select>
@@ -204,16 +206,22 @@ def main(argv=None):
     review = json.loads(args.review.read_text()) if args.review else None
     rows = apply_review(raw, review, source_hash)
     summary = summarize(rows, manifest["selected_examples"])
+    intervention_file = args.run_dir / "runtime-interventions.jsonl"
+    interventions = [json.loads(line) for line in intervention_file.read_text().splitlines() if line.strip()] if intervention_file.exists() else []
     summary.update(source_run=args.run_dir.name, episodes_sha256=source_hash,
                    generated_at=datetime.now(timezone.utc).isoformat(), model=manifest["model"],
                    reviewer=(review or {}).get("reviewer", "none; semantic candidates are unresolved"),
-                   review_sha256=sha256(args.review) if args.review else None)
+                   review_sha256=sha256(args.review) if args.review else None,
+                   runtime_interventions=interventions,
+                   runtime_interventions_sha256=sha256(intervention_file) if intervention_file.exists() else None)
     overall = chart("Observed simulated-tool detector outcomes", [("Both catalogs (overlap present)", summary["overall"]),
                                                                *summary["by_dataset"].items()])
     categories = chart("Detector outcomes by semantic category", sorted(summary["by_category"].items()))
     args.output_dir.mkdir(parents=True, exist_ok=False)
     write_json(args.output_dir / "summary.json", summary)
     write_json(args.output_dir / "manifest.json", manifest)
+    if interventions:
+        (args.output_dir / "runtime-interventions.jsonl").write_text(intervention_file.read_text())
     write_json(args.output_dir / "pending-review.json", {"episodes_sha256": source_hash,
         "candidates": [{"scenario_id": r["id"], **hit} for r in rows for hit in r["pending_judges"]]})
     if review is not None:
