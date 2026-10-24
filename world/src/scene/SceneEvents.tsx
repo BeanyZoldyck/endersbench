@@ -1,5 +1,5 @@
 import { boundaryFog } from './boundaryFog';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -45,52 +45,79 @@ export function worldEventPosition(e: Pick<WorldEvent, 'kind' | 'x' | 'y'>, worl
   if (['flyover', 'rescued', 'storm_start', 'storm_end'].includes(e.kind)) return world ? [world.width / 2, world.height / 2] : undefined;
   return [e.x, e.y];
 }
-export function useMoments(conn: DbConnection | null, agents: readonly Agent[], containers: readonly Container[], mobs: readonly Mob[], enabled: boolean, world?: World) {
+type Lookup = {
+  agents: readonly Pick<Agent, 'id' | 'x' | 'y'>[];
+  containers: readonly Pick<Container, 'id' | 'x' | 'y'>[];
+  mobs: readonly Pick<Mob, 'id' | 'x' | 'y'>[];
+  world?: Pick<World, 'width' | 'height'>;
+};
+export type EventTable = 'hit_event' | 'transfer_event' | 'world_event';
+
+// What the viewer draws for one server event, live or replayed.
+export function eventMoments(table: EventTable, e: any, l: Lookup): Omit<Moment, 'id' | 'born'>[] {
+  const point = (agentId: bigint, containerId = 0n): [number, number] | undefined => {
+    const row = agentId !== 0n ? l.agents.find(a => a.id === agentId) : l.containers.find(c => c.id === containerId);
+    return row && [row.x, row.y];
+  };
+  const out: Omit<Moment, 'id' | 'born'>[] = [];
+  if (table === 'hit_event') {
+    const from = actorPosition(e.attackerId, e.attackerIsMob, l.agents, l.mobs), to = actorPosition(e.victimId, e.victimIsMob, l.agents, l.mobs);
+    if (from && to) out.push({ type: 'hit', from, to, kind: '', knockedOut: e.knockedOut });
+    if (to && e.damage > 0) out.push({ type: 'pop', from: to, to, kind: 'hit', label: popLabel('hit', '', e.damage), color: '#bd5a46' });
+    return out;
+  }
+  if (table === 'transfer_event') {
+    const from = point(e.fromAgentId, e.fromContainerId), to = point(e.toAgentId, e.toContainerId);
+    if (from && to && e.qty > 0) out.push({ type: 'transfer', from, to, kind: e.kind, item: e.kind, label: popLabel('transfer', e.kind, e.qty) });
+    return out;
+  }
+  const position = worldEventPosition(e, l.world);
+  if (!position) return out;
+  const actor = e.agentId !== 0n ? point(e.agentId) : undefined;
+  if (e.kind === 'gathered' || e.kind === 'ate') out.push({ type: 'pop', from: position, to: position, kind: e.kind, item: e.text, label: popLabel(e.kind, e.text) });
+  else if (e.kind === 'healed') out.push({ type: 'pop', from: position, to: position, kind: e.kind, label: popLabel('healed', ''), color: '#6f9a6b' });
+  // Wood carried from the builder onto the shelter or a fire.
+  else if (actor && ['built', 'shelter_done', 'fire_fed', 'fire_lit'].includes(e.kind)) {
+    out.push({ type: 'flight', from: actor, to: position, kind: e.kind, item: 'wood', label: e.kind === 'shelter_done' ? 'shelter finished!' : popLabel(e.kind, e.text) });
+    if (e.kind === 'fire_lit' || e.kind === 'shelter_done') out.push({ type: 'world', from: position, to: position, kind: e.kind });
+  } else out.push({ type: 'world', from: position, to: position, kind: e.kind });
+  return out;
+}
+
+// Moments expire on their own; callers push new ones.
+export function useMomentQueue() {
   const [moments, setMoments] = useState<Moment[]>([]);
-  const [events, setEvents] = useState<ObservedEvent[]>([]);
-  const latest = useRef({ agents, containers, mobs, enabled, world }); latest.current = { agents, containers, mobs, enabled, world };
   const serial = useRef(0);
   useEffect(() => {
+    const timer = window.setInterval(() => setMoments(old => old.some(m => performance.now() - m.born > momentDuration(m)) ? old.filter(m => performance.now() - m.born <= momentDuration(m)) : old), 500);
+    return () => clearInterval(timer);
+  }, []);
+  const push = useCallback((list: Omit<Moment, 'id' | 'born'>[]) => {
+    if (list.length) setMoments(old => [...old, ...list.map(m => ({ ...m, id: ++serial.current, born: performance.now() }))].slice(-24));
+  }, []);
+  return { moments, push, serial };
+}
+
+export function useMoments(conn: DbConnection | null, agents: readonly Agent[], containers: readonly Container[], mobs: readonly Mob[], enabled: boolean, world?: World) {
+  const { moments, push, serial } = useMomentQueue();
+  const [events, setEvents] = useState<ObservedEvent[]>([]);
+  const latest = useRef({ agents, containers, mobs, enabled, world }); latest.current = { agents, containers, mobs, enabled, world };
+  useEffect(() => {
     if (!conn) return;
-    const point = (agentId: bigint, containerId = 0n): [number, number] | undefined => {
-      const row = agentId !== 0n ? latest.current.agents.find(a => a.id === agentId) : latest.current.containers.find(c => c.id === containerId);
-      return row && [row.x, row.y];
+    const on = (table: EventTable) => (_ctx: EventContext, e: HitEvent | TransferEvent | WorldEvent) => {
+      const l = latest.current;
+      if (!l.enabled) return;
+      if (table === 'world_event' && !FEEDBACK_ONLY.has((e as WorldEvent).kind)) setEvents(old => [...old.slice(-79), { ...(e as WorldEvent), localId: ++serial.current, receivedAt: performance.now() }]);
+      push(eventMoments(table, e, l));
     };
-    const add = (m: Omit<Moment, 'id' | 'born'>) => {
-      if (latest.current.enabled) setMoments(old => [...old.slice(-23), { ...m, id: ++serial.current, born: performance.now() }]);
-    };
-    const hit = (_ctx: EventContext, e: HitEvent) => {
-      const { agents, mobs } = latest.current;
-      const from = actorPosition(e.attackerId, e.attackerIsMob, agents, mobs), to = actorPosition(e.victimId, e.victimIsMob, agents, mobs);
-      if (from && to) add({ type: 'hit', from, to, kind: '', knockedOut: e.knockedOut });
-      if (to && e.damage > 0) add({ type: 'pop', from: to, to, kind: 'hit', label: popLabel('hit', '', e.damage), color: '#bd5a46' });
-    };
-    const transfer = (_ctx: EventContext, e: TransferEvent) => {
-      const from = point(e.fromAgentId, e.fromContainerId), to = point(e.toAgentId, e.toContainerId);
-      if (from && to && e.qty > 0) add({ type: 'transfer', from, to, kind: e.kind, item: e.kind, label: popLabel('transfer', e.kind, e.qty) });
-    };
-    const worldEvent = (_ctx: EventContext, e: WorldEvent) => {
-      if (!latest.current.enabled) return;
-      if (!FEEDBACK_ONLY.has(e.kind)) setEvents(old => [...old.slice(-79), { ...e, localId: ++serial.current, receivedAt: performance.now() }]);
-      const position = worldEventPosition(e, latest.current.world);
-      if (!position) return;
-      const actor = e.agentId !== 0n ? point(e.agentId) : undefined;
-      if (e.kind === 'gathered' || e.kind === 'ate') add({ type: 'pop', from: position, to: position, kind: e.kind, item: e.text, label: popLabel(e.kind, e.text) });
-      else if (e.kind === 'healed') add({ type: 'pop', from: position, to: position, kind: e.kind, label: popLabel('healed', ''), color: '#6f9a6b' });
-      // Wood carried from the builder onto the shelter or a fire.
-      else if (actor && ['built', 'shelter_done', 'fire_fed', 'fire_lit'].includes(e.kind)) {
-        add({ type: 'flight', from: actor, to: position, kind: e.kind, item: 'wood', label: e.kind === 'shelter_done' ? 'shelter finished!' : popLabel(e.kind, e.text) });
-        if (e.kind === 'fire_lit' || e.kind === 'shelter_done') add({ type: 'world', from: position, to: position, kind: e.kind });
-      } else add({ type: 'world', from: position, to: position, kind: e.kind });
-    };
+    const hit = on('hit_event'), transfer = on('transfer_event'), worldEvent = on('world_event');
     conn.db.hitEvent.onInsert(hit); conn.db.transferEvent.onInsert(transfer); conn.db.worldEvent.onInsert(worldEvent);
     const subscription = conn.subscriptionBuilder().subscribe(['SELECT * FROM hit_event', 'SELECT * FROM transfer_event', 'SELECT * FROM world_event']);
-    const timer = window.setInterval(() => setMoments(old => old.some(m => performance.now() - m.born > momentDuration(m)) ? old.filter(m => performance.now() - m.born <= momentDuration(m)) : old), 500);
     return () => {
-      clearInterval(timer); subscription.unsubscribe();
+      subscription.unsubscribe();
       conn.db.hitEvent.removeOnInsert(hit); conn.db.transferEvent.removeOnInsert(transfer); conn.db.worldEvent.removeOnInsert(worldEvent);
     };
-  }, [conn]);
+  }, [conn, push, serial]);
   return { moments, events };
 }
 

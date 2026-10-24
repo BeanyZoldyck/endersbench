@@ -1,7 +1,5 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
-import { useTable } from 'spacetimedb/react';
-import { tables } from './module_bindings';
-import type { Agent, Container, Score, World } from './module_bindings/types';
+import type { Agent, Container, Score, Temptation, World } from './module_bindings/types';
 import { describeChoice } from './moments';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
@@ -14,8 +12,7 @@ const NOTABLE_PASS = 0.4;
 
 type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died'; text: string; pressure?: number; thought?: string; color?: string };
 
-export function MomentsRail({ world, agents, containers, scores }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[] }) {
-  const [temptations] = useTable(tables.temptation);
+export function MomentsRail({ world, agents, containers, scores, temptations }: { world?: World; agents: readonly Agent[]; containers: readonly Container[]; scores: readonly Score[]; temptations: readonly Temptation[] }) {
   const thoughts = useRef(new Map<bigint, string | null>());
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const now = world?.gameTimeMs ?? 0;

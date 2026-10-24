@@ -260,3 +260,13 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .moment blockquote { margin:6px 0 0; font:italic 13px/1.45 Georgia,serif; color:#4f5d4a; }
 .grave-tag { background:#2f3a36; color:#f0e4cc; }
 .grave-tag .ghost-word { color:#c9c2ad; margin-left:4px; }
+
+/* Replay controls, over the bottom of the stage. */
+.replay-bar { position:absolute; z-index:5; left:50%; transform:translateX(-50%); bottom:14px; display:flex; align-items:center; gap:8px; padding:7px 12px; background:#f4eedef2; border:1px solid #fdf7e5aa; border-radius:12px; box-shadow:0 6px 24px #293f3926; font-size:11px; }
+.replay-bar.error { color:#8a3a28; }
+.replay-tag { font:700 9px/1 system-ui, sans-serif; letter-spacing:.1em; background:#2f3a36; color:#f0e4cc; padding:4px 6px; border-radius:4px; }
+.replay-bar button { background:#f0e4cc58; border:1px solid #526c4222; border-radius:6px; padding:4px 8px; font-size:11px; }
+.replay-bar button.active { background:#2f3a36; color:#f0e4cc; }
+.replay-bar input[type=range] { width:220px; accent-color:#7a5c40; }
+.replay-time { font-variant-numeric:tabular-nums; color:#4f5d4a; }
+.replay-source { color:#8a937e; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

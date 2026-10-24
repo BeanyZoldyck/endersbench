@@ -9,6 +9,7 @@ import { parsePhysics, itemName } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
+import { useReplay } from './useReplay';
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -39,7 +40,12 @@ export default function App() {
   const [liveMobs, mobsReady] = useTable(tables.mob);
   const [liveHazards, hazardsReady] = useTable(tables.hazard);
   const [liveMemories, memoriesReady] = useTable(tables.memory);
-  const physicsRaw = metadata.find(m => m.key === 'physics')?.value;
+  const [liveTemptations] = useTable(tables.temptation);
+  // ?replay=/runs/<dir>/replay.json plays a recorded run with no database.
+  const replayUrl = useMemo(() => new URLSearchParams(window.location.search).get('replay'), []);
+  const replay = useReplay(replayUrl);
+  const recorded = replay.data;
+  const physicsRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'physics')?.value;
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
   const [scores, scoresReady] = useTable(tables.score);
   const [selectedId, setSelectedId] = useState<bigint>();
@@ -57,19 +63,20 @@ export default function App() {
   previewSource.current = liveWorld;
   const worldAvailable = !!liveWorld;
   const preview = useMemo(() => import.meta.env.DEV && staged && previewSource.current ? artPreview(previewSource.current, winterPreview, depleted, survivalPreview) : null, [staged, worldAvailable, winterPreview, depleted, survivalPreview]);
-  const world = preview?.world ?? liveWorld;
-  const agents = preview?.agents ?? liveAgents, nodes = preview?.nodes ?? liveNodes;
-  const containers = preview?.containers ?? liveContainers, items = preview?.items ?? liveItems, messages = preview?.messages ?? liveMessages;
-  const structures = preview?.structures ?? liveStructures, mobs = preview?.mobs ?? liveMobs, hazards = preview?.hazards ?? liveHazards, memories = preview?.memories ?? liveMemories;
+  const world = recorded?.world ?? preview?.world ?? liveWorld;
+  const agents = recorded?.agents ?? preview?.agents ?? liveAgents, nodes = recorded?.nodes ?? preview?.nodes ?? liveNodes;
+  const containers = recorded?.containers ?? preview?.containers ?? liveContainers, items = recorded?.items ?? preview?.items ?? liveItems, messages = recorded?.messages ?? preview?.messages ?? liveMessages;
+  const structures = recorded?.structures ?? preview?.structures ?? liveStructures, mobs = recorded?.mobs ?? preview?.mobs ?? liveMobs, hazards = recorded?.hazards ?? preview?.hazards ?? liveHazards, memories = recorded?.memories ?? preview?.memories ?? liveMemories;
+  const ethicsRows = recorded?.ethics ?? ethics, scoreRows = recorded?.scores ?? scores, temptations = recorded?.temptations ?? liveTemptations;
   const { moments, events: worldEvents } = useMoments(conn, liveAgents, liveContainers, liveMobs, !preview, liveWorld);
   const ready = worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));
-  const latestEvents = useMemo(() => recent(ethics, 40), [ethics]);
+  const latestEvents = useMemo(() => recent(ethicsRows, 40), [ethicsRows]);
   const dialogue = useMemo(() => recent(messages, 60), [messages]);
   const event = !preview && world && latestEvents.find(e => world.gameTimeMs >= e.gameTimeMs && world.gameTimeMs - e.gameTimeMs < 12000);
   const worldCaption = !preview && [...worldEvents].reverse().find(e => e.text && performance.now() - e.receivedAt < 8000)?.text;
-  const selectedScore = !preview && scores.find(s => s.agentId === selectedId);
+  const selectedScore = !preview && scoreRows.find(s => s.agentId === selectedId);
   const select = (id: bigint) => { setSelectedId(id); setMode('follow'); setPanel(null); };
   const winterIn = world ? world.winterAtMs - world.gameTimeMs : 0;
   const isWinter = world?.phase === 'winter';
@@ -97,8 +104,9 @@ export default function App() {
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || (isActive && ready)} selectedId={selectedId} mode={mode} moments={preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
+      {replay.active && <ReplayBar replay={replay} />}
     </div>
     <div className="topbar">
     <header className="masthead">
@@ -111,7 +119,7 @@ export default function App() {
       {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
-      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools"><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -128,7 +136,7 @@ export default function App() {
       </>}
       {panel === 'join' && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!isActive || !ready || !!preview} onError={setError} /></>}
     </aside>}
-    {!panel && !preview && <MomentsRail world={world} agents={liveAgents} containers={liveContainers} scores={scores} />}
+    {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} scores={scoreRows} temptations={temptations} />}
     <footer className="spectator-dock">
       <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption) && <div className="event-caption" role="status"><span className="event-mark" />{worldCaption || (event && event.caption)}</div>}</div>
       <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
@@ -171,4 +179,19 @@ function HumanControls({ conn, me, disabled, onError }: { conn: DbConnection | n
     catch (err) { onError(err instanceof Error ? err.message : String(err)); }
     finally { setPending(false); }
   }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Enter the same world as the AI survivors. Choose a name to begin.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
+}
+
+// Playback for a recorded run.
+function ReplayBar({ replay }: { replay: ReturnType<typeof useReplay> }) {
+  const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+  if (replay.error) return <div className="replay-bar error" role="alert">Replay failed to load: {replay.error}</div>;
+  if (!replay.replay) return <div className="replay-bar">Loading replay…</div>;
+  return <div className="replay-bar" role="group" aria-label="Replay controls">
+    <span className="replay-tag">REPLAY</span>
+    <button onClick={() => replay.setPlaying(!replay.playing)} aria-label={replay.playing ? 'Pause' : 'Play'}>{replay.playing ? '❚❚' : '▶'}</button>
+    <input type="range" min={0} max={replay.duration} step={100} value={replay.t} onChange={e => replay.seek(Number(e.target.value))} aria-label="Replay position" />
+    <span className="replay-time">{clock(replay.t)} / {clock(replay.duration)}</span>
+    {[1, 2, 4, 8].map(s => <button key={s} className={replay.speed === s ? 'active' : ''} onClick={() => replay.setSpeed(s)}>{s}×</button>)}
+    <span className="replay-source" title={replay.replay.recordedAt}>{replay.replay.db} · recorded {new Date(replay.replay.recordedAt).toLocaleString()}</span>
+  </div>;
 }
