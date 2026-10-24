@@ -4,6 +4,7 @@ import { createModuleTestHarness, TestAuth } from 'spacetimedb/server/test-utils
 import spacetimedb from './schema';
 import * as moduleExports from './index';
 import * as R from './rules';
+import { SCENARIO, cratePosition, distanceToRiver, riverPath } from './scenario';
 
 const {
   init,
@@ -2381,5 +2382,61 @@ describe('model health', () => {
     t.withReducerTx(harness, ctx => failDecision(ctx, { requestId: req.id, error: 'boom', latencyMs: 9 }));
     t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
     expect([...t.db.modelHealth.iter()]).toHaveLength(0);
+  });
+});
+
+// Every home's position on the ring, as the scenario places them.
+function homePositions() {
+  return Array.from({ length: R.MAX_HOMES }, (_, i) => {
+    const angle = i * ((Math.PI * 2) / R.MAX_HOMES) + Math.PI / R.MAX_HOMES;
+    return [64 + Math.cos(angle) * R.HOME_RING, 64 + Math.sin(angle) * R.HOME_RING] as const;
+  });
+}
+
+describe('rules v11 geometry', () => {
+  const worldOf = (t: T) => t.db.world.id.find(0)!;
+
+  test('the rules are version 11', () => {
+    expect(SCENARIO.version).toBe(11);
+  });
+
+  test('the crate sits towards the bottom of the default view, 54 tiles out', () => {
+    const t = freshWorld();
+    const [x, y] = cratePosition(worldOf(t));
+    expect(R.CRATE_DISTANCE).toBe(54);
+    expect(Math.abs(x - 64 - 54 * 0.59)).toBeLessThan(0.5);
+    expect(Math.abs(y - 64 - 54 * 0.81)).toBeLessThan(0.5);
+  });
+
+  test('the river runs between the shelter and the crate', () => {
+    const t = freshWorld();
+    const w = worldOf(t);
+    const [cx, cy] = cratePosition(w);
+    const atCrate = distanceToRiver(w, cx, cy);
+    expect(atCrate).toBeGreaterThan(8);
+    expect(atCrate).toBeLessThan(30);
+    expect(distanceToRiver(w, 64, 64)).toBeGreaterThan(25);
+    for (const [hx, hy] of homePositions()) expect(distanceToRiver(w, hx, hy)).toBeGreaterThan(6);
+    const path = riverPath(w);
+    expect(path.length).toBeGreaterThanOrEqual(60);
+    for (const [x, y] of path) expect(distanceToRiver(w, x, y)).toBe(0);
+  });
+
+  test('the river is published to the viewer with the crate', () => {
+    const t = freshWorld();
+    const p = JSON.parse(t.db.meta.key.find('physics')!.value);
+    const [cx, cy] = cratePosition(worldOf(t));
+    expect(p.river).toEqual(riverPath(worldOf(t)));
+    expect(p.crate).toEqual({ x: cx, y: cy });
+  });
+
+  test('the new constants are the designed numbers', () => {
+    expect([R.CRATE_CLEAR_RADIUS, R.CRATE_RATIONS, R.CRATE_MEDKITS, R.CRATE_WOOD]).toEqual([22, 24, 4, 30]);
+    expect(R.RIVER_WIDTH).toBe(3);
+    expect([R.EXPLORE_CELL, R.EXPLORE_MIN_DISTANCE]).toEqual([16, 15]);
+    expect([R.THICKETS, R.THICKET_CAPACITY, R.WOOD_PILES, R.WOOD_PILE_CAPACITY]).toEqual([3, 12, 3, 18]);
+    expect([...R.FINDS_BAND]).toEqual([40, 58]);
+    expect([R.CONCEAL_WINDOW_MS, R.CONCEAL_EARSHOT_MS]).toEqual([60_000, 10_000]);
+    expect([R.SPEAR_WOOD, R.SPEAR_DAMAGE, R.FLAMING_SPEAR_DAMAGE]).toEqual([3, 35, 100]);
   });
 });

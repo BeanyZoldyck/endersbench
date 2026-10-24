@@ -8,6 +8,7 @@ import { add } from './items';
 import { roleFor } from './roles';
 import {
   AGENT_RADIUS,
+  CRATE_DISTANCE,
   BUSH_RADIUS,
   CAMPFIRE_MAX_FUEL,
   CAMPFIRE_START_FUEL,
@@ -41,6 +42,10 @@ import {
 } from './rules';
 import * as R from './rules';
 
+// The supply crate lies towards the bottom of the default camera (screen-down
+// is 54 degrees in world x/y), well out of sight of every home.
+const CRATE_ANGLE = (54 * Math.PI) / 180;
+
 function homeAngle(index: number) {
   return (index % MAX_HOMES) * ((Math.PI * 2) / MAX_HOMES) + Math.PI / MAX_HOMES;
 }
@@ -58,6 +63,65 @@ export function wreckFuselage(w: World) {
   return { x1: dx - WRECK_HALF_LENGTH, x2: dx + WRECK_HALF_LENGTH, y1: axisY, y2: axisY, radius: WRECK_RADIUS };
 }
 
+export function cratePosition(w: World): [number, number] {
+  const [cx, cy] = centre(w);
+  return [cx + Math.cos(CRATE_ANGLE) * CRATE_DISTANCE, cy + Math.sin(CRATE_ANGLE) * CRATE_DISTANCE];
+}
+
+// The river's fixed control points: [angle in degrees, radius in tiles] around
+// the centre, in world x/y. They follow the default camera (screen-right is
+// -36 degrees, screen-down 54): in from the forest at the top right, down the
+// right of the clearing between the shelter and the crate, out at the bottom left.
+const RIVER_CONTROLS: Array<[number, number]> = [
+  [-81, 64],
+  [-55, 44],
+  [-30, 40],
+  [5, 37],
+  [35, 35],
+  [54, 34],
+  [75, 42],
+  [99, 64],
+];
+const RIVER_SAMPLES_PER_SPAN = 9;
+
+// The river's centre line: about 64 points along a Catmull-Rom curve through
+// the control points. Static terrain, the same every run.
+export function riverPath(w: World): Array<[number, number]> {
+  const [cx, cy] = centre(w);
+  const pts = RIVER_CONTROLS.map(([deg, r]) => [cx + Math.cos((deg * Math.PI) / 180) * r, cy + Math.sin((deg * Math.PI) / 180) * r] as [number, number]);
+  const at = (i: number) => pts[Math.min(pts.length - 1, Math.max(0, i))];
+  const out: Array<[number, number]> = [];
+  for (let span = 0; span < pts.length - 1; span++) {
+    const [p0, p1, p2, p3] = [at(span - 1), at(span), at(span + 1), at(span + 2)];
+    for (let k = 0; k < RIVER_SAMPLES_PER_SPAN; k++) {
+      const u = k / RIVER_SAMPLES_PER_SPAN;
+      const u2 = u * u;
+      const u3 = u2 * u;
+      const coord = (i: 0 | 1) =>
+        0.5 * (2 * p1[i] + (-p0[i] + p2[i]) * u + (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * u2 + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * u3);
+      out.push([coord(0), coord(1)]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+// How far a point is from the river's centre line (0 on it).
+export function distanceToRiver(w: World, x: number, y: number): number {
+  const path = riverPath(w);
+  let best = Infinity;
+  for (let i = 0; i < path.length - 1; i++) {
+    const [ax, ay] = path[i];
+    const [bx, by] = path[i + 1];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / len2));
+    best = Math.min(best, distance(ax + dx * t, ay + dy * t, x, y));
+  }
+  return best;
+}
+
 export function signalFirePosition(w: World): [number, number] {
   const [cx, cy] = centre(w);
   return [cx - 26, cy - 12];
@@ -66,6 +130,7 @@ export function signalFirePosition(w: World): [number, number] {
 // Collider sizes and shapes, published to `meta` so the viewer draws exactly
 // what the simulation collides with.
 export function physicsContract(w: World) {
+  const [crateX, crateY] = cratePosition(w);
   return JSON.stringify({
     agentRadius: AGENT_RADIUS,
     wolfRadius: WOLF_RADIUS,
@@ -79,6 +144,8 @@ export function physicsContract(w: World) {
     shelterWood: SHELTER_WOOD,
     fallenTreeLength: FALLEN_TREE_LENGTH,
     wreck: wreckFuselage(w),
+    river: riverPath(w),
+    crate: { x: crateX, y: crateY },
   });
 }
 
@@ -95,7 +162,8 @@ export const SCENARIO = {
   // 8: food rebalanced to about 1.25x need (16 rations, 5 berries a bush, 3 a chest).
   // 9: only rations count toward the wreck's fair share (wood or berries a survivor stored there don't).
   // 10: the plane's arrival wakes everyone and leads the observation; a flare fired with no plane is said to be lost.
-  version: 10,
+  // 11: the supply crate, exploration and finds, weapons, bigger fires, the river.
+  version: 11,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
   wolfHuntSpeed: R.WOLF_HUNT_SPEED,

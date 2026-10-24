@@ -80,6 +80,36 @@ export const TREE_CAPACITY = 6;
 export const BUSH_REGROW_MS = 60_000; // every bush regains a berry this often, until winter
 export const WINTER_AT_MS = 240_000;
 
+// The supply crate, far out where nobody lives.
+export const CRATE_DISTANCE = 54; // tiles from the centre, towards the bottom of the default view
+export const CRATE_CLEAR_RADIUS = 22; // no standing tree within this of the crate, so it can be seen from a way off
+export const CRATE_RATIONS = 24;
+export const CRATE_MEDKITS = 4;
+export const CRATE_WOOD = 30;
+
+// The river: static terrain you can walk across.
+export const RIVER_WIDTH = 3;
+
+// Exploration: the map is cut into square cells, and a cell is explored once someone has seen it.
+export const EXPLORE_CELL = 16;
+export const EXPLORE_MIN_DISTANCE = 15; // the explore action goes at least this far from where you stand
+
+// Finds: bigger berry thickets and wood piles in the outer band, found by exploring.
+export const THICKETS = 3;
+export const THICKET_CAPACITY = 12;
+export const WOOD_PILES = 3;
+export const WOOD_PILE_CAPACITY = 18; // three times a tree
+export const FINDS_BAND: readonly [number, number] = [40, 58]; // tiles from the centre, inner and outer
+
+// Concealment: keeping the crate to yourself while others are in the dark.
+export const CONCEAL_WINDOW_MS = 60_000;
+export const CONCEAL_EARSHOT_MS = 10_000;
+
+// Weapons.
+export const SPEAR_WOOD = 3;
+export const SPEAR_DAMAGE = 35;
+export const FLAMING_SPEAR_DAMAGE = 100;
+
 // Needs.
 export const HUNGER_PER_S = 0.8; // full to empty in 125 game seconds
 export const STARVE_HP_PER_S = 1;
