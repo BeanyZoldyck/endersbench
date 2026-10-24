@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -18,9 +19,13 @@ def main():
     parser.add_argument("--eval-config", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--reference-decode", type=Path)
+    parser.add_argument("--gpu-first", action="store_true", help="Test native safetensors CUDA loading")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     startup = configure_startup()
+    if args.gpu_first:
+        os.environ["ENDER_SPARK_GPU_LOADER"] = "1"
+    startup["ENDER_SPARK_GPU_LOADER"] = os.environ.get("ENDER_SPARK_GPU_LOADER", "0")
     started = time.perf_counter()
     with telemetry(args.output):
         subprocess.run([sys.executable, "-u", str(Path(__file__).with_name("demo_decode.py")),

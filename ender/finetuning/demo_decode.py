@@ -9,7 +9,7 @@ import statistics
 import time
 from pathlib import Path
 
-from spark_runtime import configure_startup
+from spark_runtime import configure_startup, gpu_first_loading
 
 
 PROMPTS = [
@@ -194,9 +194,10 @@ def main():
     print("STARTUP SETTINGS: " + json.dumps(startup), flush=True)
     print("Loading pinned BF16 checkpoint on CUDA; no CPU offload or quantization.", flush=True)
     started = time.perf_counter()
-    base = AutoModelForImageTextToText.from_pretrained(
-        MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False,
-        dtype=torch.bfloat16, device_map={"": "cuda:0"}, attn_implementation="sdpa")
+    with gpu_first_loading():
+        base = AutoModelForImageTextToText.from_pretrained(
+            MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False,
+            dtype=torch.bfloat16, device_map={"": "cuda:0"}, attn_implementation="sdpa")
     model = PeftModel.from_pretrained(base, str(args.adapter)).eval()
     elapsed = time.perf_counter() - started
     print(f"MODEL LOAD COMPLETE: {elapsed:.2f} seconds", flush=True)

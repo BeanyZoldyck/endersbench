@@ -90,6 +90,35 @@ samples, and actual decode speed. A single measured prompt per model is a smoke
 check, not a maximum-throughput serving test. Separate-run cache state is not
 controlled. Do not load this model while another training model is resident.
 
+`profile_spark_startup.py --gpu-first` additionally tests a scoped loader bridge
+in `spark_runtime.py`. It uses the installed safetensors 0.8 API
+`safe_open(..., device="cuda:0", backend="pread")` and its `get_tensor` path.
+Deferred slices retain only metadata until Transformers requests their bytes.
+Transformers still performs its usual key mapping and parameter installation.
+The bridge is restored on exit and does not modify installed package files.
+
+Measured on this Spark (2026-10-24), the full BF16 checkpoint plus adapter loaded
+in **28.27 seconds** with the pread bridge, versus **352.86 seconds** in the
+original run. The new profile observed no additional swap. The original and
+adapted held-out losses exactly matched the mmap profile. These are separate
+runs, not cache-controlled cold-start measurements. Sequential loading alone
+had not helped (348.51 seconds). Decode speed remained about 4.3/4.1 tokens/s;
+the loader is a startup improvement, not a decode optimization.
+
+This avoids the slow mmap slicing path observed on Spark. It **still stages
+through pinned host buffers**; it is not a GPU Direct Storage claim. Merely
+changing `safe_open`'s device while retaining mmap slicing did not improve the
+shard test. `test_spark_loader_gpu.py` verifies the alternative against original
+tensor bytes before a full-model test. The loader remains opt-in via
+`ENDER_SPARK_GPU_LOADER=1` for the Python training worker; a bare
+`llamafactory-cli` process does not install the bridge automatically.
+
+Relevant primary/source references:
+- [NVIDIA developer forum: slow mmap/loading on Spark](https://forums.developer.nvidia.com/t/from-pretrained-super-slow-on-dgx-spark-100-cpu-my-solution/373341)
+  is a community report, not an official NVIDIA guarantee.
+- [Native safetensors implementation](https://github.com/safetensors/safetensors/blob/main/bindings/python/src/lib.rs)
+  documents the pread backend and pinned-buffer CUDA path.
+
 ### Larger financial dataset
 
 Before starting a financial run, measure lengths using the actual LLaMA-Factory
@@ -118,6 +147,76 @@ Supervised training processes known target tokens together; its relevant rate is
 **training input tokens/s**. Faster single-stream decoding does not directly
 accelerate SFT. Estimate a large run from a representative training throughput
 test at its real sequence length, not the short policy-plan demo.
+
+`financial_smoke.py` creates a separate six-step performance subset from the
+actual training split: median-length, p90-length, and longest examples, each
+appearing twice. It does not alter the full prepared dataset/configuration or
+train an epoch on the full corpus. It records the source hash, chosen row indices,
+per-step token counts/time, GPU memory, and telemetry in a new directory. Kernel
+warmup, shuffling, and the tiny sample make its rate estimates approximate.
+The subprocess limits PyTorch allocations to 80% of reported device memory; an
+OOM at that limit is a failed probe, not a successful full-run readiness check.
+
+```bash
+.venv/bin/python -u finetuning/financial_smoke.py --gpu-first \
+  --config finetuning/configs/qwen38_27b_lora.yaml \
+  --output outputs/financial-smoke-$(date -u +%Y%m%dT%H%M%SZ)
+```
+
+Run this in tmux only after any loading/inference probe has exited. Quantized
+LoRA may reduce memory pressure and enable larger batches, but dequantization
+can cost throughput. An 8-bit GGUF inference model is not a drop-in training
+checkpoint. Do not select training precision from a single-stream decode rate.
+
+### 8-bit financial LoRA
+
+Further performance experiments and the experimental `retep` sister are
+documented in [SPARK_OPTIMIZATION.md](SPARK_OPTIMIZATION.md).
+
+The requested 8-bit training path uses bitsandbytes LLM.int8 weights from the
+original pinned safetensors checkpoint, **not an inference GGUF**. BF16 compute
+and FP32 trainable LoRA adapters remain enabled. Only the adapter is optimized;
+this is not full-weight 8-bit gradient training. CUDA 13/aarch64/SM121 support is
+documented in the [bitsandbytes installation guide](https://huggingface.co/docs/bitsandbytes/main/en/installation).
+
+`setup_int8.sh` installs bitsandbytes without replacing the existing core stack
+and tests a real int8 linear layer's forward and input-gradient backward on GB10.
+`prepare_int8_config.py` derives a new configuration from the remote financial
+BF16 configuration, preserving its dataset, 16K cutoff, LoRA settings, and seed.
+It adds `quantization_method: bnb` and `quantization_bit: 8`, selects a
+fresh output path, and refuses to overwrite an existing configuration/run.
+
+The worker's training validation requires actual `Linear8bitLt` modules with
+`torch.int8` weights, LoRA-only trainable parameters, and all parameters on CUDA.
+For quantization, the pread bridge supplies CPU tensors to the native
+bitsandbytes quantizer instead of forcing unquantized GPU weights. The final
+weights are not CPU/disk-offloaded. The six-step `financial_smoke.py` accepts
+this configuration unchanged and records its requested precision.
+
+`logs/selected-financial-int8.json` on Spark identifies the generated financial
+configuration and explicitly records whether full training has started. BF16
+sources, configurations, failed probes, and completed adapters are retained.
+Switching precision is not a guaranteed throughput improvement: use the actual
+int8 probe's step times and memory use before estimating the full epoch.
+
+The completed 2026-10-24 int8 probe verified **606 int8 linear modules** and
+496 updated LoRA B matrices. All six steps completed, including the longest
+12.6K-token example that had failed the BF16 probe. Peak CUDA allocation was
+72.64 GiB; between-step allocation was 29.29 GiB. Warmed-up rates were about
+165 tokens/s at 2.5K tokens, 169 tokens/s at 7.2K, and 161 tokens/s at 12.7K
+(padded/template-expanded lengths). The corresponding warmed-up BF16 7.2K
+step measured 182 tokens/s. Thus int8 solved the observed memory problem but
+did **not** demonstrate a training-throughput speedup. These small shuffled
+probes do not provide a precise full-run ETA; validation/checkpoint overhead
+is additional. Bitsandbytes internally casts BF16 activations to FP16 during
+int8 quantization, as its emitted warnings state; “BF16 compute” refers to the
+configured autocast mode, not every internal operation.
+
+Verified Spark artifacts:
+- `outputs/financial-int8-smoke-20261024T211540Z/`
+- `finetuning/configs/financial-int8-20261024T211540Z.yaml`
+
+The full financial epoch has not been launched by these probes.
 
 ### Interpreting loss
 

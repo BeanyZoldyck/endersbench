@@ -1,15 +1,73 @@
 import json
 import tempfile
+import sys
+import types
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from build_demo_data import BENIGN, build
 from demo_decode import summarize
-from spark_runtime import configure_startup, token_ids
+from spark_runtime import configure_startup, token_ids, gpu_first_loading
 from audit_sft_data import distribution, encode_example
+from prepare_int8_config import int8_config
 
 
 class DemoTests(unittest.TestCase):
+    def test_int8_config_preserves_long_context_and_bf16_source(self):
+        source = {"finetuning_type": "lora", "bf16": True, "cutoff_len": 16384,
+                  "model_name_or_path": "Qwen/Qwen3.8-27B", "lora_rank": 16,
+                  "output_dir": "old", "quantization_device_map": "auto"}
+        result = int8_config(source, Path("new"))
+        self.assertEqual(result["quantization_bit"], 8)
+        self.assertEqual(result["quantization_method"], "bnb")
+        self.assertEqual(result["cutoff_len"], 16384)
+        self.assertEqual(result["lora_rank"], 16)
+        self.assertEqual(source["output_dir"], "old")
+        self.assertNotIn("quantization_device_map", result)
+        with self.assertRaises(ValueError):
+            int8_config({**source, "finetuning_type": "full"}, Path("new"))
+
+    def test_gpu_loader_is_lazy_scoped_and_restored_on_error(self):
+        calls = []
+
+        class Slice:
+            def get_shape(self):
+                return [2]
+
+            def get_dtype(self):
+                return "BF16"
+
+        class Handle:
+            def get_slice(self, name):
+                return Slice()
+
+            def get_tensor(self, name):
+                calls.append(("materialize", name))
+                return [10, 20]
+
+        def original(filename, **kwargs):
+            calls.append((filename, kwargs))
+            return Handle()
+
+        modeling = types.ModuleType("transformers.modeling_utils")
+        modeling.safe_open = original
+        transformers = types.ModuleType("transformers")
+        transformers.modeling_utils = modeling
+        torch = types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: True))
+        with patch.dict(sys.modules, {"torch": torch, "transformers": transformers,
+                                      "transformers.modeling_utils": modeling}):
+            with self.assertRaisesRegex(RuntimeError, "test failure"):
+                with gpu_first_loading(True):
+                    handle = modeling.safe_open("test.safetensors", framework="pt")
+                    deferred = handle.get_slice("weight")
+                    self.assertEqual(deferred.get_shape(), [2])
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(deferred[:1], [10])
+                    self.assertEqual(calls[0][1]["backend"], "pread")
+                    raise RuntimeError("test failure")
+            self.assertIs(modeling.safe_open, original)
+
     def test_untruncated_native_template_lengths(self):
         class Template:
             efficient_eos = True
