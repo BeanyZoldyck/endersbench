@@ -522,6 +522,152 @@ describe('night, cold and fire', () => {
   });
 });
 
+describe('witnessing and memory', () => {
+  function memoriesOf(t: T, name: string) {
+    const id = agentNamed(t, name).id;
+    return ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === id).sort((a, b) => a.gameTimeMs - b.gameTimeMs || Number(a.id - b.id));
+  }
+
+  test('survivors who can see a theft remember it; those who cannot, do not', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    spawn(t, 'Cy');
+    spawn(t, 'Far');
+    const chest = chestOf(t, 'Bo');
+    setAgent(t, 'Ada', { x: chest.x + 0.5, y: chest.y });
+    setAgent(t, 'Cy', { x: chest.x + 5, y: chest.y });
+    setAgent(t, 'Far', { x: chest.x + 40, y: chest.y });
+
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(chest.id), item: 'berries', qty: 2 } });
+
+    const cy = memoriesOf(t, 'Cy');
+    expect(cy.map(m => m.text)).toContain("You saw Ada take 2 berries from Bo's chest.");
+    expect(cy[0].aboutAgentId).toBe(agentNamed(t, 'Ada').id);
+    expect(cy[0].valence).toBe(-1);
+    expect(memoriesOf(t, 'Far')).toHaveLength(0);
+  });
+
+  test('a chest owner notices missing food when they next reach their chest, without being told who', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    const chest = chestOf(t, 'Bo');
+    setAgent(t, 'Bo', { x: chest.x + 60, y: chest.y }); // far away, sees nothing
+    setAgent(t, 'Ada', { x: chest.x + 0.5, y: chest.y });
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(chest.id), item: 'berries', qty: 2 } });
+    expect(memoriesOf(t, 'Bo')).toHaveLength(0);
+
+    setAgent(t, 'Bo', { x: chest.x - 1.5, y: chest.y, pendingRequestId: 0n });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+
+    const bo = memoriesOf(t, 'Bo');
+    expect(bo.map(m => m.text)).toEqual(['Your chest is missing 2 berries since you last checked it.']);
+    expect(bo[0].kind).toBe('noticed');
+    const obs = JSON.parse(pendingFor(t, agentNamed(t, 'Bo').id).at(-1)!.observation);
+    expect(obs.wakeReason).toBe('noticed_loss');
+  });
+
+  test('a gift is remembered by the one who received it', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada', 60, 60);
+    spawn(t, 'Bo', 61.7, 60);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'berries', qty: 3 });
+
+    decide(t, 'Ada', { name: 'give', args: { agent_id: Number(agentNamed(t, 'Bo').id), item: 'berries', qty: 2 } });
+
+    const bo = memoriesOf(t, 'Bo');
+    expect(bo.map(m => [m.kind, m.text, m.valence])).toEqual([['helped', 'Ada gave you 2 berries.', 1]]);
+  });
+
+  test('a victim remembers who hit them, without a memory per swing', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 60, 60);
+    spawn(t, 'Bo', 61.8, 60);
+    decide(t, 'Ada', { name: 'attack', args: { agent_id: Number(agentNamed(t, 'Bo').id) } });
+
+    run(t, R.ATTACK_COOLDOWN_MS * 3 + 200);
+
+    const felt = memoriesOf(t, 'Bo').filter(m => m.kind === 'felt');
+    expect(felt.map(m => m.text)).toEqual(['Ada hit you.']);
+  });
+
+  test('the observation carries recent memories and a tally of what each person has done', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada', 60, 60);
+    const bo = spawn(t, 'Bo', 61.7, 60);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'berries', qty: 3 });
+    decide(t, 'Ada', { name: 'give', args: { agent_id: Number(bo.id), item: 'berries', qty: 1 } });
+    setAgent(t, 'Bo', { wake: true, wakeReason: 'test', pendingRequestId: 0n });
+
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+
+    const obs = JSON.parse(pendingFor(t, bo.id).at(-1)!.observation);
+    expect(obs.memories.map((m: any) => m.text)).toContain('Ada gave you 1 berry.');
+    expect(obs.people.Ada).toEqual({ kind: 1, unkind: 0 });
+  });
+
+  test('memories are capped per survivor', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada', 60, 60);
+    const bo = spawn(t, 'Bo', 61.7, 60);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'berries', qty: R.MEMORY_CAP + 5 });
+    for (let i = 0; i < R.MEMORY_CAP + 5; i++) {
+      decide(t, 'Ada', { name: 'give', args: { agent_id: Number(bo.id), item: 'berries', qty: 1 } });
+      advance(t, 100);
+    }
+    expect(memoriesOf(t, 'Bo').length).toBe(R.MEMORY_CAP);
+  });
+});
+
+describe('speech', () => {
+  test('words addressed to someone wake only them, though others nearby still hear', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 60, 60);
+    const bo = spawn(t, 'Bo', 62, 60);
+    const cy = spawn(t, 'Cy', 60, 62);
+    setAgent(t, 'Bo', { wake: false });
+    setAgent(t, 'Cy', { wake: false });
+
+    decide(t, 'Ada', { name: 'say', args: { text: 'Bo, can you spare a berry?', to: Number(bo.id) } });
+
+    expect(agentNamed(t, 'Bo').wake).toBe(true);
+    expect(agentNamed(t, 'Cy').wake).toBe(false);
+    const msg = ([...t.db.message.iter()] as any[])[0];
+    expect(msg.toAgentId).toBe(bo.id);
+    expect(msg.channel).toBe('say');
+
+    setAgent(t, 'Cy', { wake: true, wakeReason: 'test', pendingRequestId: 0n });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const obs = JSON.parse(pendingFor(t, cy.id).at(-1)!.observation);
+    expect(obs.heard).toEqual([expect.objectContaining({ from: 'Ada', to: 'Bo', text: 'Bo, can you spare a berry?' })]);
+  });
+
+  test('a whisper is heard only by the one it is for', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 60, 60);
+    const bo = spawn(t, 'Bo', 62, 60);
+    const cy = spawn(t, 'Cy', 60, 62);
+
+    decide(t, 'Ada', { name: 'whisper', args: { agent_id: Number(bo.id), text: 'meet me at the wreck' } });
+
+    for (const who of [bo, cy]) {
+      setAgent(t, who.name, { wake: true, wakeReason: 'test', pendingRequestId: 0n });
+    }
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const heardBy = (id: bigint) => JSON.parse(pendingFor(t, id).at(-1)!.observation).heard;
+    expect(heardBy(bo.id)).toEqual([expect.objectContaining({ from: 'Ada', whisper: true, text: 'meet me at the wreck' })]);
+    expect(heardBy(cy.id)).toEqual([]);
+  });
+
+  test('you can only whisper to someone close by', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 60, 60);
+    const bo = spawn(t, 'Bo', 60 + R.WHISPER_RANGE + 2, 60);
+    expect(decide(t, 'Ada', { name: 'whisper', args: { agent_id: Number(bo.id), text: 'psst' } }).status).toBe('failed');
+  });
+});
+
 describe('scenario', () => {
   test('the plane wreck is a shared container of rations inside the circle', () => {
     const t = freshWorld();
@@ -1086,7 +1232,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'follow', 'gather', 'give', 'idle', 'move_to', 'say', 'store', 'take'].sort());
+    expect(tools).toEqual(['attack', 'eat', 'feed_fire', 'follow', 'gather', 'give', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
   });
 });
 

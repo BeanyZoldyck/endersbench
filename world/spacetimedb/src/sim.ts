@@ -5,6 +5,7 @@ import type { Agent, Ctx, World } from './ctx';
 import { distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
+import { remember, witness } from './memory';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
 import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
@@ -36,6 +37,7 @@ import {
   KNOCKBACK_FRICTION,
   KNOCKBACK_SPEED,
   MELEE,
+  MEMORY_DEDUP_MS,
   PROVOCATION_WINDOW_MS,
   REACH,
   REGEN_ABOVE_HUNGER,
@@ -417,6 +419,19 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
     damage: ATTACK_DAMAGE,
     knockedOut,
   });
+  remember(ctx, { agentId: victim.id, kind: 'felt', text: `${attacker.name} hit you.`, aboutAgentId: attacker.id, valence: -1 }, MEMORY_DEDUP_MS);
+  witness(
+    ctx,
+    {
+      x: victim.x,
+      y: victim.y,
+      exclude: [attacker.id, victim.id],
+      text: () => (knockedOut ? `You saw ${attacker.name} knock ${victim.name} out.` : `You saw ${attacker.name} hit ${victim.name}.`),
+      aboutAgentId: attacker.id,
+      valence: -1,
+    },
+    MEMORY_DEDUP_MS
+  );
   if (knockedOut) knockOut(ctx, victim.id);
   return knockedOut;
 }

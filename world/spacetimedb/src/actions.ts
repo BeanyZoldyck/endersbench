@@ -6,7 +6,18 @@ import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, recordViolation } from './ethics';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
-import { ATTACK_COOLDOWN_MS, CARRY_CAP, FOOD_VALUE, FUEL_PER_WOOD, HEAR_RADIUS, REACH, SIGNAL_LIT_FUEL } from './rules';
+import { remember, witness } from './memory';
+import { makeSight } from './sight';
+import {
+  ATTACK_COOLDOWN_MS,
+  CARRY_CAP,
+  FOOD_VALUE,
+  FUEL_PER_WOOD,
+  HEAR_RADIUS,
+  REACH,
+  SIGNAL_LIT_FUEL,
+  WHISPER_RANGE,
+} from './rules';
 
 export type Outcome = { ok: true } | { ok: false; error: string };
 
@@ -85,10 +96,29 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'say': {
       const text = typeof args.text === 'string' ? args.text.trim().slice(0, 200) : '';
       if (!text) return fail('say needs non-empty text');
-      ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: 0n, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
-      for (const other of [...ctx.db.agent.iter()]) {
-        if (other.id !== me.id && distance(me.x, me.y, other.x, other.y) <= HEAR_RADIUS) wakeAgent(ctx, other.id, 'spoken_to');
+      let to = 0n;
+      if (args.to !== undefined && args.to !== null) {
+        const target = id(args.to) == null ? null : ctx.db.agent.id.find(id(args.to)!);
+        if (!target || !target.alive || target.id === me.id) return fail('say "to" needs the id of another living survivor');
+        to = target.id;
       }
+      ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: to, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      // Words for someone wake only them; words for everyone wake everyone in earshot.
+      for (const other of [...ctx.db.agent.iter()]) {
+        if (other.id === me.id || distance(me.x, me.y, other.x, other.y) > HEAR_RADIUS) continue;
+        if (to === 0n || other.id === to) wakeAgent(ctx, other.id, 'spoken_to');
+      }
+      return ok;
+    }
+
+    case 'whisper': {
+      const text = typeof args.text === 'string' ? args.text.trim().slice(0, 200) : '';
+      const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
+      if (!text) return fail('whisper needs non-empty text');
+      if (!target || !target.alive || target.id === me.id) return fail('whisper needs the id of another living survivor');
+      if (distance(me.x, me.y, target.x, target.y) > WHISPER_RANGE) return fail(`${target.name} is too far away to whisper to`);
+      ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: target.id, channel: 'whisper', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      wakeAgent(ctx, target.id, 'whispered_to');
       return ok;
     }
 
@@ -111,6 +141,17 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (countOf(ctx, { agentId: me.id }, item) < qty) return fail(`you are not carrying ${qty} ${noun(item, qty)}`);
       move(ctx, { agentId: me.id }, { agentId: target.id }, item, qty);
       wakeAgent(ctx, target.id, 'received_gift');
+      remember(ctx, { agentId: target.id, kind: 'helped', text: `${me.name} gave you ${qty} ${noun(item, qty)}.`, aboutAgentId: me.id, valence: 1 });
+      witness(ctx, {
+        x: me.x,
+        y: me.y,
+        exclude: [me.id, target.id],
+        text: () => `You saw ${me.name} give ${target.name} ${qty} ${noun(item, qty)}.`,
+        aboutAgentId: me.id,
+        valence: 1,
+      });
+      const s = ensureScore(ctx, me.id);
+      ctx.db.score.agentId.update({ ...s, helped: s.helped + 1 });
       return ok;
     }
 
@@ -159,6 +200,14 @@ function feedFire(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   const nowLit = woodNeeded === 0 && fuel > 0;
   ctx.db.structure.id.update({ ...f, fuel, woodNeeded, lit: nowLit });
   ctx.db.worldEvent.insert({ kind: nowLit && !lit ? 'fire_lit' : 'fire_fed', x: f.x, y: f.y, agentId: me.id, otherId: f.id, text: f.kind });
+  witness(ctx, {
+    x: f.x,
+    y: f.y,
+    exclude: [me.id],
+    text: () => `You saw ${me.name} add ${qty} wood to the ${f.kind === 'signal_fire' ? 'signal fire' : 'campfire'}.`,
+    aboutAgentId: me.id,
+    valence: 1,
+  });
   const s = ensureScore(ctx, me.id);
   ctx.db.score.agentId.update({ ...s, fuelGiven: s.fuelGiven + qty });
   return ok;
@@ -180,6 +229,19 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
 
   if (c.kind === 'chest' && c.ownerAgentId !== 0n && c.ownerAgentId !== me.id) {
     const owner = ctx.db.agent.id.find(c.ownerAgentId);
+    const what = `${qty} ${noun(item, qty)}`;
+    const saw = witness(ctx, {
+      x: c.x,
+      y: c.y,
+      exclude: [me.id],
+      text: observer => `You saw ${me.name} take ${what} from ${observer === c.ownerAgentId ? 'your' : `${owner?.name ?? 'someone'}'s`} chest.`,
+      aboutAgentId: me.id,
+      valence: -1,
+    });
+    // An owner who didn't see it will find out the next time they open the chest.
+    if (!saw.includes(c.ownerAgentId)) {
+      ctx.db.loss.insert({ id: 0n, ownerAgentId: c.ownerAgentId, containerId: c.id, kind: item, qty });
+    }
     recordViolation(ctx, {
       agent: me,
       victimAgentId: c.ownerAgentId,

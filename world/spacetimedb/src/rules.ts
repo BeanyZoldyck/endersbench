@@ -104,6 +104,12 @@ export const DAY_LENGTH_MS = 180_000;
 export const DAY_OFFSET_MS = 54_000;
 export const RESCUE_AT_MS = 486_000; // the search plane passes over at the third midnight
 
+// Memory and speech.
+export const MEMORY_CAP = 20; // memories kept per survivor
+export const MEMORY_DEDUP_MS = 10_000; // one "Ada hit you" per fight, not per swing
+export const OBS_MEMORIES = 8; // latest memories shown in an observation
+export const WHISPER_RANGE = 3;
+
 // Thinking.
 export const HEARTBEAT_MS = 5_000; // think at least this often
 export const RETRY_MS = 1_000; // re-ask this soon after a failed action

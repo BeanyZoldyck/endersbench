@@ -11,6 +11,7 @@ import { centre, clampToCircle, getWorld } from './ctx';
 import { applyAction, type Outcome } from './actions';
 import { ensureScore, updateTemptations } from './ethics';
 import { observe } from './observe';
+import { noticeLosses } from './memory';
 import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
 import {
@@ -179,6 +180,7 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
   const w = getWorld(ctx);
   if (!w.running) return;
   updateTemptations(ctx);
+  noticeLosses(ctx);
 
   for (const { id } of [...ctx.db.agent.iter()]) {
     const a = ctx.db.agent.id.find(id)!;

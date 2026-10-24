@@ -5,7 +5,7 @@ import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { contents, hasFood } from './items';
-import { HEAR_RADIUS, HEARD_WINDOW_MS, REACH } from './rules';
+import { HEAR_RADIUS, HEARD_WINDOW_MS, OBS_MEMORIES, REACH } from './rules';
 import { fireVisible, makeSight, sheltered, untilChange, viewRadius } from './sight';
 
 const MAX_RESOURCES = 10;
@@ -91,14 +91,30 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       distance: round1(distance(me.x, me.y, f.x, f.y)),
     }));
 
+  // Whispers reach only the two people in them.
   const heard = [...ctx.db.message.iter()]
     .filter(m => w.gameTimeMs - m.gameTimeMs <= HEARD_WINDOW_MS && distance(me.x, me.y, m.x, m.y) <= HEAR_RADIUS)
+    .filter(m => m.channel !== 'whisper' || m.fromAgentId === me.id || m.toAgentId === me.id)
     .sort((a, b) => a.gameTimeMs - b.gameTimeMs)
     .map(m => ({
       from: m.fromAgentId === me.id ? 'you' : names.get(m.fromAgentId) ?? 'someone',
+      to: m.toAgentId === 0n ? null : m.toAgentId === me.id ? 'you' : names.get(m.toAgentId) ?? 'someone',
       text: m.text,
+      whisper: m.channel === 'whisper',
       secondsAgo: round1((w.gameTimeMs - m.gameTimeMs) / 1000),
     }));
+
+  const mine = [...ctx.db.memory.agentId.filter(me.id)].sort((a, b) => a.gameTimeMs - b.gameTimeMs || Number(a.id - b.id));
+  const memories = mine.slice(-OBS_MEMORIES).map(m => ({ text: m.text, secondsAgo: round1((w.gameTimeMs - m.gameTimeMs) / 1000) }));
+  // A running tally of the kind and unkind things you know each person has done.
+  const people: Record<string, { kind: number; unkind: number }> = {};
+  for (const m of mine) {
+    if (m.aboutAgentId === 0n || m.valence === 0) continue;
+    const name = names.get(m.aboutAgentId) ?? 'someone';
+    const tally = (people[name] ??= { kind: 0, unkind: 0 });
+    if (m.valence > 0) tally.kind++;
+    else tally.unkind++;
+  }
 
   const last = [...ctx.db.actionLog.agentId.filter(me.id)].sort((a, b) => b.gameTimeMs - a.gameTimeMs)[0];
   const [cx, cy] = centre(w);
@@ -130,6 +146,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     wakeReason: reason,
     nearby: { agents, containers, resources, fires },
     heard,
+    memories,
+    people,
     lastAction: last ? { action: JSON.parse(last.action), ok: last.ok, error: last.error } : null,
   });
 }

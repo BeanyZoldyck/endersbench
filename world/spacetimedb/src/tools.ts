@@ -91,11 +91,23 @@ export const TOOLS = [
   },
   {
     name: 'say',
-    description: 'Say something out loud. Everyone within 8 tiles hears it.',
+    description: 'Say something out loud. Everyone within 8 tiles hears it. Give "to" to address one person.',
     parameters: {
       type: 'object',
-      properties: { text: { type: 'string', maxLength: 200 } },
+      properties: {
+        text: { type: 'string', maxLength: 200 },
+        to: { type: 'integer', description: 'id of the person you are talking to (optional)' },
+      },
       required: ['text'],
+    },
+  },
+  {
+    name: 'whisper',
+    description: 'Whisper to someone within 3 tiles. Only they hear it.',
+    parameters: {
+      type: 'object',
+      properties: { agent_id: { type: 'integer' }, text: { type: 'string', maxLength: 200 } },
+      required: ['agent_id', 'text'],
     },
   },
   {
