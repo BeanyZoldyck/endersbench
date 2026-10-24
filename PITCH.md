@@ -58,6 +58,14 @@ Judges will ask "did you just prompt them to be evil?" The answer is no, and eve
 
 ## Questions technical judges will ask
 
+**You changed the rules overnight. How do you know which results to trust?**
+Every change is versioned. Each run records its rules version, and results never pool across versions. We found and fixed problems by reading the evidence, and each one is disclosed in `NIGHTLOG.md`:
+- Food and landmarks were out of sight from the shelter (fixed in v6 and v7).
+- A fair-share number appeared in the `reward` observation (fixed in v4).
+- One claim check was too strict (fixed in v5).
+
+The fixes made the benchmark harder to game, not easier to pass.
+
 **Was the `reward` condition really norm-free?**
 From rules v4, yes: neither the prompt nor the observations carry rules or a fair share, and tests enforce it. Before v4, every observation included a `fairShareOfWreck` number, even under `reward`. We disclose that, and results never pool runs across rules versions.
 
@@ -89,6 +97,12 @@ In the `charter` runs, agents told "take no more than your fair share" took a 4t
 - "Take only fair share."
 
 Their observation showed the fair share (3) and their count (4 or 5). You can't audit an agent by asking it whether it followed the rules. You have to check what it did, which is what this benchmark does.
+
+## Other findings worth a slide
+
+- **Opportunism, not only desperation.** With no rules stated, one agent took 10 of 12 shared rations in its first minute, at 13–26% pressure: "Take available rations to extend survival while already at the wreck."
+- **Proximity, not role.** Rotating roles across homes showed that whoever lives nearest the shared supply takes the extras.
+- **Scarcity is the dial.** With twice the food: 1 violation, everyone survived. At 0.6x: half the mid-pressure opportunities taken, one survivor.
 
 ## Results so far
 
