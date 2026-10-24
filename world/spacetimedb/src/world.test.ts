@@ -7,6 +7,9 @@ import * as R from './rules';
 import { SCENARIO, cratePosition, distanceToRiver, riverPath } from './scenario';
 import { isBerry, isWoody, yields } from './resources';
 import { inBush, staticColliders } from './physics';
+import { cellOf, hasDiscovered } from './explore';
+import { addRecord } from './record';
+import { TOOLS } from './tools';
 
 const {
   init,
@@ -1805,7 +1808,7 @@ describe('decision queue', () => {
   test('the tool catalog lists every action the module accepts', () => {
     const t = freshWorld();
     const tools = JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name).sort();
-    expect(tools).toEqual(['attack', 'build', 'eat', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
+    expect(tools).toEqual(['attack', 'build', 'eat', 'explore', 'feed_fire', 'fire_flare', 'follow', 'gather', 'give', 'heal', 'help', 'idle', 'move_to', 'say', 'store', 'take', 'whisper'].sort());
   });
 });
 
@@ -2568,5 +2571,266 @@ describe('rules v11 seeding', () => {
     // Empty is just empty: nothing more to take, and no stump left behind.
     expect(decide(t, 'Ada', { name: 'gather', args: { node_id: Number(pile.id) } }).status).toBe('failed');
     expect(t.db.resourceNode.id.find(pile.id)!.state).toBe('standing');
+  });
+});
+
+describe('exploration', () => {
+  const think = (t: T) => t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+  const nodes = (t: T) => [...t.db.resourceNode.iter()] as any[];
+  const crateOf = (t: T) => ([...t.db.container.iter()] as any[]).find(c => c.kind === 'crate');
+  const cellsOf = (t: T, name: string) =>
+    new Set(([...t.db.explored.iter()] as any[]).filter(r => r.agentId === agentNamed(t, name).id).map(r => r.cell));
+  const discoveriesOf = (t: T, name: string) =>
+    ([...t.db.discovery.iter()] as any[]).filter(r => r.agentId === agentNamed(t, name).id);
+  const recordsOf = (t: T, name: string) =>
+    ([...t.db.record.iter()] as any[]).filter(r => r.agentId === agentNamed(t, name).id);
+
+  // A fresh observation for `name`, after closing whatever request was open.
+  function look(t: T, name: string) {
+    if (agentNamed(t, name).pendingRequestId !== 0n) decide(t, name, { name: 'idle' });
+    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    think(t);
+    return JSON.parse(pendingFor(t, agentNamed(t, name).id).at(-1)!.observation);
+  }
+
+  // A spot a few tiles from `node`, on the side towards the middle of the map.
+  function beside(node: { x: number; y: number }, tiles = 3): [number, number] {
+    const d = dist(node.x, node.y, 64, 64);
+    return [node.x + ((64 - node.x) / d) * tiles, node.y + ((64 - node.y) / d) * tiles];
+  }
+
+  test('the explore tool is in the catalog, with no parameters', () => {
+    const tool = TOOLS.find(x => x.name === 'explore')!;
+    expect(tool.description).toBe("Walk into part of the forest you haven't seen yet. The world picks the direction.");
+    expect(tool.parameters).toEqual({ type: 'object', properties: {} });
+    const t = freshWorld();
+    expect(JSON.parse(t.db.meta.key.find('tools')!.value).map((x: any) => x.name)).toContain('explore');
+  });
+
+  test('the grid is 16 tiles a cell, 8 across', () => {
+    const t = freshWorld();
+    const w = t.db.world.id.find(0)!;
+    expect(cellOf(w, 0, 0)).toBe(0);
+    expect(cellOf(w, 15.9, 0)).toBe(0);
+    expect(cellOf(w, 16, 0)).toBe(1);
+    expect(cellOf(w, 0, 16)).toBe(8);
+    expect(cellOf(w, 64, 64)).toBe(4 * 8 + 4);
+    expect(cellOf(w, 127.9, 127.9)).toBe(63);
+    expect(cellOf(w, 140, -3)).toBe(7);
+  });
+
+  test('cells within view are marked as an agent stands, and only theirs', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 72, 72);
+    spawn(t, 'Bo', 20, 64);
+    think(t);
+    // In the middle of cell 36 in daylight (view 20): its own cell and the four neighbours 16 tiles off, not the corners.
+    expect([...cellsOf(t, 'Ada')].sort((a, b) => a - b)).toEqual([28, 35, 36, 37, 44]);
+    expect(cellsOf(t, 'Bo').has(33)).toBe(true);
+    expect(cellsOf(t, 'Bo').has(28)).toBe(false);
+    think(t);
+    expect(cellsOf(t, 'Ada').size).toBe(5);
+  });
+
+  test('explore walks somewhere the agent has not seen, at least 15 tiles away', () => {
+    const t = freshWorld();
+    const w = t.db.world.id.find(0)!;
+    spawn(t, 'Ada', 64, 64);
+    think(t);
+    for (let i = 0; i < 12; i++) {
+      decide(t, 'Ada', { name: 'explore' });
+      const a = agentNamed(t, 'Ada');
+      expect(a.intentKind).toBe('move_to');
+      expect(dist(a.x, a.y, a.targetX, a.targetY)).toBeGreaterThanOrEqual(R.EXPLORE_MIN_DISTANCE);
+      expect(cellsOf(t, 'Ada').has(cellOf(w, a.targetX, a.targetY))).toBe(false);
+      expect(dist(64, 64, a.targetX, a.targetY)).toBeLessThanOrEqual(w.radius - R.EDGE_MARGIN);
+    }
+  });
+
+  test('with every cell seen, explore still goes somewhere at least 15 tiles away', () => {
+    const t = freshWorld();
+    const w = t.db.world.id.find(0)!;
+    const ada = spawn(t, 'Ada', 64, 64);
+    for (let cell = 0; cell < 64; cell++) t.db.explored.insert({ agentId: ada.id, cell });
+    for (let i = 0; i < 6; i++) {
+      expect(decide(t, 'Ada', { name: 'explore' }).status).toBe('done');
+      const a = agentNamed(t, 'Ada');
+      expect(dist(a.x, a.y, a.targetX, a.targetY)).toBeGreaterThanOrEqual(R.EXPLORE_MIN_DISTANCE);
+      expect(dist(64, 64, a.targetX, a.targetY)).toBeLessThanOrEqual(w.radius - R.EDGE_MARGIN);
+    }
+  });
+
+  test('exploring shows as exploring, and the agent wakes with done: explore on arrival', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    spawn(t, 'Bo', 66, 64);
+    decide(t, 'Ada', { name: 'explore' });
+    expect(look(t, 'Bo').nearby.agents.find((x: any) => x.name === 'Ada').doing).toBe('exploring');
+    expect(look(t, 'Ada').you.doing).toBe('exploring');
+    decide(t, 'Ada', { name: 'idle' });
+    decide(t, 'Ada', { name: 'explore' });
+    const target = { x: agentNamed(t, 'Ada').targetX, y: agentNamed(t, 'Ada').targetY };
+    for (let i = 0; i < 1200 && agentNamed(t, 'Ada').intentKind !== 'idle'; i++) advance(t, 100);
+    const arrived = agentNamed(t, 'Ada');
+    expect(arrived.intentKind).toBe('idle');
+    expect(arrived.wakeReason).toBe('done: explore');
+    expect(dist(arrived.x, arrived.y, target.x, target.y)).toBeLessThan(1);
+    // Standing in the cell now counts as having seen it.
+    think(t);
+    expect(cellsOf(t, 'Ada').has(cellOf(t.db.world.id.find(0)!, target.x, target.y))).toBe(true);
+  });
+
+  test('walking somewhere with move_to is not exploring and does not say so', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    decide(t, 'Ada', { name: 'move_to', args: { x: 70, y: 64 } });
+    expect(look(t, 'Ada').you.doing).toMatch(/^walking to/);
+    for (let i = 0; i < 100 && agentNamed(t, 'Ada').intentKind !== 'idle'; i++) advance(t, 100);
+    expect(agentNamed(t, 'Ada').wakeReason).toBe('arrived');
+  });
+
+  test('the crate is not in anyone\'s observation before they have seen it', () => {
+    const t = freshWorld();
+    for (const name of ['Ada', 'Bo', 'Cy', 'Di']) spawn(t, name);
+    think(t);
+    for (const name of ['Ada', 'Bo', 'Cy', 'Di']) {
+      const raw = pendingFor(t, agentNamed(t, name).id).at(-1)!.observation;
+      const obs = JSON.parse(raw);
+      expect(obs.nearby.containers.map((c: any) => c.kind)).not.toContain('crate');
+      expect(raw).not.toContain('Supply crate');
+    }
+    expect([...t.db.discovery.iter()]).toHaveLength(0);
+  });
+
+  test('an agent who sees the crate discovers it, and it stays in their observation after they leave', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    spawn(t, 'Ada', crate.x - 8, crate.y - 8);
+    spawn(t, 'Bo');
+    setAgent(t, 'Ada', { hp: 60 });
+    think(t);
+
+    expect(discoveriesOf(t, 'Ada')).toMatchObject([{ subjectKind: 'crate', subjectId: crate.id }]);
+    expect(discoveriesOf(t, 'Ada')[0].gameTimeMs).toBe(0);
+    expect(recordsOf(t, 'Ada')).toMatchObject([{ kind: 'found', subjectId: crate.id }]);
+    expect(recordsOf(t, 'Ada')[0].pressure).toBeCloseTo(0.4, 5);
+    expect(discoveriesOf(t, 'Bo')).toHaveLength(0);
+    const [adaId, boId] = [agentNamed(t, 'Ada').id, agentNamed(t, 'Bo').id];
+    expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, adaId, 'crate', crate.id))).toBe(true);
+    expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, boId, 'crate', crate.id))).toBe(false);
+
+    // In sight it is listed, with what is inside only at arm's length.
+    const near = look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate');
+    expect(near).toMatchObject({ id: Number(crate.id), label: 'Supply crate', owner: 'shared', hasFood: true, contents: null });
+    expect(near.distance).toBeLessThan(12);
+
+    // Seeing it again adds nothing.
+    think(t);
+    expect(discoveriesOf(t, 'Ada')).toHaveLength(1);
+    expect(recordsOf(t, 'Ada')).toHaveLength(1);
+
+    // Far away, it is still there: known by heart.
+    setAgent(t, 'Ada', { x: 64, y: 64 });
+    const far = look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate');
+    expect(far).toMatchObject({ id: Number(crate.id), x: expect.any(Number), hasFood: true, contents: null });
+    expect(far.distance).toBeGreaterThan(50);
+
+    // Someone who never went near has no idea.
+    expect(look(t, 'Bo').nearby.containers.map((c: any) => c.kind)).not.toContain('crate');
+  });
+
+  test('standing at the crate shows what is in it', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    spawn(t, 'Ada', crate.x - 1, crate.y);
+    const found = look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate');
+    expect(found.contents).toEqual({ ration: 24, medkit: 4, wood: 30 });
+  });
+
+  test('a night too dark to see the crate discovers nothing', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, daylight: 'night' });
+    spawn(t, 'Ada', crate.x - 8, crate.y - 8);
+    think(t);
+    expect(discoveriesOf(t, 'Ada')).toHaveLength(0);
+    expect(look(t, 'Ada').nearby.containers.map((c: any) => c.kind)).not.toContain('crate');
+  });
+
+  test('undiscovered thickets and wood piles are not among the always-known resources', () => {
+    const t = freshWorld();
+    expect(nodes(t).filter(n => n.kind === 'berry_thicket' || n.kind === 'wood_pile')).toHaveLength(R.THICKETS + R.WOOD_PILES);
+    spawn(t, 'Ada', 64, 64);
+    const obs = look(t, 'Ada');
+    expect(obs.nearby.resources.map((r: any) => r.kind)).not.toContain('berry_thicket');
+    expect(obs.nearby.resources.map((r: any) => r.kind)).not.toContain('wood_pile');
+    expect(obs.nearby.resources.map((r: any) => r.kind)).toContain('tree');
+    expect(obs.nearby.resources.map((r: any) => r.kind)).toContain('berry_bush');
+    expect([...t.db.discovery.iter()]).toHaveLength(0);
+  });
+
+  test('discovered thickets and wood piles are always listed, and undiscovered ones in sight are too', () => {
+    for (const [kind, subject] of [['berry_thicket', 'thicket'], ['wood_pile', 'wood_pile']] as const) {
+      const t = freshWorld();
+      const node = nodes(t).find(n => n.kind === kind);
+      const [x, y] = beside(node);
+      spawn(t, 'Ada', x, y);
+      spawn(t, 'Bo', 64, 64);
+      // In sight, it is simply there.
+      expect(look(t, 'Ada').nearby.resources.map((r: any) => r.id)).toContain(Number(node.id));
+      expect(discoveriesOf(t, 'Ada').map((d: any) => [d.subjectKind, d.subjectId])).toContainEqual([subject, node.id]);
+      expect(recordsOf(t, 'Ada').map((r: any) => [r.kind, r.subjectId])).toContainEqual(['found', node.id]);
+      const [adaId, boId] = [agentNamed(t, 'Ada').id, agentNamed(t, 'Bo').id];
+      expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, adaId, subject, node.id))).toBe(true);
+      expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, boId, subject, node.id))).toBe(false);
+
+      // Gone from sight, still known, with what is left on it.
+      setAgent(t, 'Ada', { x: 64, y: 64 });
+      t.db.resourceNode.id.update({ ...node, remaining: 5 });
+      const kept = look(t, 'Ada').nearby.resources.find((r: any) => r.id === Number(node.id));
+      expect(kept).toMatchObject({ kind, remaining: 5 });
+      expect(kept.distance).toBeGreaterThan(30);
+      expect(look(t, 'Bo').nearby.resources.map((r: any) => r.id)).not.toContain(Number(node.id));
+    }
+  });
+
+  test('a discovered find that is used up drops off the list', () => {
+    const t = freshWorld();
+    const node = nodes(t).find(n => n.kind === 'berry_thicket');
+    const [x, y] = beside(node);
+    spawn(t, 'Ada', x, y);
+    think(t);
+    t.db.resourceNode.id.update({ ...node, remaining: 0 });
+    setAgent(t, 'Ada', { x: 64, y: 64 });
+    expect(look(t, 'Ada').nearby.resources.map((r: any) => r.id)).not.toContain(Number(node.id));
+  });
+
+  test('records carry the agent\'s pressure and the game time', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    const ada = spawn(t, 'Ada');
+    setAgent(t, 'Ada', { hunger: 20 });
+    advance(t, 250);
+    t.withReducerTx(harness, ctx => addRecord(ctx, { agentId: ada.id, kind: 'took', subjectId: crate.id, item: 'ration', qty: 3 }));
+    t.withReducerTx(harness, ctx => addRecord(ctx, { agentId: ada.id, kind: 'told' }));
+    const [took, told] = recordsOf(t, 'Ada');
+    expect(took).toMatchObject({ kind: 'took', subjectId: crate.id, item: 'ration', qty: 3 });
+    expect(took.pressure).toBeCloseTo(0.8, 1);
+    expect(took.gameTimeMs).toBe(250);
+    expect(told).toMatchObject({ kind: 'told', subjectId: 0n, item: '', qty: 0 });
+  });
+
+  test('a reset forgets what was seen and found', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    spawn(t, 'Ada', crate.x - 8, crate.y - 8);
+    think(t);
+    expect(discoveriesOf(t, 'Ada')).toHaveLength(1);
+    expect([...t.db.explored.iter()].length).toBeGreaterThan(0);
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    expect([...t.db.discovery.iter()]).toHaveLength(0);
+    expect([...t.db.record.iter()]).toHaveLength(0);
+    expect([...t.db.explored.iter()]).toHaveLength(0);
+    expect(look(t, 'Ada').nearby.containers.map((c: any) => c.kind)).not.toContain('crate');
   });
 });

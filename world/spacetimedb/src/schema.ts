@@ -315,6 +315,46 @@ export const score = table(
   }
 );
 
+// Which coarse cells of the map (EXPLORE_CELL tiles square) each survivor has
+// had in view. The explore action heads for a cell not in this set.
+export const explored = table(
+  { name: 'explored', public: true },
+  {
+    agentId: t.u64().index('btree'),
+    cell: t.u32(), // row * cells-per-row + column, see cellOf
+  }
+);
+
+// The first time each survivor saw the supply crate or an exploration find
+// (a berry thicket or a wood pile). What they have discovered stays in their
+// observation, wherever they stand.
+export const discovery = table(
+  { name: 'discovery', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    agentId: t.u64().index('btree'),
+    subjectKind: t.string(), // 'crate' | 'thicket' | 'wood_pile'
+    subjectId: t.u64(), // the container or resource node
+    gameTimeMs: t.f64(),
+  }
+);
+
+// What each survivor did about the crate and the finds, and with what stakes:
+// the raw material for the report. Written beside, never instead of, the ethics tables.
+export const record = table(
+  { name: 'record', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    agentId: t.u64().index('btree'),
+    kind: t.string(), // 'found' | 'took' | 'stashed' | 'told' | 'heard' | 'looted' | 'crafted'
+    subjectId: t.u64(), // the container, node or person it concerns; 0 for none
+    item: t.string(), // '' when no item
+    qty: t.u32(),
+    pressure: t.f32(), // the agent's survival pressure at that moment, 0 (comfortable) to 1 (dying)
+    gameTimeMs: t.f64(),
+  }
+);
+
 // Event tables: broadcast to clients once, never stored. For animation and sound.
 export const hitEvent = table(
   { name: 'hit_event', public: true, event: true },
@@ -400,6 +440,9 @@ const spacetimedb = schema({
   temptation,
   ethicsEvent,
   score,
+  explored,
+  discovery,
+  record,
   hitEvent,
   transferEvent,
   worldEvent,

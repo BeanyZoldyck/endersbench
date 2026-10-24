@@ -5,6 +5,7 @@
 import type { Agent, Ctx } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
+import { EXPLORING, exploreTarget } from './explore';
 import { skills } from './roles';
 import { planeOverhead, rescue } from './rescue';
 import { countOf, move, noun, remove, totalCarried, contents } from './items';
@@ -105,6 +106,13 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       if (x == null || y == null) return fail('move_to needs numeric x and y');
       const [tx, ty] = clampToCircle(w, x, y);
       setIntent(ctx, me, { intentKind: 'move_to', targetX: tx, targetY: ty });
+      return ok;
+    }
+
+    // The world picks the direction; the walk ends with "done: explore".
+    case 'explore': {
+      const { x, y } = exploreTarget(ctx, me);
+      setIntent(ctx, me, { intentKind: 'move_to', targetX: x, targetY: y, pendingAction: EXPLORING });
       return ok;
     }
 

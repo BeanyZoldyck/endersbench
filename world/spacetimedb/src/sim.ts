@@ -5,6 +5,7 @@ import type { Agent, Ctx, World } from './ctx';
 import { alarm, distance, getWorld, wakeAgent } from './ctx';
 import { applyAction, reachFor } from './actions';
 import { ensureScore, recordViolation } from './ethics';
+import { isExploring } from './explore';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
 import { isBerry, isWoody, yields } from './resources';
@@ -167,6 +168,11 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm
   return true;
 }
 
+// Why a finished walk wakes the agent: an explore says so.
+function arrivedReason(a: Agent) {
+  return isExploring(a) ? 'done: explore' : 'arrived';
+}
+
 function goIdle(ctx: Ctx, a: Agent, reason: string) {
   ctx.db.agent.id.update({
     ...a,
@@ -175,6 +181,7 @@ function goIdle(ctx: Ctx, a: Agent, reason: string) {
     targetNodeId: 0n,
     progressMs: 0,
     stuckMs: 0,
+    pendingAction: '',
     wake: true,
     wakeReason: reason,
   });
@@ -362,7 +369,7 @@ function checkHeadway(ctx: Ctx, walk: Walk, dt: number) {
   const left = distance(a.x, a.y, walk.goal.x, walk.goal.y);
   const progress = walk.distBefore - left;
   const stuckMs = progress < walk.speed * (dt / 1000) * 0.3 ? a.stuckMs + dt : 0;
-  if (a.intentKind === 'move_to' && left <= CLOSE_ENOUGH && stuckMs >= CLOSE_ENOUGH_STALL_MS) return goIdle(ctx, a, 'arrived');
+  if (a.intentKind === 'move_to' && left <= CLOSE_ENOUGH && stuckMs >= CLOSE_ENOUGH_STALL_MS) return goIdle(ctx, a, arrivedReason(a));
   if (stuckMs >= STUCK_MS) return goIdle(ctx, a, 'blocked');
   if (stuckMs !== a.stuckMs) ctx.db.agent.id.update({ ...a, stuckMs });
 }
@@ -372,7 +379,7 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
   const a = ctx.db.agent.id.find(id)!;
   switch (a.intentKind) {
     case 'move_to':
-      if (arrived) goIdle(ctx, a, 'arrived');
+      if (arrived) goIdle(ctx, a, arrivedReason(a));
       return;
 
     case 'approach': {

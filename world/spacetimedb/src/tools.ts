@@ -16,6 +16,11 @@ export const TOOLS = [
     },
   },
   {
+    name: 'explore',
+    description: "Walk into part of the forest you haven't seen yet. The world picks the direction.",
+    parameters: { type: 'object', properties: {} },
+  },
+  {
     name: 'follow',
     description: 'Keep walking behind another survivor until you choose another action.',
     parameters: {

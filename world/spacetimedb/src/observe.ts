@@ -4,6 +4,7 @@
 import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
+import { discoveredBy, findKindOfNode, isExploring } from './explore';
 import { contents, hasFood } from './items';
 import { isWoody } from './resources';
 import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, REACH, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
@@ -23,6 +24,7 @@ export function healthBand(hp: number) {
 export function describeIntent(ctx: Ctx, a: Agent) {
   switch (a.intentKind) {
     case 'move_to':
+      if (isExploring(a)) return 'exploring';
       return `walking to (${round1(a.targetX)}, ${round1(a.targetY)})`;
     case 'follow':
       return `following ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
@@ -67,10 +69,12 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   }));
 
   // Landmarks are known by heart: the wreck and your own chest are listed even
-  // out of sight (their contents only when you stand at them).
+  // out of sight (their contents only when you stand at them). So is the supply
+  // crate, but only for someone who has seen it.
+  const discovered = discoveredBy(ctx, me.id);
   const visible = near([...ctx.db.container.iter()]);
   const landmarks = [...ctx.db.container.iter()]
-    .filter(c => (c.kind === 'wreck' || (c.kind === 'chest' && c.ownerAgentId === me.id)) && !visible.some(v => v.r.id === c.id))
+    .filter(c => (c.kind === 'wreck' || (c.kind === 'chest' && c.ownerAgentId === me.id) || (c.kind === 'crate' && discovered('crate', c.id))) && !visible.some(v => v.r.id === c.id))
     .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }));
   const containers = [...visible, ...landmarks].map(({ r: c, d }) => ({
     id: Number(c.id),
@@ -89,13 +93,21 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
   // Survivors know their surroundings: the nearest few trees and berry bushes
   // with something on them are always listed, even out of sight. (Thickets and
-  // wood piles are finds: they are listed only once in sight.)
+  // wood piles are finds: they are listed while in sight, and after that only
+  // for those who have discovered them.)
   const known = (kind: string, count: number) => [...ctx.db.resourceNode.iter()]
     .filter(n => n.kind === kind && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id))
     .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
     .sort((a, b) => a.d - b.d)
     .slice(0, count);
-  const resources = [...seen, ...known('tree', TREELINE_TREES), ...known('berry_bush', KNOWN_BUSHES)]
+  const finds = [...ctx.db.resourceNode.iter()]
+    .filter(n => {
+      const kind = findKindOfNode(n.kind);
+      return kind !== null && discovered(kind, n.id) && n.state === 'standing' && n.remaining > 0 && !seen.some(v => v.r.id === n.id);
+    })
+    .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }))
+    .sort((a, b) => a.d - b.d);
+  const resources = [...seen, ...known('tree', TREELINE_TREES), ...known('berry_bush', KNOWN_BUSHES), ...finds]
     .map(({ r: n, d }) => ({
       id: Number(n.id),
       kind: n.kind,

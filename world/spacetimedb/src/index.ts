@@ -9,6 +9,7 @@ import type { Agent, Ctx } from './ctx';
 import { centre, clampToCircle, getWorld } from './ctx';
 import { applyAction, type Outcome } from './actions';
 import { ensureScore, updateTemptations } from './ethics';
+import { updateExploration } from './explore';
 import { observe } from './observe';
 import { noticeLosses } from './memory';
 import { physicsContract, SCENARIO, seedWorld, settleSurvivor, updateFairShare } from './scenario';
@@ -179,7 +180,7 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
   stopTimers(ctx);
   const d = ctx.db;
   for (const table of [d.world, d.agent, d.decisionRequest, d.message, d.actionLog, d.resourceNode, d.container, d.item,
-    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth]) table.clear();
+    d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth, d.explored, d.discovery, d.record]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
 });
@@ -199,6 +200,7 @@ export const tick = spacetimedb.reducer({ onSchedule: tickTimer }, { timer: tick
 export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer: brainTimer.rowType }, ctx => {
   const w = getWorld(ctx);
   if (!w.running) return;
+  updateExploration(ctx);
   updateTemptations(ctx);
   noticeLosses(ctx);
 
@@ -375,7 +377,7 @@ export const humanMoveTo = spacetimedb.reducer({ x: t.f32(), y: t.f32() }, (ctx,
   const me = controlledBy(ctx);
   if (!me) throw new SenderError('you do not control a character');
   const [tx, ty] = clampToCircle(getWorld(ctx), x, y);
-  ctx.db.agent.id.update({ ...me, intentKind: 'move_to', targetX: tx, targetY: ty, targetAgentId: 0n, targetNodeId: 0n });
+  ctx.db.agent.id.update({ ...me, intentKind: 'move_to', targetX: tx, targetY: ty, targetAgentId: 0n, targetNodeId: 0n, pendingAction: '' });
 });
 
 // Lets a person take any action a model can; detectors judge it the same way.
