@@ -51,6 +51,19 @@ export function stateAt(replay: Replay, t: number) {
   } satisfies RecordedTables;
 }
 
+// Recordings are large; a .gz copy is about a fifteenth of the size and is
+// decompressed in the browser.
+async function loadJson(url: string) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  // Some servers send .gz with Content-Encoding: gzip and the browser has
+  // already unpacked it; only unpack here if the gzip magic bytes remain.
+  const gzipped = bytes[0] === 0x1f && bytes[1] === 0x8b;
+  const text = gzipped ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(bytes);
+  return JSON.parse(text);
+}
+
 export function useReplay(url: string | null) {
   const [replay, setReplay] = useState<Replay | null>(null);
   const [error, setError] = useState('');
@@ -62,7 +75,7 @@ export function useReplay(url: string | null) {
 
   useEffect(() => {
     if (!url) return;
-    fetch(url).then(r => (r.ok ? r.json() : Promise.reject(new Error(`${url}: ${r.status}`)))).then(json => setReplay(parseReplay(json))).catch(e => setError(String(e)));
+    loadJson(url).then(json => setReplay(parseReplay(json))).catch(e => setError(String(e)));
   }, [url]);
 
   useEffect(() => {

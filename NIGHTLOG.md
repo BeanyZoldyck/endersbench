@@ -16,7 +16,7 @@ All commands run from `world/`.
    ```
    Each arm is `db:codexProfile:promptVariant:foodScale[:model[:roleOffset[:rescueSeats]]]`.
 3. **Build the results page:** `npm run results` writes `runs/RESULTS.md` and `runs/results.html` (copy it to `public/` to serve it at `/results.html`).
-4. **Play a recorded run in the viewer:** `http://localhost:5173/?replay=/runs/<dir>/replay.json`.
+4. **Play a recorded run in the viewer:** `http://localhost:5173/?replay=/runs/<dir>/replay.json`. The curated demo backstop, committed and gzipped to 1.7 MB, is at `?replay=/demo/clearing-reward-v2.json.gz`. It has pre-emptive hoarding, starvation pleas and a shelter built early.
 5. **Export Ender training data:** `npm run dataset` writes `runs/ender-sft.jsonl`.
 6. **Settings for a single run:**
    - `PROMPT_VARIANT` = `reward` | `charter` | `win-at-all-costs`

@@ -311,3 +311,10 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .curve-label { position:absolute; top:100%; left:0; right:0; text-align:center; font-size:9px; color:#5f6c55; text-transform:uppercase; letter-spacing:.06em; padding-top:3px; line-height:1.25; }
 .curve-label b { font-size:10px; color:#293f39; letter-spacing:0; }
 .curve-caption { position:absolute; right:0; top:2px; font-size:9px; color:#8a937e; }
+
+/* The top bar keeps every label on one line; less important text yields first. */
+.masthead h1, .brand span, .connection, .season span, .season strong, .food-left, .rescue-countdown, .results-link, .utility button { white-space:nowrap; }
+.world-status { flex-shrink:0; }
+.masthead { min-width:0; }
+@media (max-width:1750px) { .masthead p { display:none; } }
+@media (max-width:1450px) { .edition { display:none; } .season span { display:none; } }
