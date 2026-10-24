@@ -17,6 +17,8 @@ pretraining model. The vision components stay frozen.
   lists 128 GB unified memory and 273 GB/s memory bandwidth.
 - [Qwen model card](https://huggingface.co/Qwen/Qwen3.8-27B) documents the hybrid
   DeltaNet/full-attention architecture and notes engine-dependent inference speed.
+- [Transformers loader settings](https://huggingface.co/docs/transformers/main/en/reference/environment_variables)
+  documents `HF_DEACTIVATE_ASYNC_LOAD`, used to bound checkpoint prefetch memory.
 
 ## Data and limitations
 
@@ -58,6 +60,75 @@ cutoff, gradient checkpointing, SDPA, and no compilation. Twelve steps are a
 **partial-epoch smoke test**, not a full training curriculum. Larger token budgets,
 batch sizes, and compilation require separate memory/performance checks.
 
+### Memory-bounded startup and model reuse
+
+`spark_runtime.py` defaults `HF_DEACTIVATE_ASYNC_LOAD=1` **before Transformers is
+imported**. The installed Transformers version otherwise dispatches tensor loads
+to four workers. Sequential loading limits live prefetched weights on Spark's
+unified memory. The upstream documentation describes it as potentially slower;
+it can be faster when parallel loading causes memory pressure. Measure it rather
+than assuming a speedup. Explicit environment overrides are respected.
+
+Training and post-training decode now share the same loaded model. The worker
+keeps the model after LLaMA-Factory saves/evaluates it, disables gradient
+checkpointing for generation, and runs the base/adapter comparison in-process.
+It no longer unloads and reloads the entire checkpoint for that comparison.
+Standalone `demo_decode.py` remains available for existing adapters.
+
+To measure startup and compare base/adapter held-out loss without retraining:
+
+```bash
+.venv/bin/python -u finetuning/profile_spark_startup.py \
+  --adapter outputs/ender-sft-demo-20261024T192018Z/adapter \
+  --eval-config outputs/ender-sft-demo-20261024T192018Z/train.yaml \
+  --reference-decode outputs/ender-sft-demo-20261024T192018Z/decode.json \
+  --output outputs/startup-profile-$(date -u +%Y%m%dT%H%M%SZ)
+```
+
+Use tmux for this command, too. The profile records loading time, memory/swap
+samples, and actual decode speed. A single measured prompt per model is a smoke
+check, not a maximum-throughput serving test. Separate-run cache state is not
+controlled. Do not load this model while another training model is resident.
+
+### Larger financial dataset
+
+Before starting a financial run, measure lengths using the actual LLaMA-Factory
+template. This audit does not load model weights or truncate examples:
+
+```bash
+.venv/bin/python -u finetuning/audit_sft_data.py \
+  --config finetuning/configs/qwen38_27b_lora.yaml \
+  --output logs/financial-length-audit-$(date -u +%Y%m%dT%H%M%SZ).json
+```
+
+Check both splits' `exceeds_cutoff` fields. Do not use a short demo cutoff on
+long finance conversations: it can remove the supervised answer entirely. Use a
+new training configuration/output directory and test the required sequence length
+for memory/throughput before a full run. Existing datasets and checkpoints must
+not be overwritten. For a direct LLaMA-Factory launch in tmux, apply the same
+startup setting explicitly:
+
+```bash
+HF_DEACTIVATE_ASYNC_LOAD=1 HF_HUB_OFFLINE=1 OMP_NUM_THREADS=8 \
+  .venv/bin/llamafactory-cli train path/to/new-financial-config.yaml
+```
+
+Autoregressive **decode tokens/s** measures generation of responses/rollouts.
+Supervised training processes known target tokens together; its relevant rate is
+**training input tokens/s**. Faster single-stream decoding does not directly
+accelerate SFT. Estimate a large run from a representative training throughput
+test at its real sequence length, not the short policy-plan demo.
+
+### Interpreting loss
+
+The reported loss is cross-entropy, averaged over supervised assistant tokens;
+it is not bounded to 0–1. A cross-entropy of 2.19 nats corresponds to perplexity
+`exp(2.19)`, about 8.94. Its absolute value depends on dataset difficulty,
+tokenizer, masking, and template. Compare the original model and adapter on the
+same held-out tokens. The updated decode comparison records both mean-example
+loss and token-weighted loss/perplexity with prompts masked. A six-example
+synthetic validation set still cannot establish broader alignment improvement.
+
 `--stop-idle-project-server` gracefully stops only the verified project BF16
 llama.cpp server after checking that no request is processing. Its command is
 saved in the run directory. It does not stop unrelated inference services or
@@ -81,6 +152,7 @@ ssh -t asus@172.20.13.192 'tmux attach -t ender-sft-demo'
   available system memory samples during training and decoding.
 - `decode.json`: warmup plus three batch-one prompts each for the original model
   and adapter, using the same Transformers/PEFT process and GPU placement.
+  New demo runs also include matched held-out loss comparisons.
 
 Decode timing synchronizes CUDA at every generated token. The reported decode
 rate excludes prefill and the first generated token; first-token latency and

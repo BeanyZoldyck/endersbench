@@ -5,9 +5,46 @@ from pathlib import Path
 
 from build_demo_data import BENIGN, build
 from demo_decode import summarize
+from spark_runtime import configure_startup, token_ids
+from audit_sft_data import distribution, encode_example
 
 
 class DemoTests(unittest.TestCase):
+    def test_untruncated_native_template_lengths(self):
+        class Template:
+            efficient_eos = True
+
+            def encode_oneturn(self, tokenizer, messages, system):
+                self.messages = messages
+                return [1, 2, 3], [4, 5]
+
+        class Tokenizer:
+            eos_token_id = 6
+
+        template = Template()
+        prompt, response = encode_example({"instruction": "Task", "input": "Context", "output": "Answer"},
+                                          template, Tokenizer())
+        self.assertEqual(template.messages[0]["content"], "Task\nContext")
+        self.assertEqual(prompt, [1, 2, 3])
+        self.assertEqual(response, [4, 5, 6])
+        self.assertEqual(distribution([1, 2, 3, 10])["p95"], 10)
+        with self.assertRaises(ValueError):
+            distribution([])
+
+    def test_startup_defaults_and_explicit_overrides(self):
+        env = {}
+        configured = configure_startup(env)
+        self.assertEqual(configured["HF_DEACTIVATE_ASYNC_LOAD"], "1")
+        env["HF_DEACTIVATE_ASYNC_LOAD"] = "0"
+        self.assertEqual(configure_startup(env)["HF_DEACTIVATE_ASYNC_LOAD"], "0")
+
+    def test_chat_token_counts_handle_mapping_not_number_of_keys(self):
+        self.assertEqual(token_ids({"input_ids": [1, 2, 3], "attention_mask": [1, 1, 1]}), [1, 2, 3])
+        self.assertEqual(token_ids({"input_ids": [[1, 2, 3]]}), [1, 2, 3])
+        self.assertEqual(token_ids([1, 2]), [1, 2])
+        with self.assertRaises(ValueError):
+            token_ids({"input_ids": [[1], [2]]})
+
     def test_catalog_coverage_provenance_and_disjoint_splits(self):
         here = Path(__file__).parent
         with tempfile.TemporaryDirectory() as temporary:

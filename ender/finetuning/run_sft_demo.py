@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from build_demo_data import build
+from spark_runtime import configure_startup, token_ids
 
 
 HERE = Path(__file__).resolve().parent
@@ -91,14 +92,17 @@ def stop_project_server(run):
     print(f"Stopped idle project BF16 server PID {pid}; other services and tmux sessions preserved.", flush=True)
 
 
-def train_worker(config):
+def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_tokens=128):
     import torch
     from transformers import TrainerCallback
     from llamafactory.train.tuner import run_exp
 
+    trained = {}
+
     class Throughput(TrainerCallback):
         def on_train_begin(self, args, state, control, **kwargs):
             model = kwargs["model"]
+            trained["model"] = model
             trainable = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
             if not trainable or any("lora_" not in n for n, _ in trainable):
                 raise ValueError("Expected LoRA-only trainable parameters")
@@ -135,6 +139,14 @@ def train_worker(config):
 
     torch.set_num_threads(8)
     run_exp(args=config, callbacks=[Throughput()])
+    if decode_output is not None:
+        from baseline import MODEL, REVISION
+        from transformers import AutoTokenizer
+        from demo_decode import benchmark
+        tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, local_files_only=True)
+        print("Reusing trained model for decode: no second 55 GB checkpoint load.", flush=True)
+        benchmark(trained["model"], tokenizer, decode_output, max_new_tokens=decode_max_new_tokens,
+                  repeats=decode_repeats, reused_from_training=True, evaluation_config=config)
 
 
 def main():
@@ -145,11 +157,18 @@ def main():
     parser.add_argument("--accept-synthetic-demo", action="store_true")
     parser.add_argument("--stop-idle-project-server", action="store_true")
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--decode-repeats", type=int, default=3)
+    parser.add_argument("--decode-max-new-tokens", type=int, default=128)
     parser.add_argument("--train-worker", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--decode-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.decode_repeats < 1 or args.decode_max_new_tokens < 2:
+        parser.error("Decode requires at least one repeat and two generated tokens")
+    startup = configure_startup()
     import yaml
     if args.train_worker:
-        train_worker(yaml.safe_load(args.train_worker.read_text()))
+        train_worker(yaml.safe_load(args.train_worker.read_text()), args.decode_output,
+                     args.decode_repeats, args.decode_max_new_tokens)
         return
     if not args.accept_synthetic_demo:
         parser.error("Demo data is synthetic and unreviewed; pass --accept-synthetic-demo explicitly")
@@ -163,6 +182,7 @@ def main():
                 "method": "BF16 frozen base plus LoRA; no weight quantization",
                 "scope": "policy-plan SFT pipeline smoke, not independent alignment evaluation",
                 "max_steps": args.max_steps}
+    manifest["startup_environment"] = startup
     write_json(run / "manifest.json", manifest)
     try:
         dataset = run / "data"
@@ -176,7 +196,7 @@ def main():
                 messages = [{"role": "system", "content": row["system"]},
                             {"role": "user", "content": row["instruction"] + "\n" + row["input"]},
                             {"role": "assistant", "content": row["output"]}]
-                size = len(tokenizer.apply_chat_template(messages, enable_thinking=False))
+                size = len(token_ids(tokenizer.apply_chat_template(messages, enable_thinking=False)))
                 if size + 32 > 1024:
                     raise ValueError(f"{row['scenario_id']} needs {size} tokens: refusing truncation")
                 lengths.append(size)
@@ -192,7 +212,8 @@ def main():
         config_path = run / "train.yaml"
         config_path.write_text(yaml.safe_dump(config, sort_keys=False))
         # Preserve source/version details without including environment variables or auth tokens.
-        for path in (HERE / "run_sft_demo.py", HERE / "demo_decode.py", HERE / "build_demo_data.py"):
+        for path in (HERE / "run_sft_demo.py", HERE / "demo_decode.py", HERE / "build_demo_data.py",
+                     HERE / "spark_runtime.py", HERE / "audit_sft_data.py"):
             manifest.setdefault("source_sha256", {})[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
         freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True, check=True)
         (run / "requirements.lock.txt").write_text(freeze.stdout)
@@ -223,7 +244,10 @@ def main():
                "TOKENIZERS_PARALLELISM": "false", "OMP_NUM_THREADS": "8"}
         with telemetry(run):
             subprocess.run([sys.executable, "-u", str(HERE / "run_sft_demo.py"),
-                            "--train-worker", str(config_path)], env=env, check=True)
+                            "--train-worker", str(config_path), "--decode-output", str(run / "decode.json"),
+                            "--decode-repeats", str(args.decode_repeats),
+                            "--decode-max-new-tokens", str(args.decode_max_new_tokens)],
+                           env=env, check=True)
         if not (run / "adapter/adapter_model.safetensors").is_file():
             raise ValueError("Training returned without a saved adapter")
         from safetensors import safe_open
@@ -236,12 +260,8 @@ def main():
         write_json(run / "adapter-validation.json", {
             "lora_b_matrices": len(b_keys), "nonzero_lora_b_matrices": len(changed),
             "note": "Nonzero trained matrices verify an update, not alignment improvement"})
-        manifest["status"] = "decoding"
-        write_json(run / "manifest.json", manifest)
-        with telemetry(run):
-            subprocess.run([sys.executable, "-u", str(HERE / "demo_decode.py"),
-                            "--adapter", str(run / "adapter"), "--output", str(run / "decode.json")],
-                           env=env, check=True)
+        if not (run / "decode.json").is_file():
+            raise ValueError("Worker returned without reused-model decode results")
         steps = [json.loads(line) for line in (run / "throughput.jsonl").read_text().splitlines()]
         steady = steps[2:] or steps
         summary = {"training_optimizer_steps": len(steps),
