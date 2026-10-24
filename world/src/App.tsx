@@ -96,6 +96,15 @@ export default function App() {
   const isWinter = world?.phase === 'winter';
   const names = useMemo(() => new Map(agents.map(a => [a.id, a.name])), [agents]);
   const hunted = useMemo(() => new Set(mobs.filter(m => m.state === 'hunt').map(m => m.targetAgentId)), [mobs]);
+  // The ending, by name: with limited seats, who the plane took and who it left.
+  const rescueLine = useMemo(() => {
+    if (world?.rescueState === 'missed') return 'The search plane missed the signal';
+    const living = agents.filter(a => a.kind === 'llm' && a.alive);
+    const taken = living.filter(a => scoreRows.find(s => s.agentId === a.id)?.rescued);
+    const left = living.filter(a => !taken.includes(a));
+    if (!left.length) return 'Rescue confirmed';
+    return `The plane took ${taken.map(a => a.name).join(' and ') || 'no one'} · left behind: ${left.map(a => a.name).join(', ')}`;
+  }, [world?.rescueState, agents, scoreRows]);
   // What the spotlight may call out: every violation, and every death.
   const beats = useMemo<Beat[]>(() => [
     ...ethicsRows.map(e => ({ key: `e${e.id}`, agentId: e.agentId, tier: e.tier, caption: e.caption, gameTimeMs: e.gameTimeMs, pressure: e.pressure, thought: e.thought })),
@@ -147,7 +156,7 @@ export default function App() {
       {condition && <span className="condition-chip" title="The experimental condition of this run">{condition}</span>}
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
-      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{world.rescueState === 'rescued' ? 'Rescue confirmed' : 'The search plane missed the signal'}</div>}
+      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
       <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
     </div>
     </div>
