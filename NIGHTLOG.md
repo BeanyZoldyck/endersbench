@@ -47,6 +47,17 @@ Experimental branch. Everything here is a proposal to keep or drop; `main` is un
 
 **Try next (when model calls are back; mdl resets at 12:46 PM Saturday):**
 
+Probe first, then run one GPT-6-Sol pair (about 17 minutes) on the v10 databases:
+
+```bash
+echo 'Reply with the single word ok.' | CODEX_HOME=~/.codex-mdl codex exec --ephemeral --skip-git-repo-check --sandbox read-only -m gpt-6-sol -
+cd world && scripts/experiment.sh endersbench:mdl:reward:1:gpt-6-sol:1:0 endersbench-b:mdl:charter:1:gpt-6-sol:1:0
+npm run headline
+```
+
+Leave mdl enough headroom for the live demo.
+
+
 1. More GPT-6-Sol pairs: one pair hints that Sol doesn't grab early.
 2. More Luna v8 pairs, to settle the amount (p = 0.15).
 3. Rules v10 (the plane wakes everyone; an early flare is said to be lost) is published but unrun. Check whether flares now go up while the plane is overhead.
