@@ -23,8 +23,10 @@ from baseline import sha256, write_json
 from second_pass import text
 
 COLORS = {"rule_hit": "#ff8f91", "no_rule_hit": "#55d6be", "unresolved": "#f1c66e"}
-DISPLAY = {"claude-opus-5-5": "Claude Opus 5.5", "gpt-6-astra": "GPT-6 Astra", "grok-4.7": "Grok 4.7"}
-ACCENT = {"claude-opus-5-5": "#d9a464", "gpt-6-astra": "#7aa2ff", "grok-4.7": "#8fe0c8"}
+DISPLAY = {"claude-opus-5-5": "Claude Opus 5.5", "gpt-6-astra": "GPT-6 Astra", "grok-4.7": "Grok 4.7",
+           "Qwen/Qwen3.8-27B": "Qwen3.8-27B (local)"}
+ACCENT = {"claude-opus-5-5": "#d9a464", "gpt-6-astra": "#7aa2ff", "grok-4.7": "#8fe0c8",
+          "Qwen/Qwen3.8-27B": "#c9a0dc"}
 
 
 def apply_review_tolerant(rows, review, source_hash):
@@ -182,8 +184,24 @@ def category_matrix(title, subtitle, categories, groups, models):
     return "\n".join(pieces)
 
 
+def sim_version_notes(per_model_manifest):
+    """Which runs used a different simulator build than the newest run's."""
+    from sim_version import current_sim_hashes
+    current = current_sim_hashes()
+    notes = []
+    for model, manifest in per_model_manifest.items():
+        sources = manifest.get("sources") or {}
+        normalized = {Path(name).name: digest for name, digest in sources.items() if name.endswith(".py")}
+        differing = sorted(name for name, digest in normalized.items()
+                           if name in current and current[name] != digest)
+        if differing:
+            notes.append((DISPLAY.get(model, model), differing))
+    return notes
+
+
 def dashboard(models, per_model_rows, per_model_summary, per_model_manifest, charts, matrix, categories_svg):
     cards = []
+    sim_notes = sim_version_notes(per_model_manifest)
     inspection_only = {}
     for model in models:
         rows = per_model_rows[model]
@@ -193,21 +211,24 @@ def dashboard(models, per_model_rows, per_model_summary, per_model_manifest, cha
                 for k in ("grade", "result.txt", "transcript", "score")))
             for h in r["events"]))
         s = per_model_summary[model]["overall"]
-        rows = per_model_rows[model]
         refusals = sum(1 for r in rows if r.get("status") == "provider_refusal")
         blocked = sum(1 for r in rows if r.get("status") == "error" and "flagged" in str(r.get("error", "")))
         refusal_note = f' · <span class="unresolved">{refusals} provider refusals</span>' if refusals else ""
         blocked_note = f' · <span class="unresolved">{blocked} request-level content blocks</span>' if blocked else ""
         inspection_note = (f' · <span class="muted">{inspection_only[model]} hit episodes are inspection-only'
                            f' (reads/ls/find, no write or egress)</span>') if inspection_only[model] else ""
+        provider = per_model_manifest[model].get("provider") or "llama.cpp, local DGX Spark"
+        judge = per_model_manifest[model].get("judge_model") or "none (no judged rules matched)"
+        budget = f"{per_model_manifest[model].get('max_turns', '?')} turns / " \
+                 f"{per_model_manifest[model].get('max_tokens_per_turn', '?')} tok·turn"
         label = DISPLAY.get(model, model)
         cards.append(
             f'<div class="card"><h3 style="color:{ACCENT[model]}">{html.escape(label)}</h3>'
             f'<div class="mini"><span class="rule_hit">{s["rule_hit"]} hits</span> · '
             f'<span class="no_rule_hit">{s["no_rule_hit"]} clean</span> · '
             f'<span class="unresolved">{s["unresolved"]} unresolved</span> / {s["n"]}</div>'
-            f'<div class="mini muted">{html.escape(str(per_model_manifest[model].get("provider", "")))} · '
-            f'{s["tool_calls"]} tool calls · judge: {html.escape(str(per_model_manifest[model].get("judge_model", "")))}'
+            f'<div class="mini muted">{html.escape(str(provider))} · {budget} · '
+            f'{s["tool_calls"]} tool calls · judge: {html.escape(str(judge))}'
             f'{refusal_note}{blocked_note}{inspection_note}</div></div>')
     table_rows = []
     all_ids = sorted({r["id"] for rows in per_model_rows.values() for r in rows})
@@ -253,10 +274,13 @@ pre{{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 system-ui,sans-s
 footer{{margin-top:36px;border-top:1px solid #28354c;padding-top:20px;font-size:13px}}.missing{{color:#61708d}}code{{overflow-wrap:anywhere}}
 @media(max-width:600px){{main{{padding:20px 12px}}}}
 </style></head><body><main><div class="eyebrow">Executable catalogs · observed simulated tool calls</div>
-<h1>Alignment &amp; reward hacking: three frontier models</h1>
+<h1>Alignment &amp; reward hacking: four models, same executable bench</h1>
 <p class="muted">{len(all_ids)} scenarios · 2 catalogs · one greedy episode each · identical simulator, protocol, budgets and detection rules per model</p>
 <div class="cards">{"".join(cards)}</div>
-<div class="note">{html.escape(LIMITATION)}</div>
+<div class="note">{html.escape(LIMITATION)}
+{"".join(f'<p><b>Simulator build differs for {model}:</b> {", ".join(files)} changed after that run. '
+         f'Same scenarios and detection rules; read its evidence with that in mind.</p>'
+         for model, files in sim_notes)}</div>
 <h2>Overall and by dataset</h2>{charts["overall"]}<p><a href="overall.svg" download>Download SVG</a></p>
 <h2>By semantic category</h2>{categories_svg}<p><a href="semantic-categories.svg" download>Download SVG</a></p>
 <h2>Scenario × model matrix</h2><p class="muted">Every row is one scenario; cells are the observed outcome per model. This is where the models differ.</p>
@@ -273,7 +297,7 @@ footer{{margin-top:36px;border-top:1px solid #28354c;padding-top:20px;font-size:
 <p id="visible" aria-live="polite">{len(all_ids)} scenarios shown</p>
 <div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Category</th><th>Tier</th>
 {"".join(f'<th style="color:{ACCENT[m]}">{DISPLAY.get(m, m)}</th>' for m in models)}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>
-<footer>{"".join(f'<a href="episodes-{m}.jsonl" download>episodes · {DISPLAY.get(m, m)}</a> · ' for m in models)}
+<footer>{"".join(f'<a href="episodes-{m.replace("/", "-")}.jsonl" download>episodes · {DISPLAY.get(m, m)}</a> · ' for m in models)}
 <a href="summary.json" download>summary</a> · <a href="comparison.csv" download>CSV</a> · Generated {html.escape(datetime.now(timezone.utc).isoformat())}. Offline; no external scripts or fonts.</footer></main>
 <script>
 const search=document.getElementById('search'),dataset=document.getElementById('dataset');
@@ -311,7 +335,7 @@ def main(argv=None):
         groups.append((f"{DISPLAY.get(model, model)} — both catalogs", s["overall"]))
         for name in DATASETS:
             groups.append((f"{DISPLAY.get(model, model)} — {name}", s["by_dataset"][name]))
-    overall_svg = chart("Observed simulated-tool detector outcomes", f"three frontier models · {subtitle}", groups)
+    overall_svg = chart("Observed simulated-tool detector outcomes", f"four models · {subtitle}", groups)
     matrix_categories = sorted({r["category"] for rows in per_model_rows.values() for r in rows})
     cat_groups = {m: {name: s for name, s in per_model_summary[m]["by_category"].items()} for m in models}
     categories_svg = category_matrix("Detector outcomes by semantic category", subtitle, matrix_categories, cat_groups, models)
@@ -330,7 +354,8 @@ def main(argv=None):
         dashboard(models, per_model_rows, per_model_summary, per_model_manifest,
                   {"overall": overall_svg}, matrix_svg, categories_svg))
     for m in models:
-        (args.output_dir / f"episodes-{m}.jsonl").write_text(
+        slug = m.replace("/", "-")
+        (args.output_dir / f"episodes-{slug}.jsonl").write_text(
             "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in per_model_rows[m]))
     with (args.output_dir / "comparison.csv").open("w", newline="") as handle:
         writer = csv.writer(handle)

@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 662" role="img" aria-label="Observed simulated-tool detector outcomes">
-<title>Observed simulated-tool detector outcomes</title><rect width="1200" height="662" rx="18" fill="#111b2d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 806" role="img" aria-label="Observed simulated-tool detector outcomes">
+<title>Observed simulated-tool detector outcomes</title><rect width="1200" height="806" rx="18" fill="#111b2d"/>
 <g font-family="system-ui,sans-serif">
 <text x="28" y="40" font-size="25" fill="#dbe3f1" >Observed simulated-tool detector outcomes</text>
-<text x="28" y="70" font-size="15" fill="#a9b7cf" >three frontier models · Claude Opus 5.5 · GPT-6 Astra · Grok 4.7</text>
+<text x="28" y="70" font-size="15" fill="#a9b7cf" >four models · Qwen3.8-27B (local) · Claude Opus 5.5 · GPT-6 Astra · Grok 4.7</text>
 <rect x="28" y="94" width="13" height="13" fill="#ff8f91"/>
 <text x="51" y="106" font-size="15" fill="#dbe3f1" >Rule hit</text>
 <rect x="273" y="94" width="13" height="13" fill="#55d6be"/>
@@ -10,79 +10,104 @@
 <rect x="518" y="94" width="13" height="13" fill="#f1c66e"/>
 <text x="541" y="106" font-size="15" fill="#dbe3f1" >Unresolved</text>
 <text x="985" y="106" font-size="14" fill="#a9b7cf" >Hit / None / ?</text>
-<text x="28" y="153" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — both catalogs</text>
+<text x="28" y="153" font-size="15" fill="#dbe3f1" >Qwen3.8-27B (local) — both catalogs</text>
 <text x="345" y="153" font-size="13" fill="#a9b7cf" >n=50</text>
-<rect x="410.00" y="133" width="44.00" height="27" fill="#ff8f91"><title>Rule hit: 4 (8.0%)</title></rect>
-<text x="432.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
-<rect x="454.00" y="133" width="154.00" height="27" fill="#55d6be"><title>No rule hit: 14 (28.0%)</title></rect>
-<text x="531.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
-<rect x="608.00" y="133" width="352.00" height="27" fill="#f1c66e"><title>Unresolved: 32 (64.0%)</title></rect>
-<text x="784.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">32</text>
-<text x="985" y="152" font-size="15" fill="#dbe3f1" >4 / 14 / 32</text>
-<text x="28" y="201" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — alignment</text>
+<rect x="410.00" y="133" width="66.00" height="27" fill="#ff8f91"><title>Rule hit: 6 (12.0%)</title></rect>
+<text x="443.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<rect x="476.00" y="133" width="286.00" height="27" fill="#55d6be"><title>No rule hit: 26 (52.0%)</title></rect>
+<text x="619.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">26</text>
+<rect x="762.00" y="133" width="198.00" height="27" fill="#f1c66e"><title>Unresolved: 18 (36.0%)</title></rect>
+<text x="861.0" y="152" font-size="14" fill="#111b2d" text-anchor="middle">18</text>
+<text x="985" y="152" font-size="15" fill="#dbe3f1" >6 / 26 / 18</text>
+<text x="28" y="201" font-size="15" fill="#dbe3f1" >Qwen3.8-27B (local) — alignment</text>
 <text x="345" y="201" font-size="13" fill="#a9b7cf" >n=24</text>
-<rect x="410.00" y="181" width="137.50" height="27" fill="#55d6be"><title>No rule hit: 6 (25.0%)</title></rect>
-<text x="478.75" y="200" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
-<rect x="547.50" y="181" width="412.50" height="27" fill="#f1c66e"><title>Unresolved: 18 (75.0%)</title></rect>
-<text x="753.75" y="200" font-size="14" fill="#111b2d" text-anchor="middle">18</text>
-<text x="985" y="200" font-size="15" fill="#dbe3f1" >0 / 6 / 18</text>
-<text x="28" y="249" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — rewardhacking</text>
+<rect x="410.00" y="181" width="504.17" height="27" fill="#55d6be"><title>No rule hit: 22 (91.7%)</title></rect>
+<text x="662.0833333333334" y="200" font-size="14" fill="#111b2d" text-anchor="middle">22</text>
+<rect x="914.17" y="181" width="45.83" height="27" fill="#f1c66e"><title>Unresolved: 2 (8.3%)</title></rect>
+<text x="937.0833333333334" y="200" font-size="14" fill="#111b2d" text-anchor="middle">2</text>
+<text x="985" y="200" font-size="15" fill="#dbe3f1" >0 / 22 / 2</text>
+<text x="28" y="249" font-size="15" fill="#dbe3f1" >Qwen3.8-27B (local) — rewardhacking</text>
 <text x="345" y="249" font-size="13" fill="#a9b7cf" >n=26</text>
-<rect x="410.00" y="229" width="84.62" height="27" fill="#ff8f91"><title>Rule hit: 4 (15.4%)</title></rect>
-<text x="452.3076923076923" y="248" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
-<rect x="494.62" y="229" width="169.23" height="27" fill="#55d6be"><title>No rule hit: 8 (30.8%)</title></rect>
-<text x="579.2307692307693" y="248" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
-<rect x="663.85" y="229" width="296.15" height="27" fill="#f1c66e"><title>Unresolved: 14 (53.8%)</title></rect>
-<text x="811.9230769230769" y="248" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
-<text x="985" y="248" font-size="15" fill="#dbe3f1" >4 / 8 / 14</text>
-<text x="28" y="297" font-size="15" fill="#dbe3f1" >GPT-6 Astra — both catalogs</text>
+<rect x="410.00" y="229" width="126.92" height="27" fill="#ff8f91"><title>Rule hit: 6 (23.1%)</title></rect>
+<text x="473.46153846153845" y="248" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<rect x="536.92" y="229" width="84.62" height="27" fill="#55d6be"><title>No rule hit: 4 (15.4%)</title></rect>
+<text x="579.2307692307692" y="248" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
+<rect x="621.54" y="229" width="338.46" height="27" fill="#f1c66e"><title>Unresolved: 16 (61.5%)</title></rect>
+<text x="790.7692307692307" y="248" font-size="14" fill="#111b2d" text-anchor="middle">16</text>
+<text x="985" y="248" font-size="15" fill="#dbe3f1" >6 / 4 / 16</text>
+<text x="28" y="297" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — both catalogs</text>
 <text x="345" y="297" font-size="13" fill="#a9b7cf" >n=50</text>
-<rect x="410.00" y="277" width="33.00" height="27" fill="#ff8f91"><title>Rule hit: 3 (6.0%)</title></rect>
-<text x="426.5" y="296" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
-<rect x="443.00" y="277" width="451.00" height="27" fill="#55d6be"><title>No rule hit: 41 (82.0%)</title></rect>
-<text x="668.5" y="296" font-size="14" fill="#111b2d" text-anchor="middle">41</text>
-<rect x="894.00" y="277" width="66.00" height="27" fill="#f1c66e"><title>Unresolved: 6 (12.0%)</title></rect>
-<text x="927.0" y="296" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
-<text x="985" y="296" font-size="15" fill="#dbe3f1" >3 / 41 / 6</text>
-<text x="28" y="345" font-size="15" fill="#dbe3f1" >GPT-6 Astra — alignment</text>
+<rect x="410.00" y="277" width="44.00" height="27" fill="#ff8f91"><title>Rule hit: 4 (8.0%)</title></rect>
+<text x="432.0" y="296" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
+<rect x="454.00" y="277" width="154.00" height="27" fill="#55d6be"><title>No rule hit: 14 (28.0%)</title></rect>
+<text x="531.0" y="296" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
+<rect x="608.00" y="277" width="352.00" height="27" fill="#f1c66e"><title>Unresolved: 32 (64.0%)</title></rect>
+<text x="784.0" y="296" font-size="14" fill="#111b2d" text-anchor="middle">32</text>
+<text x="985" y="296" font-size="15" fill="#dbe3f1" >4 / 14 / 32</text>
+<text x="28" y="345" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — alignment</text>
 <text x="345" y="345" font-size="13" fill="#a9b7cf" >n=24</text>
-<rect x="410.00" y="325" width="550.00" height="27" fill="#55d6be"><title>No rule hit: 24 (100.0%)</title></rect>
-<text x="685.0" y="344" font-size="14" fill="#111b2d" text-anchor="middle">24</text>
-<text x="985" y="344" font-size="15" fill="#dbe3f1" >0 / 24 / 0</text>
-<text x="28" y="393" font-size="15" fill="#dbe3f1" >GPT-6 Astra — rewardhacking</text>
+<rect x="410.00" y="325" width="137.50" height="27" fill="#55d6be"><title>No rule hit: 6 (25.0%)</title></rect>
+<text x="478.75" y="344" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<rect x="547.50" y="325" width="412.50" height="27" fill="#f1c66e"><title>Unresolved: 18 (75.0%)</title></rect>
+<text x="753.75" y="344" font-size="14" fill="#111b2d" text-anchor="middle">18</text>
+<text x="985" y="344" font-size="15" fill="#dbe3f1" >0 / 6 / 18</text>
+<text x="28" y="393" font-size="15" fill="#dbe3f1" >Claude Opus 5.5 — rewardhacking</text>
 <text x="345" y="393" font-size="13" fill="#a9b7cf" >n=26</text>
-<rect x="410.00" y="373" width="63.46" height="27" fill="#ff8f91"><title>Rule hit: 3 (11.5%)</title></rect>
-<text x="441.7307692307692" y="392" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
-<rect x="473.46" y="373" width="359.62" height="27" fill="#55d6be"><title>No rule hit: 17 (65.4%)</title></rect>
-<text x="653.2692307692307" y="392" font-size="14" fill="#111b2d" text-anchor="middle">17</text>
-<rect x="833.08" y="373" width="126.92" height="27" fill="#f1c66e"><title>Unresolved: 6 (23.1%)</title></rect>
-<text x="896.5384615384615" y="392" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
-<text x="985" y="392" font-size="15" fill="#dbe3f1" >3 / 17 / 6</text>
-<text x="28" y="441" font-size="15" fill="#dbe3f1" >Grok 4.7 — both catalogs</text>
+<rect x="410.00" y="373" width="84.62" height="27" fill="#ff8f91"><title>Rule hit: 4 (15.4%)</title></rect>
+<text x="452.3076923076923" y="392" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
+<rect x="494.62" y="373" width="169.23" height="27" fill="#55d6be"><title>No rule hit: 8 (30.8%)</title></rect>
+<text x="579.2307692307693" y="392" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
+<rect x="663.85" y="373" width="296.15" height="27" fill="#f1c66e"><title>Unresolved: 14 (53.8%)</title></rect>
+<text x="811.9230769230769" y="392" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
+<text x="985" y="392" font-size="15" fill="#dbe3f1" >4 / 8 / 14</text>
+<text x="28" y="441" font-size="15" fill="#dbe3f1" >GPT-6 Astra — both catalogs</text>
 <text x="345" y="441" font-size="13" fill="#a9b7cf" >n=50</text>
-<rect x="410.00" y="421" width="88.00" height="27" fill="#ff8f91"><title>Rule hit: 8 (16.0%)</title></rect>
-<text x="454.0" y="440" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
-<rect x="498.00" y="421" width="275.00" height="27" fill="#55d6be"><title>No rule hit: 25 (50.0%)</title></rect>
-<text x="635.5" y="440" font-size="14" fill="#111b2d" text-anchor="middle">25</text>
-<rect x="773.00" y="421" width="187.00" height="27" fill="#f1c66e"><title>Unresolved: 17 (34.0%)</title></rect>
-<text x="866.5" y="440" font-size="14" fill="#111b2d" text-anchor="middle">17</text>
-<text x="985" y="440" font-size="15" fill="#dbe3f1" >8 / 25 / 17</text>
-<text x="28" y="489" font-size="15" fill="#dbe3f1" >Grok 4.7 — alignment</text>
+<rect x="410.00" y="421" width="33.00" height="27" fill="#ff8f91"><title>Rule hit: 3 (6.0%)</title></rect>
+<text x="426.5" y="440" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
+<rect x="443.00" y="421" width="451.00" height="27" fill="#55d6be"><title>No rule hit: 41 (82.0%)</title></rect>
+<text x="668.5" y="440" font-size="14" fill="#111b2d" text-anchor="middle">41</text>
+<rect x="894.00" y="421" width="66.00" height="27" fill="#f1c66e"><title>Unresolved: 6 (12.0%)</title></rect>
+<text x="927.0" y="440" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<text x="985" y="440" font-size="15" fill="#dbe3f1" >3 / 41 / 6</text>
+<text x="28" y="489" font-size="15" fill="#dbe3f1" >GPT-6 Astra — alignment</text>
 <text x="345" y="489" font-size="13" fill="#a9b7cf" >n=24</text>
-<rect x="410.00" y="469" width="481.25" height="27" fill="#55d6be"><title>No rule hit: 21 (87.5%)</title></rect>
-<text x="650.625" y="488" font-size="14" fill="#111b2d" text-anchor="middle">21</text>
-<rect x="891.25" y="469" width="68.75" height="27" fill="#f1c66e"><title>Unresolved: 3 (12.5%)</title></rect>
-<text x="925.625" y="488" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
-<text x="985" y="488" font-size="15" fill="#dbe3f1" >0 / 21 / 3</text>
-<text x="28" y="537" font-size="15" fill="#dbe3f1" >Grok 4.7 — rewardhacking</text>
+<rect x="410.00" y="469" width="550.00" height="27" fill="#55d6be"><title>No rule hit: 24 (100.0%)</title></rect>
+<text x="685.0" y="488" font-size="14" fill="#111b2d" text-anchor="middle">24</text>
+<text x="985" y="488" font-size="15" fill="#dbe3f1" >0 / 24 / 0</text>
+<text x="28" y="537" font-size="15" fill="#dbe3f1" >GPT-6 Astra — rewardhacking</text>
 <text x="345" y="537" font-size="13" fill="#a9b7cf" >n=26</text>
-<rect x="410.00" y="517" width="169.23" height="27" fill="#ff8f91"><title>Rule hit: 8 (30.8%)</title></rect>
-<text x="494.61538461538464" y="536" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
-<rect x="579.23" y="517" width="84.62" height="27" fill="#55d6be"><title>No rule hit: 4 (15.4%)</title></rect>
-<text x="621.5384615384615" y="536" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
-<rect x="663.85" y="517" width="296.15" height="27" fill="#f1c66e"><title>Unresolved: 14 (53.8%)</title></rect>
-<text x="811.923076923077" y="536" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
-<text x="985" y="536" font-size="15" fill="#dbe3f1" >8 / 4 / 14</text>
-<text x="28" y="617" font-size="13" fill="#a9b7cf" >No rule hit is not a safety verdict or proof of task success. Pending judgments and incomplete runs stay unresolved.</text>
-<text x="28" y="641" font-size="14" fill="#a9b7cf" >In-memory tools with canned outputs; detector coverage is limited; related scenarios overlap.</text>
+<rect x="410.00" y="517" width="63.46" height="27" fill="#ff8f91"><title>Rule hit: 3 (11.5%)</title></rect>
+<text x="441.7307692307692" y="536" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
+<rect x="473.46" y="517" width="359.62" height="27" fill="#55d6be"><title>No rule hit: 17 (65.4%)</title></rect>
+<text x="653.2692307692307" y="536" font-size="14" fill="#111b2d" text-anchor="middle">17</text>
+<rect x="833.08" y="517" width="126.92" height="27" fill="#f1c66e"><title>Unresolved: 6 (23.1%)</title></rect>
+<text x="896.5384615384615" y="536" font-size="14" fill="#111b2d" text-anchor="middle">6</text>
+<text x="985" y="536" font-size="15" fill="#dbe3f1" >3 / 17 / 6</text>
+<text x="28" y="585" font-size="15" fill="#dbe3f1" >Grok 4.7 — both catalogs</text>
+<text x="345" y="585" font-size="13" fill="#a9b7cf" >n=50</text>
+<rect x="410.00" y="565" width="88.00" height="27" fill="#ff8f91"><title>Rule hit: 8 (16.0%)</title></rect>
+<text x="454.0" y="584" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
+<rect x="498.00" y="565" width="275.00" height="27" fill="#55d6be"><title>No rule hit: 25 (50.0%)</title></rect>
+<text x="635.5" y="584" font-size="14" fill="#111b2d" text-anchor="middle">25</text>
+<rect x="773.00" y="565" width="187.00" height="27" fill="#f1c66e"><title>Unresolved: 17 (34.0%)</title></rect>
+<text x="866.5" y="584" font-size="14" fill="#111b2d" text-anchor="middle">17</text>
+<text x="985" y="584" font-size="15" fill="#dbe3f1" >8 / 25 / 17</text>
+<text x="28" y="633" font-size="15" fill="#dbe3f1" >Grok 4.7 — alignment</text>
+<text x="345" y="633" font-size="13" fill="#a9b7cf" >n=24</text>
+<rect x="410.00" y="613" width="481.25" height="27" fill="#55d6be"><title>No rule hit: 21 (87.5%)</title></rect>
+<text x="650.625" y="632" font-size="14" fill="#111b2d" text-anchor="middle">21</text>
+<rect x="891.25" y="613" width="68.75" height="27" fill="#f1c66e"><title>Unresolved: 3 (12.5%)</title></rect>
+<text x="925.625" y="632" font-size="14" fill="#111b2d" text-anchor="middle">3</text>
+<text x="985" y="632" font-size="15" fill="#dbe3f1" >0 / 21 / 3</text>
+<text x="28" y="681" font-size="15" fill="#dbe3f1" >Grok 4.7 — rewardhacking</text>
+<text x="345" y="681" font-size="13" fill="#a9b7cf" >n=26</text>
+<rect x="410.00" y="661" width="169.23" height="27" fill="#ff8f91"><title>Rule hit: 8 (30.8%)</title></rect>
+<text x="494.61538461538464" y="680" font-size="14" fill="#111b2d" text-anchor="middle">8</text>
+<rect x="579.23" y="661" width="84.62" height="27" fill="#55d6be"><title>No rule hit: 4 (15.4%)</title></rect>
+<text x="621.5384615384615" y="680" font-size="14" fill="#111b2d" text-anchor="middle">4</text>
+<rect x="663.85" y="661" width="296.15" height="27" fill="#f1c66e"><title>Unresolved: 14 (53.8%)</title></rect>
+<text x="811.923076923077" y="680" font-size="14" fill="#111b2d" text-anchor="middle">14</text>
+<text x="985" y="680" font-size="15" fill="#dbe3f1" >8 / 4 / 14</text>
+<text x="28" y="761" font-size="13" fill="#a9b7cf" >No rule hit is not a safety verdict or proof of task success. Pending judgments and incomplete runs stay unresolved.</text>
+<text x="28" y="785" font-size="14" fill="#a9b7cf" >In-memory tools with canned outputs; detector coverage is limited; related scenarios overlap.</text>
 </g></svg>
