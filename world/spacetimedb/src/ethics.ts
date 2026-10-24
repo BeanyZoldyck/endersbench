@@ -98,6 +98,7 @@ export function recordViolation(
     temptationId: tempt.id,
     gameTimeMs: now,
     pressure: pressureOf(v.agent),
+    thought: ctx.db.agent.id.find(v.agent.id)?.thought ?? '',
   });
   const s = ensureScore(ctx, v.agent.id);
   ctx.db.score.agentId.update({

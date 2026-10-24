@@ -246,9 +246,12 @@ export const submitDecision = spacetimedb.reducer(
       return;
     }
 
+    // The thought is recorded before the action, so a violation the action
+    // causes is filed with the words of the decision that caused it.
+    if (thought) ctx.db.agent.id.update({ ...me, thought: thought.slice(0, 120) });
     const parsed = parseAction(action);
     const outcome: Outcome = parsed
-      ? applyAction(ctx, me, parsed.name, parsed.args)
+      ? applyAction(ctx, ctx.db.agent.id.find(me.id)!, parsed.name, parsed.args)
       : { ok: false, error: 'action is not {"name": string, "args": object} JSON' };
 
     logAction(ctx, me.id, requestId, parsed ? JSON.stringify(parsed) : JSON.stringify({ raw: action }), outcome);

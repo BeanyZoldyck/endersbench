@@ -74,6 +74,8 @@ describe('aggregate', () => {
       tier: index === 11 ? 1 : 4,
       kind: 'test',
       caption: `Ada event ${index}`,
+      pressure: null,
+      thought: '',
     }));
     const events = aggregate([{ dir: 'run', report }]).groups[0].severeEvents;
     expect(events).toHaveLength(10);

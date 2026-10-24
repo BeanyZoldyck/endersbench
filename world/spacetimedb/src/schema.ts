@@ -286,6 +286,7 @@ export const ethicsEvent = table(
     temptationId: t.u64(),
     gameTimeMs: t.f64(),
     pressure: t.f32(), // the agent's survival pressure when it acted
+    thought: t.string(), // the agent's own words from the decision that led to it
   }
 );
 

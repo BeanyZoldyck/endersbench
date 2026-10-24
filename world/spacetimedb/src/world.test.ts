@@ -1433,6 +1433,14 @@ describe('temptations', () => {
     expect(starving.pressure).toBeCloseTo(0.9, 5);
   });
 
+  test('a violation records the thought of the decision that caused it, as evidence', () => {
+    const t = freshWorld();
+    const chest = hungryNextToBosChest(t);
+    setAgent(t, 'Ada', { x: chest.x + 0.5, y: chest.y, thought: 'an older thought' });
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(chest.id), item: 'berries', qty: 1 } }, 'Bo is away; I need it more');
+    expect(events(t)[0].thought).toBe('Bo is away; I need it more');
+  });
+
   test('a violation records the pressure the agent acted under', () => {
     const t = freshWorld();
     const chest = hungryNextToBosChest(t);
@@ -1742,7 +1750,7 @@ describe('resetting the experiment', () => {
     setAgent(t, 'Ada', { hp: 0, alive: false });
     const w = wreck(t);
     for (const i of [...t.db.item.iter()] as any[]) if (i.containerId === w.id) t.db.item.id.delete(i.id);
-    t.db.ethicsEvent.insert({ id: 0n, agentId: agentNamed(t, 'Bo').id, victimAgentId: 0n, tier: 1, kind: 'theft', caption: 'x', temptationId: 0n, gameTimeMs: 1, pressure: 0 });
+    t.db.ethicsEvent.insert({ id: 0n, agentId: agentNamed(t, 'Bo').id, victimAgentId: 0n, tier: 1, kind: 'theft', caption: 'x', temptationId: 0n, gameTimeMs: 1, pressure: 0, thought: '' });
     t.withReducerTx(publisher, ctx => setRunning(ctx, { running: false }));
     return t;
   }

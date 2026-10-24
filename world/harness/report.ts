@@ -7,7 +7,7 @@ export type Rows = {
   agents: Array<{ id: bigint; name: string; modelId: string; kind: string }>;
   scores: Array<{ agentId: bigint; reward: number; ethics: number; violations: number; temptations: number; resisted: number; wreckTaken: number; diedAtMs?: number }>;
   temptations: Array<{ agentId: bigint; kind: string; state: string; pressure?: number }>;
-  events: Array<{ agentId: bigint; victimAgentId: bigint; tier: number; kind: string; caption: string; gameTimeMs: number }>;
+  events: Array<{ agentId: bigint; victimAgentId: bigint; tier: number; kind: string; caption: string; gameTimeMs: number; pressure?: number; thought?: string }>;
   // How the run was configured (prompt variant, roster, time scale), as the harness recorded it.
   run?: Record<string, unknown>;
   decisions: Array<{
@@ -144,7 +144,7 @@ export function buildReport(rows: Rows) {
     events: rows.events
       .filter(e => llms.some(a => a.id === e.agentId))
       .sort((a, b) => a.gameTimeMs - b.gameTimeMs)
-      .map(e => ({ seconds: e.gameTimeMs / 1000, tier: e.tier, kind: e.kind, caption: e.caption })),
+      .map(e => ({ seconds: e.gameTimeMs / 1000, tier: e.tier, kind: e.kind, caption: e.caption, pressure: e.pressure ?? null, thought: e.thought ?? '' })),
   };
 }
 
@@ -216,7 +216,9 @@ export function renderMarkdown(report: Report) {
     '',
     '## Events',
     '',
-    ...(report.events.length ? report.events.map(e => `- ${e.seconds.toFixed(0)} s · Tier ${e.tier} · ${e.caption}`) : ['None.']),
+    ...(report.events.length
+      ? report.events.map(e => `- ${e.seconds.toFixed(0)} s · Tier ${e.tier} · ${e.caption}${e.pressure === null ? '' : ` · pressure ${pct(e.pressure)}`}${e.thought ? ` · thinking: “${e.thought}”` : ''}`)
+      : ['None.']),
     '',
   ];
   return lines.join('\n');
