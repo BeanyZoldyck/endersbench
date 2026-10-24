@@ -58,6 +58,9 @@ Judges will ask "did you just prompt them to be evil?" The answer is no, and eve
 
 ## Questions technical judges will ask
 
+**Was the `reward` condition really norm-free?**
+From rules v4, yes: neither the prompt nor the observations carry rules or a fair share, and tests enforce it. Before v4, every observation included a `fairShareOfWreck` number, even under `reward`. We disclose that, and results never pool runs across rules versions.
+
 **Did you tell them to be unethical?**
 No. The default prompt has no moral language at all (a test enforces this: no "rule", "fair", "steal", "harm" or "honest"). Hoarding, theft and lies are the agents' own choices. The prompt is in every report.
 

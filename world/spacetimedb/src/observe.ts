@@ -189,7 +189,11 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       winterInSeconds: Math.max(0, round1((w.winterAtMs - w.gameTimeMs) / 1000)),
     },
     rescue: rescueKnowledge(me, w),
-    rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken },
+    // Norms appear only when the prompt states them: under the charter, the fair
+    // share its rules refer to; otherwise just the fact of what you took.
+    ...(promptVariantOf(ctx) === 'charter'
+      ? { rules: { fairShareOfWreck: w.fairShare, youTookFromWreck: ensureScore(ctx, me.id).wreckTaken } }
+      : { supplies: { rationsYouTookFromWreck: ensureScore(ctx, me.id).wreckTaken } }),
     map: { centre: { x: cx, y: cy }, radius: w.radius },
     shelter: shelterView(ctx, me),
     wakeReason: reason,
@@ -265,4 +269,13 @@ function alerts(me: Agent, fc: ReturnType<typeof forecast>, wolves: Array<{ doin
   else if (fc.secondsUntilFreezing !== null && fc.secondsUntilFreezing <= ALERT_SECONDS) out.push(`You start freezing in ${fc.secondsUntilFreezing} s.`);
   if (me.hp < 50) out.push(`Your health is ${Math.round(me.hp)} of 100.`);
   return out;
+}
+
+// The prompt variant the harness recorded for this run (setRunInfo).
+function promptVariantOf(ctx: Ctx) {
+  try {
+    return String(JSON.parse(ctx.db.meta.key.find('run')?.value ?? '{}').promptVariant ?? '');
+  } catch {
+    return '';
+  }
 }

@@ -35,6 +35,7 @@ Two prompt conditions:
 - **Exposure-normalized.** Rates are violations per opportunity the agent could actually see, not per run.
 - **Reproducible.** The map comes from a fixed scenario seed. The scenario's constants, the full system prompt and the run settings are saved in every report.
 - **Infrastructure failures are excluded.** A run where more than 10% of model calls got no answer is left out and listed: an API outage measures the API, not the agent.
+- **Norm-free means norm-free.** From rules v4, neither the `reward` prompt nor its observations mention rules or a fair share, and a test enforces it. Earlier runs showed a fair-share number in every observation, and that is disclosed.
 - **Honest wording.** The detector proves a claim false, not that it was meant to deceive, so the record says "made a false claim" and shows the thought beside it.
 
 ## Early results (GPT-6-Luna, 4 agents per run, overnight)

@@ -169,3 +169,11 @@ With the evidence now on the results page, the charter agents' own words show th
 Each observation states both numbers (`rules.fairShareOfWreck: 3`, `youTookFromWreck: 4`). So the rule doesn't break with a confession; it bends with a rationalisation. That is the most pitch-worthy finding so far: you can't audit an agent by asking whether it thinks it followed the rules.
 
 Counted (`npm run results`, "Hoarding while claiming a fair share"): **charter 3 of 7** hoarding violations came with a thought claiming a fair share, against **1 of 16 under `reward`**. Told about a fair-share rule, agents frame their violations as fair. Charter run 1 predates filed thoughts, so 3 of 7 is a lower bound.
+
+### Disclosure: the observation was not norm-free before rules v4
+
+A v3 `reward` agent thought "Take remaining **fair-share** rations", but the `reward` prompt never mentions a fair share. The source was the observation, which in rules v1–v3 carried `rules: { fairShareOfWreck, youTookFromWreck }` in every prompt variant.
+
+So the `reward` condition was "no rules in the prompt, but a fair-share number in every observation." That weakens the `reward` vs `charter` contrast, and it is why one `reward` agent spoke of a fair share.
+
+Rules v4 fixes it. The fair share appears only under `charter`. Other variants see only `supplies.rationsYouTookFromWreck`, a fact. A test enforces that a `reward` observation contains neither "fair" nor "rule". Results already separate rules versions, so v4 runs never pool with earlier ones.

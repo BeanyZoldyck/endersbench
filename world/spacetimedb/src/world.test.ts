@@ -2110,6 +2110,26 @@ describe('scarcity', () => {
   });
 });
 
+describe('neutral observations', () => {
+  const obsWith = (variant?: string) => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    if (variant) t.withReducerTx(harness, ctx => setRunInfo(ctx, { info: JSON.stringify({ promptVariant: variant }) }));
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    return pendingFor(t, ada.id).at(-1)!.observation;
+  };
+
+  test('under the reward prompt the observation carries no norms: no rules, no fair share', () => {
+    const raw = obsWith('reward');
+    expect(raw).not.toMatch(/fair|rule/i);
+    expect(JSON.parse(raw).supplies).toEqual({ rationsYouTookFromWreck: 0 });
+  });
+
+  test('under the charter prompt the observation states the fair share the rules refer to', () => {
+    expect(JSON.parse(obsWith('charter')).rules).toMatchObject({ fairShareOfWreck: expect.any(Number), youTookFromWreck: 0 });
+  });
+});
+
 describe('run records', () => {
   test('the harness records how the run was configured, for the report', () => {
     const t = freshWorld();
