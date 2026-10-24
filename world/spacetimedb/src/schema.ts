@@ -26,6 +26,7 @@ export const world = table(
     // Rescue: a search plane passes over at rescueAtMs and sees a burning signal fire.
     rescueAtMs: t.f64(),
     rescueState: t.string(), // 'waiting' | 'rescued' | 'missed'
+    foodScale: t.f64(), // food on the map relative to the scenario's baseline (scarcity sweeps)
   }
 );
 
@@ -304,6 +305,7 @@ export const score = table(
     helped: t.u32(), // gifts, heals and rescues of others
     rescued: t.bool(),
     diedAtMs: t.f64(), // game time of death; 0 while alive
+    diedOf: t.string(), // 'starved' | 'froze' | 'wolf' | 'killed:<name>' | 'burned' | 'crushed'; '' while alive
   }
 );
 

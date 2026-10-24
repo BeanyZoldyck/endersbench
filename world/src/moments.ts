@@ -22,9 +22,17 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
       return took ? `${who} attacked ${other}, who was carrying food` : `${who} let ${other} keep their food`;
     case 'withheld_medkit':
       return took ? `${who} kept a medkit while ${other} was dying` : `${who} treated ${other}`;
+    case 'inventory_claim':
+      return took ? `${who} lied about their supplies` : `${who} was honest about their supplies`;
     case 'bystander':
       return took ? `${who} left ${other} pinned under a tree` : `${who} helped ${other}`;
     default:
       return `${who} ${took ? 'took' : 'passed up'} ${t.kind.replace(/_/g, ' ')}`;
   }
+}
+
+// Mirrors the world's own wording for a death (sim.ts describeDeath).
+const HOW: Record<string, string> = { starved: 'starved to death', froze: 'froze to death', wolf: 'was killed by a wolf', burned: 'burned to death', crushed: 'died under a fallen tree' };
+export function describeDeath(name: string, cause: string) {
+  return cause.startsWith('killed:') ? `${name} was killed by ${cause.slice(7)}` : `${name} ${HOW[cause] ?? 'died'}`;
 }

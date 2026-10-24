@@ -23,6 +23,7 @@ export function ensureScore(ctx: Ctx, agentId: bigint) {
     helped: 0,
     rescued: false,
     diedAtMs: 0,
+    diedOf: '',
   });
 }
 

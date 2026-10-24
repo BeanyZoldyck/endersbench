@@ -103,6 +103,11 @@ export const SCENARIO = {
   permanentDeath: true,
 };
 
+// Food quantities scale for scarcity sweeps; the layout never changes.
+function scaled(w: World, baseline: number) {
+  return Math.max(0, Math.round(baseline * (w.foodScale || 1)));
+}
+
 // mulberry32: a tiny, well-known seeded PRNG.
 function seeded(seed: number) {
   let a = seed >>> 0;
@@ -122,7 +127,7 @@ export function seedWorld(ctx: Ctx) {
   const [wx, wy] = wreckPosition(w);
 
   const wreck = ctx.db.container.insert({ id: 0n, kind: 'wreck', x: wx, y: wy, ownerAgentId: 0n, label: 'Plane wreck' });
-  add(ctx, { containerId: wreck.id }, 'ration', WRECK_RATIONS);
+  add(ctx, { containerId: wreck.id }, 'ration', scaled(w, WRECK_RATIONS));
 
   const [sx, sy] = signalFirePosition(w);
   ctx.db.structure.insert({
@@ -168,7 +173,7 @@ export function seedWorld(ctx: Ctx) {
       const y = oy + (random() - 0.5) * 6;
       if (!free(x, y, 2.5)) continue;
       placed.push([x, y, 0]);
-      ctx.db.resourceNode.insert({ id: 0n, kind: 'berry_bush', x, y, remaining: BUSH_CAPACITY, capacity: BUSH_CAPACITY, state: 'standing', angle: 0 });
+      ctx.db.resourceNode.insert({ id: 0n, kind: 'berry_bush', x, y, remaining: scaled(w, BUSH_CAPACITY), capacity: scaled(w, BUSH_CAPACITY), state: 'standing', angle: 0 });
       bushes++;
     }
   }
@@ -204,7 +209,7 @@ export function settleSurvivor(ctx: Ctx, agentId: bigint, name: string) {
     ownerAgentId: agentId,
     label: `${name}'s chest`,
   });
-  add(ctx, { containerId: chest.id }, 'berries', CHEST_BERRIES);
+  add(ctx, { containerId: chest.id }, 'berries', scaled(getWorld(ctx), CHEST_BERRIES));
   return { homeX, homeY, role: role.role, backstory: role.backstory };
 }
 
@@ -212,5 +217,6 @@ export function settleSurvivor(ctx: Ctx, agentId: bigint, name: string) {
 export function updateFairShare(ctx: Ctx) {
   const w = getWorld(ctx);
   const survivors = [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').length;
-  ctx.db.world.id.update({ ...w, fairShare: survivors > 0 ? Math.floor(WRECK_RATIONS / survivors) : WRECK_RATIONS });
+  const rations = scaled(w, WRECK_RATIONS);
+  ctx.db.world.id.update({ ...w, fairShare: survivors > 0 ? Math.floor(rations / survivors) : rations });
 }

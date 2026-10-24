@@ -156,7 +156,7 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm
   if (hunger > REGEN_ABOVE_HUNGER && warmth > 0 && hp >= CRITICAL_HP) hp = Math.min(100, hp + REGEN_HP_PER_S * s);
   ctx.db.agent.id.update({ ...a, hunger, warmth, hp });
   if (hp <= 0) {
-    knockOut(ctx, a.id);
+    knockOut(ctx, a.id, a.pinned ? 'crushed' : hunger <= 0 ? 'starved' : 'froze');
     return false;
   }
   const fell = (before: number, after: number, lines: number[]) => lines.some(l => before > l && after <= l);
@@ -313,7 +313,7 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
     hp,
   });
   if (hp <= 0) {
-    knockOut(ctx, id);
+    knockOut(ctx, id, 'burned');
     return null;
   }
   act(ctx, id, dt, nowMs, arrived);
@@ -496,7 +496,7 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
     },
     MEMORY_DEDUP_MS
   );
-  if (knockedOut) knockOut(ctx, victim.id);
+  if (knockedOut) knockOut(ctx, victim.id, `killed:${attacker.name}`);
   return knockedOut;
 }
 
@@ -508,7 +508,12 @@ export function dropAll(ctx: Ctx, a: Agent) {
   for (const [kind, qty] of Object.entries(held)) move(ctx, { agentId: a.id }, { containerId: drop.id }, kind, qty);
 }
 
-export function knockOut(ctx: Ctx, id: bigint) {
+const HOW: Record<string, string> = { starved: 'starved to death', froze: 'froze to death', wolf: 'was killed by a wolf', burned: 'burned to death', crushed: 'died under a fallen tree' };
+export function describeDeath(name: string, cause: string) {
+  return cause.startsWith('killed:') ? `${name} was killed by ${cause.slice(7)}` : `${name} ${HOW[cause] ?? 'died'}`;
+}
+
+export function knockOut(ctx: Ctx, id: bigint, cause = '') {
   const a = ctx.db.agent.id.find(id);
   if (!a || !a.alive) return;
   dropAll(ctx, a);
@@ -530,8 +535,8 @@ export function knockOut(ctx: Ctx, id: bigint) {
     pendingRequestId: 0n,
     wake: false,
   });
-  ctx.db.worldEvent.insert({ kind: 'died', x: a.x, y: a.y, agentId: a.id, otherId: 0n, text: `${a.name} died` });
-  ctx.db.score.agentId.update({ ...ensureScore(ctx, a.id), diedAtMs: now });
+  ctx.db.worldEvent.insert({ kind: 'died', x: a.x, y: a.y, agentId: a.id, otherId: 0n, text: describeDeath(a.name, cause) });
+  ctx.db.score.agentId.update({ ...ensureScore(ctx, a.id), diedAtMs: now, diedOf: cause });
   witness(ctx, { x: a.x, y: a.y, exclude: [a.id], text: () => `You saw ${a.name} die.`, aboutAgentId: a.id, valence: 0 });
   // Anyone fighting or following them stops.
   for (const other of [...ctx.db.agent.iter()]) {

@@ -1,6 +1,6 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
 import type { Agent, Container, Score, Temptation, World } from './module_bindings/types';
-import { describeChoice } from './moments';
+import { describeChoice, describeDeath } from './moments';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
 // A thought is shown beside a choice only if the choice closed while we were
@@ -31,7 +31,7 @@ export function MomentsRail({ world, agents, containers, scores, temptations }: 
     for (const s of scores) {
       if (!s.diedAtMs) continue;
       const a = agents.find(a => a.id === s.agentId);
-      if (a) list.push({ key: `d${s.agentId}`, at: s.diedAtMs, kind: 'died', text: `${a.name} died`, color: a.color });
+      if (a) list.push({ key: `d${s.agentId}`, at: s.diedAtMs, kind: 'died', text: describeDeath(a.name, (s as Score & { diedOf?: string }).diedOf ?? ''), color: a.color });
     }
     return list.sort((a, b) => b.at - a.at).slice(0, 40);
   }, [temptations, scores, agents, containers, names, now]);

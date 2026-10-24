@@ -24,6 +24,8 @@ export type SceneProps = {
   onClickTile: (x: number, y: number) => void;
   // The selected survivor's status card, drawn beside them in the scene.
   selectedCard?: ReactNode;
+  // Someone who just broke a rule: the audience camera cuts to them.
+  spotlitId?: bigint;
 };
 
 export function WorldScene(props: SceneProps) {
@@ -66,7 +68,7 @@ const FOV = 30;
 const VIEW = new THREE.Vector3(80, 82, 110).normalize();
 const MIN_DISTANCE = 18, MAX_DISTANCE = 260;
 
-function CameraRig({ world, agents, containers, mode, selectedId, moments, onExplore }: SceneProps) {
+function CameraRig({ world, agents, containers, mode, selectedId, spotlitId, moments, onExplore }: SceneProps) {
   const controls = useRef<Controls>(null);
   const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
@@ -97,7 +99,7 @@ function CameraRig({ world, agents, containers, mode, selectedId, moments, onExp
       return;
     }
     if (lastMode.current !== mode) { shot.current.at = -Infinity; lastMode.current = mode; }
-    const following = mode === 'follow' && agents.find(a => a.id === selectedId);
+    const following = (mode === 'follow' && agents.find(a => a.id === selectedId)) || (mode === 'audience' && spotlitId !== undefined && agents.find(a => a.id === spotlitId));
     if (following) target.current.set(following.x - world.width / 2, 0, following.y - world.height / 2);
     else {
       const now = performance.now();

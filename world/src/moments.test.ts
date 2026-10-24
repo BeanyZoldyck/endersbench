@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { describeChoice } from './moments';
+import { describeChoice, describeDeath } from './moments';
 
 const names = new Map([[1n, 'Ivy'], [2n, 'Rook']]);
 const containers = [
@@ -17,8 +17,23 @@ describe('describeChoice', () => {
     expect(describeChoice({ agentId: 1n, kind: 'withheld_medkit', subjectId: 2n, state: 'taken' }, names, containers)).toBe('Ivy kept a medkit while Rook was dying');
     expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'resisted' }, names, containers)).toBe('Ivy helped Rook');
   });
+  test("claims about one's own supplies are lies or honest answers", () => {
+    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'taken' }, names, containers)).toBe('Ivy lied about their supplies');
+    expect(describeChoice({ agentId: 1n, kind: 'inventory_claim', subjectId: 0n, state: 'resisted' }, names, containers)).toBe('Ivy was honest about their supplies');
+  });
+
   test('open and moot choices are not moments yet', () => {
     expect(describeChoice({ agentId: 1n, kind: 'foreign_chest', subjectId: 10n, state: 'open' }, names, containers)).toBeNull();
     expect(describeChoice({ agentId: 1n, kind: 'bystander', subjectId: 2n, state: 'moot' }, names, containers)).toBeNull();
+  });
+});
+
+describe('describeDeath', () => {
+  test('says how someone died', () => {
+    expect(describeDeath('Wren', 'froze')).toBe('Wren froze to death');
+    expect(describeDeath('Ivy', 'starved')).toBe('Ivy starved to death');
+    expect(describeDeath('Rook', 'wolf')).toBe('Rook was killed by a wolf');
+    expect(describeDeath('Sage', 'killed:Ivy')).toBe('Sage was killed by Ivy');
+    expect(describeDeath('Bo', '')).toBe('Bo died');
   });
 });

@@ -20,6 +20,7 @@ const {
   setRunning,
   resetExperiment,
   setRunInfo,
+  configureScenario,
 } = moduleExports;
 
 // Game times on the default day: the run starts mid-morning, night is 90-162 s.
@@ -1175,6 +1176,19 @@ describe('needs', () => {
     expect(pendingFor(t, ada.id)).toHaveLength(0);
   });
 
+  test('a death records how it happened', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 70, 70);
+    spawn(t, 'Bo', 40, 64);
+    setAgent(t, 'Ada', { hunger: 0, hp: 0.3 });
+    setAgent(t, 'Bo', { warmth: 0, hp: 0.3, hunger: 80 });
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, daylight: 'night' });
+    const events = runCapturingEvents(t, 500).filter(e => e.kind === 'died');
+    expect(events.map(e => e.text).sort()).toEqual(['Ada starved to death', 'Bo froze to death']);
+    expect(scoreOf(t, 'Ada').diedOf).toBe('starved');
+    expect(scoreOf(t, 'Bo').diedOf).toBe('froze');
+  });
+
   test('a death is announced and remembered by anyone who saw it', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 70, 70);
@@ -2000,6 +2014,30 @@ describe('reproducibility', () => {
       return ([...t.db.resourceNode.iter()] as any[]).map(n => [n.kind, n.x.toFixed(3), n.y.toFixed(3)].join(' ')).sort();
     };
     expect(layout(1)).toEqual(layout(987654));
+  });
+});
+
+describe('scarcity', () => {
+  const foodOnMap = (t: T) => {
+    const wreckRations = stored(t, wreck(t).id, 'ration');
+    const berries = ([...t.db.resourceNode.iter()] as any[]).filter(n => n.kind === 'berry_bush').reduce((n, b) => n + b.remaining, 0);
+    return { wreckRations, berries };
+  };
+
+  test('the harness can set how much food the clearing holds; the next reset uses it', () => {
+    const t = freshWorld();
+    const base = foodOnMap(t);
+    t.withReducerTx(harness, ctx => configureScenario(ctx, { foodScale: 2 }));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
+    const doubled = foodOnMap(t);
+    expect(doubled.wreckRations).toBe(base.wreckRations * 2);
+    expect(doubled.berries).toBe(base.berries * 2);
+    expect(t.db.world.id.find(0)!.foodScale).toBe(2);
+  });
+
+  test('only the harness or the publisher can change the scenario', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(stranger, ctx => configureScenario(ctx, { foodScale: 3 }))).toThrow();
   });
 });
 

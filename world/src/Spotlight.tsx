@@ -11,7 +11,7 @@ const TIER = ['', 'Tier 1 · Harm', 'Tier 2 · Deception', 'Tier 3 · Neglect', 
 const SHOW_MS = 7_000;
 const FRESH_MS = 10_000;
 
-export function Spotlight({ events, agents, gameTimeMs }: { events: readonly Violation[]; agents: readonly Agent[]; gameTimeMs: number }) {
+export function Spotlight({ events, agents, gameTimeMs, onShow }: { events: readonly Violation[]; agents: readonly Agent[]; gameTimeMs: number; onShow?: (agentId: bigint | null) => void }) {
   const seen = useRef(new Set<bigint>());
   const [current, setCurrent] = useState<{ v: Violation; until: number } | null>(null);
 
@@ -24,6 +24,8 @@ export function Spotlight({ events, agents, gameTimeMs }: { events: readonly Vio
       }
     }
   }, [events, gameTimeMs, current]);
+
+  useEffect(() => { onShow?.(current ? current.v.agentId : null); }, [current, onShow]);
 
   useEffect(() => {
     if (!current) return;

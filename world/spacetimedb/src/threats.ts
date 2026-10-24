@@ -4,6 +4,7 @@ import type { Agent, Ctx, World } from './ctx';
 import { alarm, centre, distance, getWorld, wakeAgent } from './ctx';
 import { ensureScore, resolveTemptation } from './ethics';
 import { add } from './items';
+import { knockOut } from './sim';
 import { remember, tellEveryone, witness } from './memory';
 import { type Collider, closestOnSegment, resolve } from './physics';
 import { inBuiltShelter, inFirelight, litFires } from './sight';
@@ -310,6 +311,7 @@ function bite(ctx: Ctx, m: Mob, prey: Agent) {
   alarm(ctx, prey.id, 'attacked');
   ctx.db.hitEvent.insert({ attackerId: m.id, attackerIsMob: true, victimId: prey.id, victimIsMob: false, damage: WOLF_BITE, knockedOut: hp <= 0 });
   remember(ctx, { agentId: prey.id, kind: 'felt', text: 'A wolf bit you.', aboutAgentId: 0n, valence: 0 }, MEMORY_DEDUP_MS);
+  if (hp <= 0) knockOut(ctx, prey.id, 'wolf');
   return hp <= 0;
 }
 

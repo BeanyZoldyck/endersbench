@@ -59,6 +59,8 @@ export default function App() {
   const [depleted, setDepleted] = useState(false);
   const [previewMoments, setPreviewMoments] = useState<Moment[]>([]);
   const [error, setError] = useState('');
+  // While a violation is in the spotlight, the audience camera shows who did it.
+  const [spotlit, setSpotlit] = useState<bigint | null>(null);
   const liveWorld = worlds[0];
   const previewSource = useRef(liveWorld);
   previewSource.current = liveWorld;
@@ -105,10 +107,10 @@ export default function App() {
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
-        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
+        physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
       {replay.active && <ReplayBar replay={replay} />}
-      {world && !preview && <Spotlight events={ethicsRows} agents={agents} gameTimeMs={world.gameTimeMs} />}
+      {world && !preview && <Spotlight events={ethicsRows} agents={agents} gameTimeMs={world.gameTimeMs} onShow={setSpotlit} />}
     </div>
     <div className="topbar">
     <header className="masthead">
