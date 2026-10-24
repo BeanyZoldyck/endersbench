@@ -1,6 +1,6 @@
 import { useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import type { Agent, Container, EthicsEvent, Record as GameRecord, ResourceNode, Score, Temptation, World } from './module_bindings/types';
-import { describeChoice, describeDeath, describeRecord, pressureBands } from './moments';
+import { describeChoice, describeDeath, describeRecord, listedInRail, pressureBands } from './moments';
 import { stanceLabel } from './fairShare';
 
 const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
@@ -8,8 +8,7 @@ const time = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms /
 // watching: the agent's latest words then are what it was thinking as it chose.
 const FRESH_MS = 15_000;
 // Every take and every death is listed. A pass is listed only under real
-// pressure; comfortable passes are still counted in the header.
-const NOTABLE_PASS = 0.4;
+// pressure; comfortable passes are still counted in the header (see listedInRail).
 
 type Entry = { key: string; at: number; kind: 'taken' | 'resisted' | 'died' | 'noted'; text: string; pressure?: number; thought?: string; stance?: string; color?: string };
 
@@ -23,8 +22,8 @@ export function MomentsRail({ world, agents, containers, nodes, records, scores,
     const list: Entry[] = [];
     for (const t of temptations) {
       const text = describeChoice(t, names, containers);
-      // True claims about one's own supplies are counted, not listed: they are the norm.
-      if (!text || (t.state === 'resisted' && (t.pressure < NOTABLE_PASS || t.kind === 'inventory_claim'))) continue;
+      // True claims, about one's own supplies or the crate, are counted, not listed: they are the norm.
+      if (!text || !listedInRail(t)) continue;
       if (!thoughts.current.has(t.id)) {
         const agent = agents.find(a => a.id === t.agentId);
         thoughts.current.set(t.id, now - t.closedAtMs <= FRESH_MS && agent?.thought ? agent.thought : null);

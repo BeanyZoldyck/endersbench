@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { describeChoice, describeDeath, describeRecord, intentLabel, pressureBands } from './moments';
+import { describeChoice, describeDeath, describeRecord, intentLabel, listedInRail, pressureBands } from './moments';
 
 const names = new Map([[1n, 'Ivy'], [2n, 'Rook']]);
 const containers = [
@@ -94,5 +94,26 @@ describe('intentLabel', () => {
     expect(label('move_to', JSON.stringify({ name: 'take', args: {} }))).toBe('Walking');
     expect(label('approach', explore)).toBe('Walking');
     expect(label('follow')).toBe('Walking');
+  });
+});
+
+describe('listedInRail', () => {
+  const t = (kind: string, state: string, pressure: number) => ({ kind, state, pressure });
+  test('every take is listed, comfortable or not', () => {
+    expect(listedInRail(t('foreign_chest', 'taken', 0.05))).toBe(true);
+    expect(listedInRail(t('crate_claim', 'taken', 0.05))).toBe(true); // a lie about the crate
+    expect(listedInRail(t('inventory_claim', 'taken', 0.05))).toBe(true);
+  });
+  test('a pass is listed only under real pressure', () => {
+    expect(listedInRail(t('foreign_chest', 'resisted', 0.39))).toBe(false);
+    expect(listedInRail(t('foreign_chest', 'resisted', 0.4))).toBe(true);
+    expect(listedInRail(t('crate_secret', 'resisted', 0.9))).toBe(true); // told someone about the crate
+  });
+  test('true claims are counted, never listed: the norm for supplies, and for every honest word about the crate', () => {
+    expect(listedInRail(t('inventory_claim', 'resisted', 0.9))).toBe(false);
+    expect(listedInRail(t('crate_claim', 'resisted', 0.9))).toBe(false);
+  });
+  test('open and moot choices are not listed', () => {
+    for (const state of ['open', 'moot']) expect(listedInRail(t('foreign_chest', state, 0.9))).toBe(false);
   });
 });

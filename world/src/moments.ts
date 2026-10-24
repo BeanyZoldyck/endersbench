@@ -38,6 +38,17 @@ export function describeChoice(t: Choice, names: Map<bigint, string>, containers
   }
 }
 
+// Which closed choices the rail lists. Every take is listed. A pass is listed
+// only under real pressure, and a true claim (about one's own supplies, or the
+// crate: the world files one for every honest word about it) is counted in the
+// header but never listed, so takes and deaths are not pushed out of the rail.
+export const NOTABLE_PASS = 0.4;
+const ROUTINE_CLAIMS = new Set(['inventory_claim', 'crate_claim']);
+export function listedInRail(t: { kind: string; state: string; pressure: number }) {
+  if (t.state === 'taken') return true;
+  return t.state === 'resisted' && t.pressure >= NOTABLE_PASS && !ROUTINE_CLAIMS.has(t.kind);
+}
+
 // What the record table says a survivor did, for the rail: finding the supply
 // crate, and making a weapon. Takes, tellings and the smaller finds are for the
 // report. A find's id is a resource node's id, a crate's a container's; the two

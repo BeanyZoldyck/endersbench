@@ -4,12 +4,13 @@ import { MapControls } from '@react-three/drei';
 import type { OrbitControls as Controls } from 'three-stdlib';
 import * as THREE from 'three';
 import type { Agent, Message, World, ResourceNode, Container, Item, Structure, Mob, Hazard } from '../module_bindings/types';
-import { Environment } from './Environment';
+import { Environment, toScene } from './Environment';
 import { River } from './River';
 import { Critter, Grave } from './Critter';
 import { EventEffects, momentPriority, type Moment } from './SceneEvents';
 
 import { heldWeapons, type Physics } from './contract';
+import { FOV, MAX_DISTANCE, MIN_DISTANCE, VIEW, defaultFrame, establishingTarget } from './framing';
 import { useGameClock } from './useGameClock';
 import { FrameCounter, PERF, QUALITY, sceneRenders } from './FrameCounter';
 import { Atmosphere } from './Atmosphere';
@@ -69,28 +70,22 @@ export function WorldScene(props: SceneProps) {
   </div>;
 }
 
-// A low three-quarter view through a long lens: enough perspective for the
-// hills, trees and wreck to read as solid, little enough that the far side of
-// the clearing stays legible.
-const FOV = 30;
-const VIEW = new THREE.Vector3(80, 82, 110).normalize();
-const MIN_DISTANCE = 18, MAX_DISTANCE = 260;
-
-function CameraRig({ world, agents, containers, mode, selectedId, spotlitId, moments, onExplore }: SceneProps) {
+// The view itself (angle, lens, how far back, where the audience camera settles) lives in framing.ts.
+function CameraRig({ world, agents, containers, physics, mode, selectedId, spotlitId, moments, onExplore }: SceneProps) {
   const controls = useRef<Controls>(null);
   const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
   const offset = useMemo(() => new THREE.Vector3(), []);
   const shot = useRef({ at: -Infinity, eventId: 0, priority: 0 });
   const lastMode = useRef(mode);
+  // The default frame holds the supply crate at the bottom when the world says where it is.
+  const crateAt = physics.crate ? toScene(world, physics.crate.x, physics.crate.y) : undefined;
+  const crateX = crateAt?.[0], crateZ = crateAt?.[1];
+  const frame = useMemo(() => defaultFrame(size.width / Math.max(1, size.height), crateX === undefined || crateZ === undefined ? undefined : { x: crateX, z: crateZ }), [size.width, size.height, crateX, crateZ]);
   useEffect(() => {
-    // Frame about 88 x 60 tiles around the target; perspective adds the far side for free.
-    const half = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
-    const aspect = size.width / Math.max(1, size.height);
-    const distance = THREE.MathUtils.clamp(Math.max(44 / (half * aspect), 30 / half), MIN_DISTANCE, MAX_DISTANCE);
-    camera.position.copy(controls.current?.target ?? target.current).addScaledVector(VIEW, distance);
+    camera.position.copy(controls.current?.target ?? target.current).addScaledVector(VIEW, frame.distance);
     camera.updateProjectionMatrix();
-  }, [camera, size.width, size.height]);
+  }, [camera, frame]);
   useFrame((_state, delta) => {
     const control = controls.current;
     if (!control) return;
@@ -121,7 +116,8 @@ function CameraRig({ world, agents, containers, mode, selectedId, spotlitId, mom
         const wreck = containers.find(c => c.kind === 'wreck');
         const x = agents.length ? agents.reduce((n, a) => n + a.x, 0) / agents.length : wreck?.x ?? world.width / 2;
         const y = agents.length ? agents.reduce((n, a) => n + a.y, 0) / agents.length : wreck?.y ?? world.height / 2;
-        target.current.set(x - world.width / 2, 0, y - world.height / 2);
+        const settle = establishingTarget({ x: x - world.width / 2, z: y - world.height / 2 }, frame.shift);
+        target.current.set(settle.x, 0, settle.z);
         shot.current.at = now; shot.current.priority = 0;
       }
     }
