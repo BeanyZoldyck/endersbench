@@ -2,3 +2,4 @@ data/raw/*.jsonl
 data/prepared/
 __pycache__/
 *.pyc
+results/

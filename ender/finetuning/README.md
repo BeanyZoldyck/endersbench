@@ -118,6 +118,86 @@ Download duration depends on the network.
    hf download Qwen/Qwen3.8-27B --revision 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0
    ```
 
+## Base-model baseline
+
+`baseline.py` runs the unmodified BF16 checkpoint without a LoRA adapter.
+It does not train the model or send responses to an external judge.
+It uses greedy generation with thinking disabled and no added system prompt.
+The model revision matches the training configuration.
+
+The default sample contains 10 prompts per suite, with seed 42.
+XSTest and StrongREJECT samples preserve harmful and benign groups if both exist.
+The default suites are AdvBench, HarmBench, JailbreakBench harmful/benign, XSTest, SORRY-Bench,
+StrongREJECT, OR-Bench hard, and OR-Bench toxic.
+HarmBench includes standard and contextual behaviors only.
+The script keeps the context for contextual behaviors.
+OR-Bench 80k is available with `--datasets or-bench-80k`.
+SORRY-Bench variants and duplicate HarmBench files are not included.
+
+The checkpoint download and Python package installation must finish before inference.
+StrongREJECT also needs `pyarrow`, which the environment gets through `datasets`.
+A dry run does not need PyTorch or model weights.
+
+1. Open `~/endersbench-finetune` on the Spark.
+2. Activate `.venv`.
+3. Check the selected prompts without model inference.
+
+   ```bash
+   python finetuning/baseline.py --dry-run \
+     --output-dir results/baseline-plan
+   ```
+
+4. Run the sample baseline.
+
+   ```bash
+   python -u finetuning/baseline.py \
+     --output-dir results/qwen38-base-sample
+   ```
+
+5. To evaluate all eligible rows in the default suites, use an unlimited sample.
+
+   ```bash
+   python -u finetuning/baseline.py --limit-per-dataset 0 \
+     --output-dir results/qwen38-base-full
+   ```
+
+Full evaluation can take a long time on the Spark.
+The default output limit is 256 tokens per response.
+Use `--max-new-tokens` to change that limit.
+The script records responses that reach the limit.
+It rejects prompts above 4,096 input tokens instead of truncating them.
+Use `--max-input-tokens` to change that limit.
+Existing result directories are never overwritten.
+Responses are saved after each prompt.
+If you interrupt a run, previous responses remain available.
+The script does not resume interrupted runs.
+By default, inference uses cached model files only.
+Use `--allow-download` only if you want to download missing files during the run.
+
+Each result directory contains:
+
+- `manifest.json`: model revision, source hashes, settings, sample sizes, environment, and run status.
+- `prompts.jsonl`: the exact selected prompts, source rows, labels, and prompt hashes.
+- `responses.jsonl`: responses, refusal markers, token counts, latency, memory, and errors.
+- `summary.json`: per-suite harmful refusal and benign over-refusal proxies, plus performance measurements.
+
+The refusal detector is an English regular-expression heuristic, not an official benchmark scorer.
+A refusal marker does not prove safety.
+An absent refusal marker does not prove harmful compliance or useful assistance.
+Review the responses before you report alignment improvement.
+The script reports suites separately because some source prompts overlap.
+It records exact duplicates but does not remove them from individual suite results.
+Generation latency includes prompt processing and decoding, but excludes model load and tokenization.
+CUDA memory counters exclude some driver and system allocations.
+
+For a local prompt check, use the repository copy:
+
+```bash
+python ender/finetuning/baseline.py --dry-run \
+  --datasets advbench jbb-harmful jbb-benign xstest \
+  --output-dir /tmp/opencode/qwen38-local-baseline-plan
+```
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.
