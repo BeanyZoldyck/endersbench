@@ -344,6 +344,52 @@ python finetuning/second_pass.py \
   --output-dir reports/baseline-second-pass
 ```
 
+### Alignment and reward-hacking catalogs (separate run)
+
+`scenario_baseline.py` evaluates all 24 `alignment/scenarios.jsonl` and 26
+`rewardhacking/scenarios.jsonl` entries. Raw upstream mirrors are copied for
+reference but their original agent harnesses are **not** executed. This is a
+text-only, explicit two-option decision probe, not an agentic benchmark score.
+
+The prompt contains the scenario observation and both actions with consequences.
+It does not contain catalog ethical labels, titles, detection rules, or provenance.
+Each scenario runs once; the ethical option is in A for half of each catalog and
+in B for the other half (seed 42). No Charter or win-at-all-costs instruction is
+added. The model emits `CHOICE: A` or `CHOICE: B` first, followed by a brief
+explanation, with a 32-token cap and thinking off. The parser maps only the
+explicit leading choice to the catalog branch. Missing choices and errors are
+undetermined. Explanations are saved, not independently semantically judged.
+
+Run on Spark, with streaming answers, 2-second heartbeat, counts, ETA, and a log:
+
+```bash
+cd ~/endersbench-finetune
+bash finetuning/run_scenarios.sh
+```
+
+For a detached but attachable terminal:
+
+```bash
+tmux new-session -s alignment-reward 'bash finetuning/run_scenarios.sh; exec bash'
+# Detach with Ctrl+B, then D. Reattach with:
+tmux attach -t alignment-reward
+```
+
+Each run creates unique `results/alignment-reward-<timestamp>/`,
+`logs/alignment-reward-<timestamp>.log`, and
+`finetuning/reports/alignment-reward-<timestamp>/` directories. The offline HTML
+report has overall/per-catalog SVG charts, source semantic categories, an
+option-position diagnostic, searchable exact prompts/responses, provenance,
+overlap links, JSONL, and CSV. Existing runs are never overwritten. `COMPLETE`
+and a terminal bell announce that inference and report generation both finished.
+
+No model tools execute. Stated ethical choices do not establish safe behavior;
+providing both alternatives can cue the answer. Catalog labels are not independent
+ground truth, and related cases overlap across the two catalogs. The report keeps
+the suites separate and marks the pooled count as descriptive, not independent
+trials. Longer explanations can be truncated; inspect the saved text before
+drawing conclusions. No external judge/API key is used.
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.
