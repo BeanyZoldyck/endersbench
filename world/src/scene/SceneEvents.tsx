@@ -1,15 +1,41 @@
 import { boundaryFog } from './boundaryFog';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { DbConnection, EventContext } from '../module_bindings';
 import type { Agent, Container, HitEvent, Mob, TransferEvent, World, WorldEvent } from '../module_bindings/types';
-import { itemColor } from './contract';
+import { GLOW, glowCategory } from './glow';
 
-export type Moment = { id: number; type: 'hit' | 'transfer' | 'world'; from: [number, number]; to: [number, number]; kind: string; born: number; knockedOut?: boolean };
+// Same colours as the glow key: food, wood, medical, flare.
+const fxColor = (item: string) => GLOW[glowCategory(item)].color;
+
+// pop: a label that rises and fades over someone (+1 wood, ate a berry, −12).
+// flight: an item token carried from one place to another (into a chest, onto a fire).
+export type Moment = { id: number; type: 'hit' | 'transfer' | 'world' | 'pop' | 'flight'; from: [number, number]; to: [number, number]; kind: string; born: number; knockedOut?: boolean; label?: string; item?: string; color?: string };
 export type ObservedEvent = WorldEvent & { localId: number; receivedAt: number };
-export const momentDuration = (m: Moment) => m.kind === 'flyover' ? 10000 : m.kind === 'flare' ? 4000 : 1600;
-export const momentPriority = (m: Moment) => m.type === 'hit' || ['burn', 'pinned', 'wolf_bite', 'bump'].includes(m.kind) ? 3 : m.type === 'transfer' || ['flyover', 'rescued', 'noticed_loss'].includes(m.kind) ? 2 : 1;
+export const momentDuration = (m: Moment) => m.kind === 'flyover' ? 10000 : m.kind === 'flare' ? 4000 : m.type === 'pop' ? 1500 : m.type === 'flight' || m.type === 'transfer' ? 1300 : 1600;
+export const momentPriority = (m: Moment) => m.type === 'pop' ? 0 : m.type === 'hit' || ['burn', 'pinned', 'wolf_bite', 'bump'].includes(m.kind) ? 3 : m.type === 'transfer' || ['flyover', 'rescued', 'noticed_loss', 'shelter_done'].includes(m.kind) ? 2 : 1;
+
+const singular = (kind: string) => kind === 'berries' ? 'berry' : kind;
+const plural = (kind: string, qty: number) => qty === 1 ? singular(kind) : kind === 'berries' || kind === 'wood' || kind === 'meat' ? kind : `${kind}s`;
+// What a viewer reads over the action.
+export function popLabel(kind: string, text: string, qty?: number) {
+  if (kind === 'gathered') return `+1 ${singular(text)}`;
+  if (kind === 'transfer') return `${qty ?? 1} ${plural(text, qty ?? 1)}`;
+  if (kind === 'ate') return text === 'meat' ? 'ate some meat' : `ate a ${singular(text)}`;
+  if (kind === 'built') return `+${text} wood`;
+  if (kind === 'fire_fed' || kind === 'fire_lit') return qty ? `+${qty} wood` : '+wood';
+  if (kind === 'hit') return `−${qty ?? 0}`;
+  if (kind === 'healed') return 'healed';
+  return kind.replace(/_/g, ' ');
+}
+// Wall panels standing on a shelter that still needs `woodNeeded` of `total` wood.
+export function shelterPanels(woodNeeded: number, total: number, panels: number) {
+  return Math.floor(((total - Math.max(0, Math.min(total, woodNeeded))) / Math.max(1, total)) * panels);
+}
+// Events that only animate; they would flood the journal and captions.
+const FEEDBACK_ONLY = new Set(['gathered', 'ate', 'built', 'fire_fed']);
 export function actorPosition(id: bigint, isMob: boolean, agents: readonly Pick<Agent, 'id' | 'x' | 'y'>[], mobs: readonly Pick<Mob, 'id' | 'x' | 'y'>[]): [number, number] | undefined {
   const row = (isMob ? mobs : agents).find(a => a.id === id);
   return row && [row.x, row.y];
@@ -31,22 +57,31 @@ export function useMoments(conn: DbConnection | null, agents: readonly Agent[], 
       return row && [row.x, row.y];
     };
     const add = (m: Omit<Moment, 'id' | 'born'>) => {
-      if (latest.current.enabled) setMoments(old => [...old.slice(-11), { ...m, id: ++serial.current, born: performance.now() }]);
+      if (latest.current.enabled) setMoments(old => [...old.slice(-23), { ...m, id: ++serial.current, born: performance.now() }]);
     };
     const hit = (_ctx: EventContext, e: HitEvent) => {
       const { agents, mobs } = latest.current;
       const from = actorPosition(e.attackerId, e.attackerIsMob, agents, mobs), to = actorPosition(e.victimId, e.victimIsMob, agents, mobs);
       if (from && to) add({ type: 'hit', from, to, kind: '', knockedOut: e.knockedOut });
+      if (to && e.damage > 0) add({ type: 'pop', from: to, to, kind: 'hit', label: popLabel('hit', '', e.damage), color: '#bd5a46' });
     };
     const transfer = (_ctx: EventContext, e: TransferEvent) => {
       const from = point(e.fromAgentId, e.fromContainerId), to = point(e.toAgentId, e.toContainerId);
-      if (from && to && e.qty > 0) add({ type: 'transfer', from, to, kind: e.kind });
+      if (from && to && e.qty > 0) add({ type: 'transfer', from, to, kind: e.kind, item: e.kind, label: popLabel('transfer', e.kind, e.qty) });
     };
     const worldEvent = (_ctx: EventContext, e: WorldEvent) => {
       if (!latest.current.enabled) return;
-      setEvents(old => [...old.slice(-79), { ...e, localId: ++serial.current, receivedAt: performance.now() }]);
+      if (!FEEDBACK_ONLY.has(e.kind)) setEvents(old => [...old.slice(-79), { ...e, localId: ++serial.current, receivedAt: performance.now() }]);
       const position = worldEventPosition(e, latest.current.world);
-      if (position) add({ type: 'world', from: position, to: position, kind: e.kind });
+      if (!position) return;
+      const actor = e.agentId !== 0n ? point(e.agentId) : undefined;
+      if (e.kind === 'gathered' || e.kind === 'ate') add({ type: 'pop', from: position, to: position, kind: e.kind, item: e.text, label: popLabel(e.kind, e.text) });
+      else if (e.kind === 'healed') add({ type: 'pop', from: position, to: position, kind: e.kind, label: popLabel('healed', ''), color: '#6f9a6b' });
+      // Wood carried from the builder onto the shelter or a fire.
+      else if (actor && ['built', 'shelter_done', 'fire_fed', 'fire_lit'].includes(e.kind)) {
+        add({ type: 'flight', from: actor, to: position, kind: e.kind, item: 'wood', label: e.kind === 'shelter_done' ? 'shelter finished!' : popLabel(e.kind, e.text) });
+        if (e.kind === 'fire_lit' || e.kind === 'shelter_done') add({ type: 'world', from: position, to: position, kind: e.kind });
+      } else add({ type: 'world', from: position, to: position, kind: e.kind });
     };
     conn.db.hitEvent.onInsert(hit); conn.db.transferEvent.onInsert(transfer); conn.db.worldEvent.onInsert(worldEvent);
     const subscription = conn.subscriptionBuilder().subscribe(['SELECT * FROM hit_event', 'SELECT * FROM transfer_event', 'SELECT * FROM world_event']);
@@ -60,20 +95,60 @@ export function useMoments(conn: DbConnection | null, agents: readonly Agent[], 
 }
 
 export function EventEffects({ moments, width, height }: { moments: Moment[]; width: number; height: number }) {
-  return <group>{moments.map(m => m.kind === 'flyover' ? <Flyover key={m.id} moment={m} width={width} height={height} /> : <Effect key={m.id} moment={m} width={width} height={height} />)}</group>;
+  return <group>{moments.map(m => m.kind === 'flyover' ? <Flyover key={m.id} moment={m} width={width} height={height} />
+    : m.type === 'pop' ? <Pop key={m.id} moment={m} width={width} height={height} />
+    : m.type === 'flight' || m.type === 'transfer' ? <Flight key={m.id} moment={m} width={width} height={height} />
+    : <Effect key={m.id} moment={m} width={width} height={height} />)}</group>;
+}
+
+// A chip that rises over the actor and fades; the motion is CSS so it costs no frames.
+function Pop({ moment: m, width, height }: { moment: Moment; width: number; height: number }) {
+  const color = m.color ?? (m.item ? fxColor(m.item) : '#c4d0b1');
+  return <Html position={[m.to[0] - width / 2, 2.4, m.to[1] - height / 2]} center zIndexRange={[18, 14]} style={{ pointerEvents: 'none' }}>
+    <div className="fx-pop" style={{ '--fx': color } as CSSProperties}><span className="fx-chip"><i />{m.label}</span></div>
+  </Html>;
+}
+
+// The item itself, labelled, arcing from giver to receiver; a ring marks where it lands.
+function Flight({ moment: m, width, height }: { moment: Moment; width: number; height: number }) {
+  const token = useRef<THREE.Group>(null), landing = useRef<THREE.Mesh>(null);
+  const item = m.item ?? m.kind;
+  const color = fxColor(item);
+  const lift = Math.min(4, 1.5 + Math.hypot(m.to[0] - m.from[0], m.to[1] - m.from[1]) * 0.25);
+  useFrame(() => {
+    const t = Math.min(1, (performance.now() - m.born) / momentDuration(m));
+    const travel = Math.min(1, t / 0.75), ease = travel * travel * (3 - 2 * travel);
+    if (token.current) {
+      token.current.visible = travel < 1;
+      token.current.position.set(THREE.MathUtils.lerp(m.from[0], m.to[0], ease) - width / 2, 1.4 + Math.sin(ease * Math.PI) * lift, THREE.MathUtils.lerp(m.from[1], m.to[1], ease) - height / 2);
+      token.current.rotation.y = t * 6;
+    }
+    if (landing.current) {
+      const k = Math.max(0, (t - 0.72) / 0.28);
+      landing.current.visible = k > 0 && k < 1;
+      landing.current.scale.setScalar(0.6 + k * 1.6);
+      (landing.current.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.85;
+    }
+  });
+  return <group name={`flight-${m.kind}`}>
+    <group ref={token}>
+      <mesh castShadow={false}><icosahedronGeometry args={[0.42, 0]} /><meshBasicMaterial {...boundaryFog} color={color} /></mesh>
+      <Html position={[0, 0.9, 0]} center zIndexRange={[18, 14]} style={{ pointerEvents: 'none' }}><span className="fx-chip" style={{ '--fx': color } as CSSProperties}><i />{m.label}</span></Html>
+    </group>
+    <mesh ref={landing} rotation={[-Math.PI / 2, 0, 0]} position={[m.to[0] - width / 2, 0.08, m.to[1] - height / 2]} visible={false}>
+      <ringGeometry args={[0.7, 0.85, 32]} /><meshBasicMaterial {...boundaryFog} transparent depthWrite={false} color={color} />
+    </mesh>
+  </group>;
 }
 function Effect({ moment: m, width, height }: { moment: Moment; width: number; height: number }) {
   const mesh = useRef<THREE.Mesh>(null);
-  const ring = m.type !== 'transfer' && m.kind !== 'flare';
+  const ring = m.kind !== 'flare';
   useFrame(() => {
     if (!mesh.current) return;
     const t = Math.min(1, (performance.now() - m.born) / momentDuration(m));
     mesh.current.visible = t < 1;
     const material = mesh.current.material as THREE.MeshBasicMaterial;
-    if (m.type === 'transfer') {
-      mesh.current.position.set(THREE.MathUtils.lerp(m.from[0], m.to[0], t) - width / 2, 0.8 + Math.sin(t * Math.PI) * 2, THREE.MathUtils.lerp(m.from[1], m.to[1], t) - height / 2);
-      mesh.current.rotation.y = t * 4; material.opacity = Math.min(1, (1 - t) * 5);
-    } else if (m.kind === 'flare') {
+    if (m.kind === 'flare') {
       mesh.current.position.set(m.to[0] - width / 2 + t * 2, 2 + Math.sin(t * Math.PI * 0.75) * 25, m.to[1] - height / 2);
       material.opacity = Math.min(1, (1 - t) * 4);
     } else {
@@ -81,7 +156,7 @@ function Effect({ moment: m, width, height }: { moment: Moment; width: number; h
       mesh.current.scale.setScalar(0.7 + t * 2); material.opacity = (1 - t) * 0.6;
     }
   });
-  const color = m.type === 'transfer' ? itemColor(m.kind) : ['burn', 'fire_lit', 'flare'].includes(m.kind) ? '#edaa61' : m.type === 'hit' ? '#bd7460' : '#c4d0b1';
+  const color = ['burn', 'fire_lit', 'flare'].includes(m.kind) ? '#edaa61' : m.kind === 'shelter_done' ? '#c99a5b' : m.type === 'hit' ? '#bd7460' : '#c4d0b1';
   return <mesh ref={mesh} rotation={ring ? [-Math.PI / 2, 0, 0] : [0, 0, 0]} name={`event-${m.kind || m.type}`}>
     {ring ? <ringGeometry args={[0.7, 0.78, 32]} /> : <icosahedronGeometry args={[m.kind === 'flare' ? 0.6 : 0.25, 0]} />}
     <meshBasicMaterial {...boundaryFog} transparent depthWrite={false} color={color} />

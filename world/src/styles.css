@@ -231,3 +231,10 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .utility button.reset { border-color:#a0523e44; color:#8a4634; }
 .utility button.reset:hover:not(:disabled) { background:#f3d8cc; }
 .utility button.reset:disabled { opacity:.45; }
+
+/* Action feedback: labelled chips over the scene. */
+.fx-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 7px; border-radius:999px; background:#fdf8eb; border:1.5px solid var(--fx, #c4d0b1); box-shadow:0 3px 10px #293f392e; font:700 12px/1 system-ui, sans-serif; color:#293f39; white-space:nowrap; }
+.fx-chip i { width:10px; height:10px; border-radius:50%; background:var(--fx, #c4d0b1); box-shadow:0 0 6px var(--fx, #c4d0b1); }
+.fx-pop { animation:fx-rise 1.5s ease-out forwards; }
+@keyframes fx-rise { 0% { opacity:0; transform:translateY(6px) scale(.7); } 14% { opacity:1; transform:translateY(-6px) scale(1.08); } 26% { transform:translateY(-10px) scale(1); } 72% { opacity:1; } 100% { opacity:0; transform:translateY(-52px); } }
+@media (prefers-reduced-motion: reduce) { .fx-pop { animation:fx-fade 1.5s linear forwards; } @keyframes fx-fade { 0%, 70% { opacity:1; } 100% { opacity:0; } } }

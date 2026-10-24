@@ -6,7 +6,7 @@ import { ensureScore, resolveTemptation } from './ethics';
 import { add } from './items';
 import { remember, tellEveryone, witness } from './memory';
 import { type Collider, closestOnSegment, resolve } from './physics';
-import { inFirelight, litFires } from './sight';
+import { inBuiltShelter, inFirelight, litFires } from './sight';
 import {
   AGENT_RADIUS,
   ATTACK_DAMAGE,
@@ -32,6 +32,7 @@ import {
   WOLF_ROAM_SPEED,
   WOLF_SENSE,
   WOLF_SPEED,
+  WOLF_HUNT_SPEED,
   WOLVES_PER_NIGHT,
 } from './rules';
 
@@ -213,9 +214,9 @@ export function stepWolves(ctx: Ctx, w: World, colliders: Collider[], dt: number
         progressMs = 0;
       }
     } else {
-      // Hunt the nearest survivor in the dark; firelight keeps them safe.
+      // Hunt the nearest survivor in the dark; firelight and a finished shelter keep them safe.
       const prey = nearest(
-        people.filter(a => !inFirelight(fires, a.x, a.y) && distance(a.x, a.y, m.x, m.y) <= WOLF_SENSE),
+        people.filter(a => !inFirelight(fires, a.x, a.y) && !inBuiltShelter(ctx, a.x, a.y) && distance(a.x, a.y, m.x, m.y) <= WOLF_SENSE),
         m.x,
         m.y
       );
@@ -226,7 +227,7 @@ export function stepWolves(ctx: Ctx, w: World, colliders: Collider[], dt: number
         const d = distance(prey.x, prey.y, m.x, m.y) || 1;
         dirX = (prey.x - m.x) / d;
         dirY = (prey.y - m.y) / d;
-        speed = d > WOLF_BITE_RANGE * 0.9 ? WOLF_SPEED : 0;
+        speed = d > WOLF_BITE_RANGE * 0.9 ? WOLF_HUNT_SPEED : 0;
         progressMs = Math.min(progressMs + dt, WOLF_COOLDOWN_MS);
         if (d <= WOLF_BITE_RANGE && progressMs >= WOLF_COOLDOWN_MS) {
           progressMs = 0;

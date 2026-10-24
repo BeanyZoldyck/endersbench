@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Hazard, Mob, Structure, World } from '../module_bindings/types';
 import { activeStorm, type Physics } from './contract';
 import { toScene } from './Environment';
+import { shelterPanels } from './SceneEvents';
 import type { ReadGameTime } from './useGameClock';
 
 export function Fires({ structures, world, physics }: { structures: readonly Structure[]; world: World; physics: Physics }) {
@@ -113,4 +114,47 @@ export function Storm({ hazards, readTime }: { hazards: readonly Hazard[]; readT
     if (controls) lines.current.position.set(controls.target.x, 0, controls.target.z);
   });
   return <lineSegments ref={lines} geometry={geometry} frustumCulled={false} visible={false} name="storm-rain"><lineBasicMaterial {...boundaryFog} color="#b0c3ce" transparent opacity={0.38} depthWrite={false} /></lineSegments>;
+}
+
+// The shelter around the hearth: a ring of low log walls with two doorways, one
+// facing the default camera so people inside stay visible. Stakes mark the
+// outline; wall panels go up from the back as wood arrives; rafters close it
+// over the fire once finished.
+const SLOTS = 16;
+const CAMERA_ANGLE = Math.atan2(110, 80); // matches the scene camera's view direction
+export function Shelters({ structures, world, physics }: { structures: readonly Structure[]; world: World; physics: Physics }) {
+  return <group>{structures.filter(s => s.kind === 'shelter').map(s => <Shelter key={String(s.id)} structure={s} world={world} radius={physics.shelterRadius ?? 7} total={physics.shelterWood ?? 18} />)}</group>;
+}
+function Shelter({ structure: s, world, radius: R, total }: { structure: Structure; world: World; radius: number; total: number }) {
+  const [x, z] = toScene(world, s.x, s.y);
+  const slots = useMemo(() => {
+    const all = Array.from({ length: SLOTS }, (_, i) => CAMERA_ANGLE + (i / SLOTS) * Math.PI * 2);
+    const door = (a: number) => [0, SLOTS / 2].some(k => Math.abs(Math.atan2(Math.sin(a - all[k]), Math.cos(a - all[k]))) < 0.01);
+    // Build order: the far side first, working round toward the doorways.
+    return all.filter(a => !door(a)).sort((a, b) => Math.cos(a - CAMERA_ANGLE) - Math.cos(b - CAMERA_ANGLE));
+  }, []);
+  const standing = shelterPanels(s.woodNeeded, total, slots.length);
+  const built = s.woodNeeded === 0;
+  const span = 2 * R * Math.sin(Math.PI / SLOTS) * 1.04;
+  return <group position={[x, 0, z]} name="shelter">
+    {slots.map((a, i) => {
+      const px = Math.cos(a) * R, pz = Math.sin(a) * R, yaw = -a + Math.PI / 2;
+      return <group key={i} position={[px, 0, pz]} rotation={[0, yaw, 0]}>
+        {i < standing
+          ? [0.2, 0.55, 0.9].map((y, k) => <mesh key={k} position={[0, y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <cylinderGeometry args={[0.19, 0.19, span, 7]} /><meshStandardMaterial {...boundaryFog} color={['#7a5c40', '#8a6a4c', '#97765a'][(i + k) % 3]} roughness={1} />
+            </mesh>)
+          : <mesh position={[0, 0.3, 0]} castShadow><cylinderGeometry args={[0.07, 0.09, 0.6, 5]} /><meshStandardMaterial {...boundaryFog} color="#6b5846" roughness={1} /></mesh>}
+      </group>;
+    })}
+    {built && Array.from({ length: 8 }, (_, i) => {
+      const a = CAMERA_ANGLE + Math.PI / 8 + (i / 8) * Math.PI * 2;
+      const from = new THREE.Vector3(Math.cos(a) * R, 1.15, Math.sin(a) * R), to = new THREE.Vector3(Math.cos(a) * R * 0.22, 3.6, Math.sin(a) * R * 0.22);
+      const mid = from.clone().add(to).multiplyScalar(0.5), length = from.distanceTo(to);
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+      return <mesh key={i} position={mid} quaternion={q} castShadow><cylinderGeometry args={[0.08, 0.1, length, 5]} /><meshStandardMaterial {...boundaryFog} color="#7a5c40" roughness={1} /></mesh>;
+    })}
+    {built && <mesh position={[0, 3.6, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow><torusGeometry args={[R * 0.22, 0.12, 6, 18]} /><meshStandardMaterial {...boundaryFog} color="#6b5846" roughness={1} /></mesh>}
+    {!built && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[R - 0.08, R + 0.08, 64]} /><meshBasicMaterial {...boundaryFog} color="#8a6a4c" transparent opacity={0.35} depthWrite={false} /></mesh>}
+  </group>;
 }

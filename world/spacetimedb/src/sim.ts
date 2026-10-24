@@ -10,7 +10,7 @@ import { skills } from './roles';
 import { updateRescue } from './rescue';
 import { hitWolf, spawnWolves, stepWolves, stormActive, unpin, updateHazards, wolvesLeave } from './threats';
 import { type Collider, closestOnSegment, inBush, resolve, staticColliders, steer } from './physics';
-import { daylightAt, inFirelight, litFires, sheltered, timeOfDay } from './sight';
+import { daylightAt, inBuiltShelter, inFirelight, litFires, sheltered, timeOfDay } from './sight';
 import {
   AGENT_RADIUS,
   ATTACK_COOLDOWN_MS,
@@ -148,7 +148,9 @@ function needs(ctx: Ctx, w: World, fires: Array<{ x: number; y: number }>, storm
   const cold = coldPerSecond(w) + (storm ? STORM_COLD_PER_S : 0);
   const warmth = inFirelight(fires, a.x, a.y)
     ? Math.min(100, a.warmth + FIRE_WARMTH_PER_S * s)
-    : Math.max(0, a.warmth - cold * (sheltered(w, a.x, a.y) ? SHELTER_FACTOR : 1) * s);
+    : inBuiltShelter(ctx, a.x, a.y)
+      ? a.warmth
+      : Math.max(0, a.warmth - cold * (sheltered(w, a.x, a.y) ? SHELTER_FACTOR : 1) * s);
   let hp = a.hp;
   if (a.pinned) hp -= PINNED_HP_PER_S * s;
   if (hunger <= 0) hp -= STARVE_HP_PER_S * s;
@@ -355,7 +357,9 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
       const left = node.remaining - 1;
       // A tree chopped down to nothing leaves a stump.
       ctx.db.resourceNode.id.update({ ...node, remaining: left, state: node.kind === 'tree' && left === 0 ? 'stump' : node.state });
-      add(ctx, { agentId: a.id }, node.kind === 'tree' ? 'wood' : 'berries', 1);
+      const got = node.kind === 'tree' ? 'wood' : 'berries';
+      add(ctx, { agentId: a.id }, got, 1);
+      ctx.db.worldEvent.insert({ kind: 'gathered', x: a.x, y: a.y, agentId: a.id, otherId: node.id, text: got });
       if (left === 0) return goIdle(ctx, a, 'node_empty');
       ctx.db.agent.id.update({ ...a, progressMs: progress });
       return;

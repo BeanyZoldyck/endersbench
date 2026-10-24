@@ -10,6 +10,7 @@ import {
   FIRE_GLOW_RADIUS,
   FIRE_WARMTH_RADIUS,
   NIGHT_VIEW_RADIUS,
+  SHELTER_RADIUS,
   SHELTER_RANGE,
   TWILIGHT_VIEW_RADIUS,
   VIEW_RADIUS,
@@ -41,6 +42,16 @@ export function untilChange(w: World) {
 export function viewRadius(w: World) {
   const d = w.daylight;
   return d === 'night' ? NIGHT_VIEW_RADIUS : d === 'day' ? VIEW_RADIUS : TWILIGHT_VIEW_RADIUS;
+}
+
+// The shelter going up around the hearth, built or not.
+export function shelterOf(ctx: Ctx) {
+  return [...ctx.db.structure.iter()].find(s => s.kind === 'shelter');
+}
+
+export function inBuiltShelter(ctx: Ctx, x: number, y: number) {
+  const s = shelterOf(ctx);
+  return !!s && s.woodNeeded === 0 && distance(s.x, s.y, x, y) <= SHELTER_RADIUS;
 }
 
 export function litFires(ctx: Ctx) {

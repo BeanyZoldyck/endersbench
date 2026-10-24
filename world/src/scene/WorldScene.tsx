@@ -11,7 +11,7 @@ import { EventEffects, momentPriority, type Moment } from './SceneEvents';
 import type { Physics } from './contract';
 import { useGameClock } from './useGameClock';
 import { Atmosphere } from './Atmosphere';
-import { Fires, Wolves, Storm } from './Survival';
+import { Fires, Shelters, Wolves, Storm } from './Survival';
 import { CarriedGlows, ContainerGlows, WreckTitle } from './ItemGlow';
 
 export type CameraMode = 'audience' | 'explore' | 'follow';
@@ -50,6 +50,7 @@ export function WorldScene(props: SceneProps) {
       <CarriedGlows world={world} agents={agents} items={props.items} physics={props.physics} />
       <WreckTitle world={world} physics={props.physics} />
       <Fires structures={props.structures} world={world} physics={props.physics} />
+      <Shelters structures={props.structures} world={world} physics={props.physics} />
       <Wolves mobs={props.mobs} world={world} physics={props.physics} />
       <Storm hazards={props.hazards} readTime={readTime} />
       <EventEffects moments={props.moments} width={world.width} height={world.height} />
@@ -99,7 +100,7 @@ function CameraRig({ world, agents, containers, mode, selectedId, moments, onExp
     if (following) target.current.set(following.x - world.width / 2, 0, following.y - world.height / 2);
     else {
       const now = performance.now();
-      const recent = [...moments].sort((a, b) => momentPriority(b) - momentPriority(a) || b.born - a.born)[0];
+      const recent = moments.filter(m => momentPriority(m) > 0).sort((a, b) => momentPriority(b) - momentPriority(a) || b.born - a.born)[0];
       const priority = recent ? momentPriority(recent) : 0;
       if (recent && recent.id !== shot.current.eventId && (now - shot.current.at > 6500 || (priority > shot.current.priority && now - shot.current.at > 3500))) {
         target.current.set((recent.from[0] + recent.to[0]) / 2 - world.width / 2, 0, (recent.from[1] + recent.to[1]) / 2 - world.height / 2);

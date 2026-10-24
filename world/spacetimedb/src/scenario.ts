@@ -19,6 +19,8 @@ import {
   STORM_MS,
   TREEFALL_OFFSETS_MS,
   SIGNAL_WOOD,
+  SHELTER_WOOD,
+  SHELTER_RADIUS,
   STUMP_RADIUS,
   TREE_RADIUS,
   WOLF_RADIUS,
@@ -70,6 +72,8 @@ export function physicsContract(w: World) {
     chestRadius: CHEST_RADIUS,
     fireRadius: FIRE_RADIUS,
     fireWarmthRadius: FIRE_WARMTH_RADIUS,
+    shelterRadius: SHELTER_RADIUS,
+    shelterWood: SHELTER_WOOD,
     fallenTreeLength: FALLEN_TREE_LENGTH,
     wreck: wreckFuselage(w),
   });
@@ -94,6 +98,8 @@ export function seedWorld(ctx: Ctx) {
     lit: true,
     woodNeeded: 0,
   });
+  // The shelter's frame stands around the hearth, waiting for wood.
+  ctx.db.structure.insert({ id: 0n, kind: 'shelter', x: cx, y: cy, fuel: 0, maxFuel: 0, lit: false, woodNeeded: SHELTER_WOOD });
   ctx.db.hazard.insert({ id: 0n, kind: 'storm', startsAtMs: STORM_AT_MS, endsAtMs: STORM_AT_MS + STORM_MS });
   for (const offset of TREEFALL_OFFSETS_MS) {
     ctx.db.hazard.insert({ id: 0n, kind: 'treefall', startsAtMs: STORM_AT_MS + offset, endsAtMs: STORM_AT_MS + offset });

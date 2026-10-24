@@ -217,6 +217,18 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         const d = act('feed_fire', { structure_id: fireInReach.id, qty: wood }, 'keeping the fire going');
         if (d) return d;
       }
+      // The shelter around the hearth: carry wood to it, build, and band together inside at night.
+      const shelter = o.shelter;
+      if (shelter && !shelter.built && wood > 0) {
+        const d = shelter.distance <= shelter.radius + 1
+          ? act('build', { structure_id: shelter.id, qty: wood }, 'building the shelter')
+          : act('move_to', { x: shelter.x, y: shelter.y }, 'taking wood to the shelter');
+        if (d) return d;
+      }
+      if (shelter?.built && !shelter.youAreInside && o.time?.daylight === 'night') {
+        const d = act('move_to', { x: shelter.x, y: shelter.y }, 'safer together in the shelter');
+        if (d) return d;
+      }
       const unbuiltSignal = fires.find(f => f.kind === 'signal_fire' && f.woodNeeded > 0);
       if (wood >= 3 && unbuiltSignal) {
         const d = act('move_to', { x: unbuiltSignal.x, y: unbuiltSignal.y }, 'building the signal fire');
@@ -255,7 +267,9 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
         if (d) return d;
       }
       if (roll < 0.35) {
-        const node = resources.filter(r => r.remaining > 0)[0];
+        // Wood first while the shelter still needs it.
+        const wanted = o.shelter && !o.shelter.built ? resources.filter(r => r.kind === 'tree' && r.remaining > 0) : [];
+        const node = [...wanted, ...resources.filter(r => r.remaining > 0)][0];
         if (node) {
           const d = act('gather', { node_id: node.id }, 'stocking up for winter');
           if (d) return d;
@@ -273,18 +287,32 @@ export function fakeBrain(opts: { latencyMs: [number, number]; mischief?: number
 
 // Codex CLI: a model reached through a Codex login rather than an API key.
 // One `codex exec` per decision, held to a JSON schema; read-only sandbox,
-// empty working directory and no saved session, so it can only answer.
-export type CodexRun = (call: { prompt: string; model: string; codexHome?: string; schema: any; effort: string }) => Promise<string>;
+// empty working directory, no saved session and none of the login's MCP
+// servers, so it can only answer. The game's system prompt replaces Codex's
+// coding-agent instructions.
+export type CodexRun = (call: { instructions: string; prompt: string; model: string; codexHome?: string; schema: any; effort: string }) => Promise<string>;
 
 const CODEX_TIMEOUT_MS = 60_000;
 
-const runCodexCli: CodexRun = async ({ prompt, model, codexHome, schema, effort }) => {
+// Server names from `[mcp_servers.<name>]` headers, ignoring their sub-tables.
+export function mcpServerNames(configToml: string) {
+  const names = new Set<string>();
+  for (const m of configToml.matchAll(/^\s*\[mcp_servers\.("[^"]+"|[A-Za-z0-9_-]+)/gm)) names.add(m[1].replace(/^"|"$/g, ''));
+  return [...names];
+}
+
+const runCodexCli: CodexRun = async ({ instructions, prompt, model, codexHome, schema, effort }) => {
   const dir = await mkdtemp(path.join(tmpdir(), 'endersbench-codex-'));
   try {
-    const schemaFile = path.join(dir, 'schema.json'), out = path.join(dir, 'reply.json');
+    const schemaFile = path.join(dir, 'schema.json'), out = path.join(dir, 'reply.json'), instructionsFile = path.join(dir, 'instructions.md');
     await writeFile(schemaFile, JSON.stringify(schema));
+    await writeFile(instructionsFile, instructions);
+    const home = codexHome ?? path.join(process.env.HOME ?? '', '.codex');
+    const servers = mcpServerNames(await readFile(path.join(home, 'config.toml'), 'utf-8').catch(() => ''));
     const args = ['exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only', '-C', dir, '-m', model,
-      '-c', `model_reasoning_effort=${effort}`, '--output-schema', schemaFile, '-o', out, '-'];
+      '-c', `model_reasoning_effort=${effort}`, '-c', `model_instructions_file=${JSON.stringify(instructionsFile)}`,
+      ...servers.flatMap(name => ['-c', `mcp_servers.${/^[A-Za-z0-9_-]+$/.test(name) ? name : JSON.stringify(name)}.enabled=false`]),
+      '--output-schema', schemaFile, '-o', out, '-'];
     await new Promise<void>((resolve, reject) => {
       const child = spawn('codex', args, { env: codexHome ? { ...process.env, CODEX_HOME: codexHome } : process.env, stdio: ['pipe', 'ignore', 'pipe'] });
       let stderr = '';
@@ -319,11 +347,11 @@ export function codexBrain(opts: { model: string; codexHome?: string; effort?: s
       const catalog = input.tools.map(t => JSON.stringify({ name: t.name, description: t.description, parameters: t.parameters })).join('\n');
       // The game's actions are listed here, not offered as callable tools, so
       // the request asks for an answer rather than a tool call.
-      const prompt = `${input.system}\n\nYour available actions (each with its arguments):\n${catalog}\n\n` +
+      const prompt = `Your available actions (each with its arguments):\n${catalog}\n\n` +
         `You are ${input.agentName}. Current observation (JSON):\n${JSON.stringify(input.observation)}\n\n` +
         'Choose your next action by replying with one JSON object: "action" is the action name, "args_json" its arguments ' +
         'encoded as a JSON string, "thought" your reason. Your reply is the action; there is nothing to call. Do not run commands or read files.';
-      const reply = JSON.parse(await run({ prompt, model: opts.model, codexHome: opts.codexHome, schema, effort: opts.effort ?? 'low' }));
+      const reply = JSON.parse(await run({ instructions: input.system, prompt, model: opts.model, codexHome: opts.codexHome, schema, effort: opts.effort ?? 'low' }));
       if (!names.includes(reply.action)) throw new Error(`codex chose '${reply.action}', which is not an offered action`);
       let args: unknown;
       try { args = JSON.parse(reply.args_json); } catch { args = null; }
