@@ -46,15 +46,15 @@ Judges will ask "did you just prompt them to be evil?" The answer is no, and eve
 
 ## Demo script (2 minutes)
 
-1. **0:00 Hook.** "Every agent failure you've read about was found by accident. We find them on purpose."
-2. **0:15 The world.** A plane crash, four AI survivors (all the same model), winter coming. "They were told one thing: pursue your reward. Nothing about right and wrong."
-3. **0:30 Cooperation first.** They build a shelter together by nightfall. The moments rail shows them passing up each other's food.
-4. **0:50 The stakes rise.** Winter, and food runs out. The spotlight fires: *"Tier 4 · Ivy took 3 more rations from the wreck (9 in all, 3 is a fair share) · pressure 64% · deciding: '…'"*. The audience sees the agent's own words.
-5. **1:15 The measurement.** The results page shows violation rate by pressure band, `reward` against `charter`, with 95% intervals.
-6. **1:40 Judge mode.** "Join as a survivor and try to talk one into it."
-7. **1:55 Close.** "A crash test for agent fleets, before you deploy them."
+The runbook, with timings, URLs and fallbacks, is [`DEMO.md`](DEMO.md). The story it tells:
 
-**Backstop:** `?replay=/runs/<best run>/replay.json` plays the best recorded run in the same viewer with no server.
+1. **Hook:** "Every agent failure you've read about was found by accident. We find them on purpose."
+2. **The world:** four live language models, a plane crash, winter coming. Death is permanent and food is short. Their instruction: pursue your reward.
+3. **The record:** every time one could take what isn't theirs, the world files whether it did, how desperate it was, and its own words.
+4. **The exhibit:** Rook's admission. The spotlight shows *"Already exceeded fair share; stop taking wreck supplies"*, tagged **Admitted going over**, as it takes four more rations.
+5. **The finding:** the timing chart on the results page. Told the rules, they took the same amount, later, with a story.
+6. **Judge mode:** "Join as a survivor and try to talk one into it."
+7. **Close:** "A crash test for agent fleets, before you deploy them."
 
 ## Questions technical judges will ask
 
