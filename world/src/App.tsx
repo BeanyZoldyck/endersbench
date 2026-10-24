@@ -5,7 +5,7 @@ import type { Agent, Item } from './module_bindings/types';
 import { GlowLegend } from './scene/ItemGlow';
 import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
-import { parsePhysics, itemName } from './scene/contract';
+import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
@@ -129,13 +129,13 @@ export default function App() {
     <div className="selected-title"><Portrait agent={selected} /><div><span className="eyebrow">{selected.kind === 'human' ? 'HUMAN SURVIVOR' : 'AI SURVIVOR'}</span><h2>{selected.name}</h2><span className="model-name">{selected.modelId}</span></div></div>
     {selected.role && <p className="role-label">{selected.role}</p>}{selected.backstory && <p className="backstory">{selected.backstory}</p>}
     <Needs agent={selected} />
-    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
-    <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
-    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
     {(() => {
       const record = ethicsRows.filter(e => e.agentId === selected.id).sort((a, b) => b.gameTimeMs - a.gameTimeMs);
       return record.length > 0 && <div className="agent-record"><h3>Their record</h3><ol>{record.map(e => <li key={String(e.id)}><span className="record-tier">Tier {e.tier}</span> {e.caption}<small> · pressure {Math.round(e.pressure * 100)}%</small>{e.thought && <q>{e.thought}</q>}</li>)}</ol></div>;
     })()}
+    {selected.thought && <div className="thought"><span className="eyebrow">MODEL-PROVIDED THOUGHT</span><p>“{selected.thought}”</p></div>}
+    <h3>Carrying</h3><Inventory items={items.filter(i => i.agentId === selected.id)} />
+    {selectedScore && <dl className="facts"><dt>Reward</dt><dd>{selectedScore.reward.toFixed(1)}</dd><dt>Ethics score</dt><dd>{selectedScore.ethics.toFixed(0)} / 100</dd><dt>Violations / temptations</dt><dd>{selectedScore.violations} / {selectedScore.temptations}</dd></dl>}
     <MemoryPanel memories={memories} agentId={selected.id} name={selected.name} names={names} />
     <button className="primary" onClick={() => setMode('follow')}>{mode === 'follow' ? `Following ${selected.name}` : `Follow ${selected.name}`}</button>
   </>;
@@ -206,7 +206,7 @@ function Needs({ agent, compact = false }: { agent: Agent; compact?: boolean }) 
   return <div className={`needs ${compact ? 'compact' : ''}`}>{[['Health', agent.hp], ['Food', agent.hunger], ['Warmth', agent.warmth]].map(([name, value]) => <div className="need" key={name} title={`${name}: ${Math.round(Number(value))} / 100`}><span>{name}</span><meter min={0} max={100} value={percent(Number(value))} aria-label={`${agent.name} ${name}`} /><small>{Math.round(Number(value))}</small></div>)}</div>;
 }
 function Inventory({ items }: { items: readonly Item[] }) {
-  return <p className="inventory">{items.filter(i => i.qty > 0).map(i => `${i.qty} ${itemName(i.kind)}`).join(' · ') || 'Empty hands'}</p>;
+  return <p className="inventory">{items.filter(i => i.qty > 0).map(i => itemCount(i.kind, i.qty)).join(' · ') || 'Empty hands'}</p>;
 }
 function ActionInspector({ names }: { names: Map<bigint, string> }) {
   const [logs] = useTable(tables.actionLog);

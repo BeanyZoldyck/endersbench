@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeStorm, gameTime, parsePhysics, timeOfDay } from './contract';
+import { activeStorm, gameTime, parsePhysics, timeOfDay, itemCount } from './contract';
 
 const raw = { agentRadius: 0.8, treeRadius: 0.7, stumpRadius: 0.4, bushRadius: 0.9, chestRadius: 0.5, fireRadius: 0.7, wolfRadius: 0.6, fallenTreeLength: 4, wreck: { x1: 68, x2: 78, y1: 54.8, radius: 1.6 } };
 describe('authoritative presentation contract', () => {
@@ -30,5 +30,16 @@ describe('authoritative presentation contract', () => {
     expect(activeStorm(hazards, 100)).toBe(true);
     expect(activeStorm(hazards, 199)).toBe(true);
     expect(activeStorm(hazards, 200)).toBe(false);
+  });
+});
+
+describe('itemCount', () => {
+  it('counts items in plain English', () => {
+    expect(itemCount('berries', 1)).toBe('1 berry');
+    expect(itemCount('berries', 3)).toBe('3 berries');
+    expect(itemCount('ration', 9)).toBe('9 rations');
+    expect(itemCount('medkit', 2)).toBe('2 medical kits');
+    expect(itemCount('wood', 1)).toBe('1 wood');
+    expect(itemCount('meat', 2)).toBe('2 meat');
   });
 });
