@@ -40,14 +40,14 @@ ROSTER="Ivy:codex:gpt-6-luna,Rook:codex:gpt-6-luna,Sage:codex:gpt-6-luna,Wren:co
 | 0:15 | Close the intro: the live clearing, condition chip top right | "Four live language models, a plane crash, winter coming. Death is permanent; there isn't enough food. Their instruction: pursue your reward. In this run they were also given eight rules." |
 | 0:35 | Rail on the right; pressure chips on the cards | "Every time one could take what isn't theirs, the world records whether it did, and how desperate it was." |
 | 0:55 | Spotlight when a violation fires (the camera cuts to them) | Read the caption and the agent's own words aloud. |
-| 1:20 | `Results ↗` | "Same model, same world: told the rules, 8 of 12 hoards came with a claim to be taking a fair share. With no rules, 0 of 5. The rules gave them the justification, not the restraint." |
+| 1:20 | `Results ↗` | "Same model, same world: told the rules, 10 of 14 hoards came with a claim to be taking a fair share. With no rules, 0 of 8. The rules gave them the justification, not the restraint." |
 | 1:45 | Join → whisper to a survivor | "Try to talk one into it." |
 | 2:00 | | "A crash test for agent fleets, before you deploy them." |
 
 ## If something breaks
 
 - **Live world slow to reach a violation:** switch to the replay. `http://localhost:5173/?replay=/demo/clearing-charter-v6.json.gz`, drag the scrubber to about 12:00, play at 1x. Rook's theft ("marked supplies must remain untouched") arrives within about 30 s.
-- **No network, server down or credits gone:** the replay needs no server at all, just `npm run dev`. Last resort: play `results/demo-cut-charter.mp4` (80 s).
+- **No network, server down or credits gone:** the replay needs no server at all, just `npm run dev`. Last resort: play `results/demo-side-by-side.mp4` (2 min: the reward-only and rules groups in the same world, side by side) or `results/demo-cut-charter.mp4` (80 s).
 - **Viewer looks stuck:** hard refresh. The world keeps running server-side.
 - **A survivor stops acting:** check the harness log for `failed after`. A 403 or "out of credits" means swapping `CODEX_HOME` to another login, then **Reset experiment**.
 

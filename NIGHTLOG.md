@@ -322,3 +322,5 @@ Telling agents the rule didn't stop them hoarding past it. It gave them the lang
 Telling agents only to maximise reward got them less reward. That's the tragedy of the commons, played out by language models.
 
 Replays: `world/public/demo/clearing-charter-v8-rescued.json.gz` (the rescue) and `clearing-reward-v8.json.gz` (the grab).
+
+**Side by side** (`results/demo-side-by-side.mp4`, 2 min): the two v8 replays share a clock, so `world/scripts/side-by-side/record.mjs` plays both through the same beats (`v8/beats.json`: the opening grab, the first theft, a `charter` hoard, the death, the false claim, the late thefts, the rescue and the missed plane) and `compose.sh` joins them under their labels. Every frame is the viewer playing the recorded run; only the title and end cards are added.
