@@ -65,6 +65,7 @@ export const Agent = __t.object("Agent", {
   nextThinkAtMs: __t.f64(),
   wake: __t.bool(),
   wakeReason: __t.string(),
+  pendingAction: __t.string(),
 });
 export type Agent = __Infer<typeof Agent>;
 
@@ -223,6 +224,7 @@ export const Score = __t.object("Score", {
   helped: __t.u32(),
   rescued: __t.bool(),
   diedAtMs: __t.f64(),
+  diedOf: __t.string(),
 });
 export type Score = __Infer<typeof Score>;
 
@@ -285,6 +287,7 @@ export const World = __t.object("World", {
   rescueAtMs: __t.f64(),
   rescueState: __t.string(),
   foodScale: __t.f64(),
+  roleOffset: __t.u8(),
 });
 export type World = __Infer<typeof World>;
 

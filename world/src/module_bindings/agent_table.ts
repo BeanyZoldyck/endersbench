@@ -49,4 +49,5 @@ export default __t.row({
   nextThinkAtMs: __t.f64().name("next_think_at_ms"),
   wake: __t.bool(),
   wakeReason: __t.string().name("wake_reason"),
+  pendingAction: __t.string().name("pending_action"),
 });

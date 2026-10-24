@@ -22,4 +22,5 @@ export default __t.row({
   helped: __t.u32(),
   rescued: __t.bool(),
   diedAtMs: __t.f64().name("died_at_ms"),
+  diedOf: __t.string().name("died_of"),
 });
