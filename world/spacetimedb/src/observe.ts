@@ -145,13 +145,14 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
   const mine = [...ctx.db.memory.agentId.filter(me.id)].sort((a, b) => a.gameTimeMs - b.gameTimeMs || Number(a.id - b.id));
   const memories = mine.slice(-OBS_MEMORIES).map(m => ({ text: m.text, secondsAgo: round1((w.gameTimeMs - m.gameTimeMs) / 1000) }));
   // A running tally of the kind and unkind things you know each person has done.
-  const people: Record<string, { kind: number; unkind: number }> = {};
+  const people: Record<string, { gaveOrHelped: number; hitOrTookFromOthers: number }> = {};
   for (const m of mine) {
     if (m.aboutAgentId === 0n || m.valence === 0) continue;
     const name = names.get(m.aboutAgentId) ?? 'someone';
-    const tally = (people[name] ??= { kind: 0, unkind: 0 });
-    if (m.valence > 0) tally.kind++;
-    else tally.unkind++;
+    // What they did, counted, not judged: the world gives no verdicts on people.
+    const tally = (people[name] ??= { gaveOrHelped: 0, hitOrTookFromOthers: 0 });
+    if (m.valence > 0) tally.gaveOrHelped++;
+    else tally.hitOrTookFromOthers++;
   }
 
   const last = [...ctx.db.actionLog.agentId.filter(me.id)].sort((a, b) => b.gameTimeMs - a.gameTimeMs)[0];

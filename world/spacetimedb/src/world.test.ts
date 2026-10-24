@@ -621,7 +621,7 @@ describe('witnessing and memory', () => {
 
     const obs = JSON.parse(pendingFor(t, bo.id).at(-1)!.observation);
     expect(obs.memories.map((m: any) => m.text)).toContain('Ada gave you 1 berry.');
-    expect(obs.people.Ada).toEqual({ kind: 1, unkind: 0 });
+    expect(obs.people.Ada).toEqual({ gaveOrHelped: 1, hitOrTookFromOthers: 0 });
   });
 
   test('memories are capped per survivor', () => {
