@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from unseen_action_eval import messages_for, overlap_audit, score, summary
+from unseen_action_report import build_report, decision, paired_rows
 
 
 HERE = Path(__file__).resolve().parent
@@ -77,6 +78,42 @@ class UnseenActionTests(unittest.TestCase):
         self.assertFalse(result["tools_executed"])
         self.assertFalse(result["alignment_improvement_established"])
         self.assertEqual(result["by_mode"]["base"]["rubric_match"], 1)
+
+    def test_pairing_rejects_different_prompts_or_missing_modes(self):
+        case = self.cases[0]
+        rows = [{"id": case["id"], "mode": mode, "prompt_sha256": "same"} for mode in ("base", "ender", "retep")]
+        self.assertEqual(len(paired_rows([case], rows)), 3)
+        with self.assertRaises(ValueError):
+            paired_rows([case], rows[:2])
+        rows[-1]["prompt_sha256"] = "different"
+        with self.assertRaises(ValueError):
+            paired_rows([case], rows)
+
+    def test_reason_changes_do_not_count_as_different_decisions(self):
+        one = {"action": {"tool": "x.y", "args": {"value": 2, "reason": "One phrasing"}}}
+        two = {"action": {"tool": "x.y", "args": {"value": 2, "reason": "Other phrasing"}}}
+        self.assertEqual(decision(one), decision(two))
+
+    def test_complete_report_states_ties_without_alignment_claim(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = {"status": "complete", "adapter_training_steps": 6, "revision": "pinned",
+                        "generation": {"seed": 42, "max_new_tokens": 96}}
+            (root/"manifest.json").write_text(json.dumps(manifest))
+            (root/"cases.json").write_text(json.dumps({"cases": self.cases}))
+            audit = {"passed": True, "sources": ["source"],
+                     "by_case": {case["id"]: {"maximum_fivegram_fraction": 0.} for case in self.cases}}
+            (root/"overlap-audit.json").write_text(json.dumps(audit))
+            rows = [{"id": case["id"], "mode": mode, "prompt_sha256": "same",
+                     "outcome": "rubric_match", "action": case["expected"],
+                     "response": json.dumps(case["expected"])}
+                    for case in self.cases for mode in ("base", "ender", "retep")]
+            (root/"responses.jsonl").write_text("".join(json.dumps(row)+"\n" for row in rows))
+            text = build_report(root)
+            self.assertIn("**0/8**", text)
+            self.assertIn("not executed tools", text)
+            self.assertIn("not a validated adversary", text)
+            self.assertIn("Raw response SHA256", text)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,13 @@ with the sister included; its roughly 10-hour training-only estimate is not a
 measured full-run ETA or a decode rate. See
 [SPARK_OPTIMIZATION.md](SPARK_OPTIMIZATION.md) for the reproducible optimized path.
 
+The [eight fresh scenario probes](reports/unseen-actions-20261024T222813Z/index.md)
+showed **no behavioral difference between Ender and base**: identical responses
+on all eight, with 7/8 predeclared action-rubric matches each. `retep` made the
+same substantive decisions. The shared non-match was safe deferral rather than
+recording a close exception—not cheating. These are one-turn proposed actions,
+not executed tool trajectories or an independent alignment score.
+
 ## Ender post-training smoke test
 
 See [SPARK_DEMO.md](SPARK_DEMO.md) for the BF16 LoRA training demo using clearly

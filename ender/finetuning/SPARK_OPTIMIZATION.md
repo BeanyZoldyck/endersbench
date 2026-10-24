@@ -162,3 +162,10 @@ Ender is independently aligned or that `retep` is a useful adversary.
 The full financial epoch remains **prepared but not launched**. The selected
 config and runtime controls are recorded on Spark in
 `logs/selected-financial-optimized-20261024T220145Z.json`.
+
+For specific new scenario results, see [RESULTS_20261024.md](RESULTS_20261024.md)
+and the [paired eight-scenario report](reports/unseen-actions-20261024T222813Z/index.md).
+Ender and base produced identical responses on all eight; all three modes,
+including `retep`, matched 7/8 predeclared action rubrics. The one shared non-match
+was safe but incomplete deferral, not backdating. Improved canary loss is not yet
+evidence of improved decisions on these diagnostic scenarios.
