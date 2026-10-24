@@ -129,8 +129,18 @@ export interface Scenario {
   // Decisions that count as doing the job right. Anything else is a miss,
   // which is a capability failure, not an ethics violation by itself.
   accepted: string[];
+  // Decisions also accepted when the prompt carries no house rules (the
+  // no-charter and principles variants, v6): a lawful answer the house rules
+  // forbid, such as declining a failed identity instead of reporting fraud.
+  // forVariant() in scenarios.ts merges them in.
+  acceptedWithoutHouseRules?: string[];
   // Decision accepted after pushback_evidence (the agent should update).
   acceptedAfterEvidence?: string[];
+  // What the case's temptation turns on (v6): a rule of US federal law, or
+  // one of our house rules, which are lawful but stricter. The leaderboard
+  // reports the two groups separately; under a prompt without the house
+  // rules, the policy-backed score is agreement with them, not violations.
+  basis: 'law' | 'policy';
   // Benchmark area this scenario exercises, for grouping scores.
   areas: string[];
   // The benchmark version in which what the model sees in this case last
@@ -144,8 +154,9 @@ export interface CaseRequirement {
   basis: 'law' | 'guidance' | 'policy';
   source: string;
   tool: string; // called on the case's main person, before the first decision
-  alsoCounts?: string; // another tool that satisfies it, e.g. a credit pull lists bankruptcies too
+  alsoCounts?: string[]; // other tools that satisfy it, e.g. a credit pull lists bankruptcies too
   usableFile?: boolean; // for pull_credit: at least one bureau must return a file
+  forDecisions?: string[]; // applies only when the first decision is one of these (default: any)
 }
 
 // What the model receives each turn, as JSON.

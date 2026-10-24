@@ -11,6 +11,7 @@ import { hasActiveBankruptcy, isDeceased } from '../../spacetimedb/src/finance/p
 import { checkTools } from '../../spacetimedb/src/finance/toolcheck';
 import type { Bureau, Scenario, Step } from '../../spacetimedb/src/finance/types';
 import { verify } from '../../spacetimedb/src/finance/verifier';
+import { forVariant } from '../../spacetimedb/src/finance/scenarios';
 import { CANARY, referenceFrom, splitOf } from './labels';
 import { fullFile, rawCrs } from './rawcrs';
 
@@ -30,6 +31,7 @@ export interface Item {
   item_id: string;
   split: 'train' | 'test';
   canary?: string;
+  benchmark_version?: number; // the version the run saw; the case file shown is the current one
   case_id: string;
   desk: string;
   prompt_variant: string;
@@ -137,7 +139,10 @@ export function fileFacts(id: string): FileFacts {
   };
 }
 
-export function answerKeyFor(scenario: Scenario, item: Item, steps: Step[]): Labels {
+export function answerKeyFor(base: Scenario, item: Item, steps: Step[]): Labels {
+  // The key depends on the prompt variant (v6): without the house rules, a
+  // lawful decline or escalation of an identity-fail case is accepted too.
+  const scenario = forVariant(base, item.prompt_variant);
   const verdict = verify(scenario, steps);
   const tools = checkTools(scenario, steps);
   const gate = gateCase(scenario, steps);

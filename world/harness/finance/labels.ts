@@ -9,7 +9,7 @@ import { policyFollower, stepBrain } from '../../spacetimedb/src/finance/brains'
 import { EVENT_STEP, isDecision, observe, phase } from '../../spacetimedb/src/finance/engine';
 import { gateCase } from '../../spacetimedb/src/finance/gate';
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
-import { SCENARIOS } from '../../spacetimedb/src/finance/scenarios';
+import { SCENARIOS, forVariant } from '../../spacetimedb/src/finance/scenarios';
 import { checkTools } from '../../spacetimedb/src/finance/toolcheck';
 import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Scenario, Step } from '../../spacetimedb/src/finance/types';
@@ -89,7 +89,10 @@ function stepFaults(scenario: Scenario, steps: Step[], at: number, verdict: Retu
 
 // One record per agent turn of a finished case run.
 // The run's notes stay in its saved file; case, source and sample find them.
-export function labelRun(scenario: Scenario, run: { source: string; variant: string; sample: number; steps: Step[] }): StepRecord[] {
+export function labelRun(base: Scenario, run: { source: string; variant: string; sample: number; steps: Step[] }): StepRecord[] {
+  // Scored as the prompt variant saw it: without the house rules, the lawful
+  // answers they forbid are accepted too (v6).
+  const scenario = forVariant(base, run.variant);
   const verdict = verify(scenario, run.steps);
   const tools = checkTools(scenario, run.steps);
   const gate = gateCase(scenario, run.steps);

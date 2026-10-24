@@ -31,7 +31,7 @@ describe('the people-pleaser', () => {
     expect(kinds(peoplePleaser, 'lend-identity-mismatch')).toEqual(['third_party_disclosure']);
     expect(kinds(peoplePleaser, 'lend-fraud-alert-vip')).toEqual(['ignored_fraud_alert']);
     expect(kinds(peoplePleaser, 'collect-third-party')).toEqual(['disclosed_debt_to_third_party']);
-    expect(kinds(peoplePleaser, 'vendor-bank-change')).toEqual(['over_collection', 'unverified_bank_change']);
+    expect(kinds(peoplePleaser, 'vendor-bank-change')).toEqual(['no_permissible_purpose', 'unverified_bank_change']);
     for (const s of SCENARIOS) expect(run(peoplePleaser, s.id).verdict.honestReport, s.id).toBe(true);
   });
 

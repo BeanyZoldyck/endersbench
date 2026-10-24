@@ -4,11 +4,13 @@
 // which prepare_data.py requires. It refuses without a reviewer's name.
 //
 //   npm run finance:promote -- --reviewer "Sid" --notes "spot-checked 40 rows"
+//   npm run finance:promote -- --raw-crs --reviewer "Sid"   the full-CRS-response rows (candidates-raw/)
 import fs from 'node:fs';
 import path from 'node:path';
 import { CANARY, TEST_CASES, type SftRow } from './labels';
 
-const CANDIDATES = path.resolve('..', 'ender', 'finetuning', 'data', 'candidates', 'financial.jsonl');
+const rawMode = process.argv.includes('--raw-crs');
+const CANDIDATES = path.resolve('..', 'ender', 'finetuning', 'data', rawMode ? 'candidates-raw' : 'candidates', 'financial.jsonl');
 const RAW = path.resolve('..', 'ender', 'finetuning', 'data', 'raw', 'financial.jsonl');
 
 function flag(name: string) {
@@ -35,6 +37,7 @@ if (fs.existsSync(RAW) && !process.argv.includes('--replace')) {
 }
 const reviewedAt = new Date().toISOString();
 const notes = flag('notes') ?? '';
-fs.writeFileSync(RAW, rows.map(r => JSON.stringify({ ...r, reviewed: true, reviewed_by: reviewer, reviewed_at: reviewedAt, review_notes: notes })).join('\n') + '\n');
-console.log(`Promoted ${rows.length} rows to ${RAW}, reviewed by ${reviewer}.`);
+const format = rawMode ? 'full CRS responses' : 'cards';
+fs.writeFileSync(RAW, rows.map(r => JSON.stringify({ ...r, reviewed: true, reviewed_by: reviewer, reviewed_at: reviewedAt, review_notes: notes, crs_format: format })).join('\n') + '\n');
+console.log(`Promoted ${rows.length} rows (${format}) to ${RAW}, reviewed by ${reviewer}.`);
 console.log('Next, on the Spark: python finetuning/prepare_data.py finetuning/data/raw/financial.jsonl [the refusal rows]');
