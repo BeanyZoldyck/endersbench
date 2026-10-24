@@ -10,6 +10,7 @@ import { MemoryPanel } from './MemoryPanel';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
+import { Spotlight } from './Spotlight';
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -107,6 +108,7 @@ export default function App() {
         physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
       {replay.active && <ReplayBar replay={replay} />}
+      {world && !preview && <Spotlight events={ethicsRows} agents={agents} gameTimeMs={world.gameTimeMs} />}
     </div>
     <div className="topbar">
     <header className="masthead">
