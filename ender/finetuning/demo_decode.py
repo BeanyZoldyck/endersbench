@@ -4,9 +4,12 @@
 import argparse
 import contextlib
 import json
+import math
 import statistics
 import time
 from pathlib import Path
+
+from spark_runtime import configure_startup, gpu_first_loading
 
 
 PROMPTS = [
@@ -26,20 +29,57 @@ def summarize(times, total_seconds):
             "output_tokens_per_second_including_prefill": len(times) / total_seconds}
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--adapter", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--max-new-tokens", type=int, default=128)
-    parser.add_argument("--repeats", type=int, default=3)
-    args = parser.parse_args()
-    if args.output.exists():
-        parser.error("Output exists; choose a new path")
-    if args.max_new_tokens < 2 or args.repeats < 1:
-        parser.error("Need at least two tokens and one repeat")
+def loss_examples(config, tokenizer):
+    """Use the training template, masking the prompt exactly as assistant-only SFT does."""
+    from llamafactory.hparams import get_train_args
+    from llamafactory.data.template import get_template_and_fix_tokenizer
+    from audit_sft_data import encode_example
+    args = {**config, "do_train": False, "do_eval": True, "report_to": "none"}
+    _, data_args, _, _, _ = get_train_args(args)
+    template = get_template_and_fix_tokenizer(tokenizer, data_args)
+    root = Path(config["dataset_dir"])
+    info = json.loads((root / "dataset_info.json").read_text())[config["eval_dataset"]]
+    columns = info.get("columns", {})
+    examples = []
+    for raw in json.loads((root / info["file_name"]).read_text()):
+        row = {name: raw.get(columns.get(column, name), "") for name, column in (
+            ("instruction", "prompt"), ("input", "query"), ("output", "response"), ("system", "system"))}
+        prompt, response = encode_example(row, template, tokenizer)
+        if len(prompt) + len(response) > config["cutoff_len"]:
+            raise ValueError("Loss comparison refuses truncated evaluation examples")
+        examples.append((prompt, response))
+    return examples
+
+
+def evaluate_loss(model, examples):
     import torch
-    from peft import PeftModel
-    from transformers import AutoModelForImageTextToText, AutoTokenizer
+    losses, weighted, target_count = [], 0., 0
+    for prompt, response in examples:
+        ids = torch.tensor([prompt + response], device="cuda")
+        labels = ids.clone()
+        labels[:, :len(prompt)] = -100
+        value = model(input_ids=ids, attention_mask=torch.ones_like(ids), labels=labels,
+                      use_cache=False).loss.item()
+        if not math.isfinite(value):
+            raise ValueError("Non-finite evaluation loss")
+        losses.append(value)
+        weighted += value * len(response)
+        target_count += len(response)
+    return {"examples": len(examples), "supervised_tokens": target_count,
+            "mean_example_cross_entropy_nats": statistics.mean(losses),
+            "token_weighted_cross_entropy_nats": weighted / target_count,
+            "token_weighted_perplexity": math.exp(weighted / target_count),
+            "masking": "prompt ignored; supervised assistant response including end tokens"}
+
+
+def benchmark(model, tokenizer, output, max_new_tokens=128, repeats=3,
+              model_load_seconds=None, reused_from_training=False, evaluation_config=None):
+    """Benchmark an existing model without allocating a second base checkpoint."""
+    if output.exists():
+        raise ValueError("Output exists; choose a new path")
+    if max_new_tokens < 2 or repeats < 1:
+        raise ValueError("Need at least two tokens and one repeat")
+    import torch
     from transformers.generation.streamers import BaseStreamer
     from baseline import MODEL, REVISION
 
@@ -63,16 +103,8 @@ def main():
         def end(self):
             pass
 
-    torch.set_num_threads(8)
-    torch.manual_seed(42)
-    assert torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, local_files_only=True)
-    print("Loading pinned BF16 checkpoint on CUDA; no CPU offload or quantization.", flush=True)
-    started = time.perf_counter()
-    base = AutoModelForImageTextToText.from_pretrained(
-        MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False,
-        dtype=torch.bfloat16, device_map={"": "cuda:0"}, attn_implementation="sdpa")
-    model = PeftModel.from_pretrained(base, str(args.adapter)).eval()
+    model.eval()
+    model.gradient_checkpointing_disable()
     assert not getattr(model, "is_quantized", False)
     devices = sorted({str(p.device) for p in model.parameters()})
     if devices != ["cuda:0"]:
@@ -86,14 +118,22 @@ def main():
               "gpu": torch.cuda.get_device_name(0), "torch": torch.__version__,
               "cuda": torch.version.cuda, "batch_size": 1, "precision": "BF16 base, unmerged LoRA",
               "attention": "sdpa", "torch_compile": False, "devices": devices,
-              "model_load_seconds": time.perf_counter() - started,
+              "model_load_seconds": model_load_seconds,
+              "model_reused_from_training": reused_from_training,
+              "additional_checkpoint_loads": 0 if reused_from_training else 1,
               "method": "CUDA-synchronized per-token wall time, first-token/prefill excluded from decode rate",
               "limitations": "Smoke outputs are not evidence of alignment improvement; no independent scoring.",
               "runs": []}
+    examples = loss_examples(evaluation_config, tokenizer) if evaluation_config else None
+    if examples:
+        result["loss_comparison"] = {}
     for mode in ("base", "adapter"):
         manager = model.disable_adapter() if mode == "base" else contextlib.nullcontext()
         with manager, torch.inference_mode():
-            for index in range(args.repeats + 1):
+            if examples:
+                result["loss_comparison"][mode] = evaluate_loss(model, examples)
+                print(f"[{mode} held-out loss] " + json.dumps(result["loss_comparison"][mode]), flush=True)
+            for index in range(repeats + 1):
                 warmup = index == 0
                 prompt = PROMPTS[0 if warmup else (index - 1) % len(PROMPTS)]
                 rendered = tokenizer.apply_chat_template(
@@ -104,7 +144,7 @@ def main():
                 print(f"[{mode}] {'warmup' if warmup else f'trial {index}'}", flush=True)
                 torch.cuda.synchronize()
                 start = time.perf_counter()
-                generated = model.generate(**inputs, max_new_tokens=16 if warmup else args.max_new_tokens,
+                generated = model.generate(**inputs, max_new_tokens=16 if warmup else max_new_tokens,
                                            do_sample=False, use_cache=True, streamer=timer,
                                            pad_token_id=tokenizer.eos_token_id)
                 torch.cuda.synchronize()
@@ -117,7 +157,7 @@ def main():
                                                     skip_special_tokens=True)}
                 result["runs"].append(row)
                 print(json.dumps(row), flush=True)
-                args.output.write_text(json.dumps(result, indent=2) + "\n")
+                output.write_text(json.dumps(result, indent=2) + "\n")
     result["summary"] = {}
     for mode in ("base", "adapter"):
         measured = [r for r in result["runs"] if r["mode"] == mode and not r["warmup"]]
@@ -125,8 +165,46 @@ def main():
             "median_decode_tokens_per_second": statistics.median(r["decode_tokens_per_second"] for r in measured),
             "aggregate_decode_tokens_per_second": sum(r["decode_tokens"] for r in measured) / sum(r["decode_seconds"] for r in measured)}
     result["peak_cuda_allocated_gib"] = torch.cuda.max_memory_allocated() / 2**30
-    args.output.write_text(json.dumps(result, indent=2) + "\n")
+    output.write_text(json.dumps(result, indent=2) + "\n")
     print("DECODE SUMMARY: " + json.dumps(result["summary"], indent=2), flush=True)
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--adapter", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--max-new-tokens", type=int, default=128)
+    parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--eval-config", type=Path, help="Compare masked base/adapter loss on this config's validation split")
+    args = parser.parse_args()
+    if args.output.exists():
+        parser.error("Output exists; choose a new path")
+    if args.max_new_tokens < 2 or args.repeats < 1:
+        parser.error("Need at least two tokens and one repeat")
+    startup = configure_startup()
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForImageTextToText, AutoTokenizer
+    from baseline import MODEL, REVISION
+    torch.set_num_threads(8)
+    torch.manual_seed(42)
+    assert torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, local_files_only=True)
+    print("STARTUP SETTINGS: " + json.dumps(startup), flush=True)
+    print("Loading pinned BF16 checkpoint on CUDA; no CPU offload or quantization.", flush=True)
+    started = time.perf_counter()
+    with gpu_first_loading():
+        base = AutoModelForImageTextToText.from_pretrained(
+            MODEL, revision=REVISION, local_files_only=True, trust_remote_code=False,
+            dtype=torch.bfloat16, device_map={"": "cuda:0"}, attn_implementation="sdpa")
+    model = PeftModel.from_pretrained(base, str(args.adapter)).eval()
+    elapsed = time.perf_counter() - started
+    print(f"MODEL LOAD COMPLETE: {elapsed:.2f} seconds", flush=True)
+    import yaml
+    benchmark(model, tokenizer, args.output, args.max_new_tokens, args.repeats,
+              model_load_seconds=elapsed,
+              evaluation_config=yaml.safe_load(args.eval_config.read_text()) if args.eval_config else None)
 
 
 if __name__ == "__main__":
