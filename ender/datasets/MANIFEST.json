@@ -1,0 +1,276 @@
+{
+  "name": "endersbench dataset collection",
+  "generated": "2026-10-24T05:48:29+00:00",
+  "root": "/home/oem/git/endersbench/ender/datasets",
+  "total_size_bytes": 132213606,
+  "dataset_count": 12,
+  "datasets": [
+    {
+      "id": "harmbench",
+      "name": "HarmBench (full repo)",
+      "category": "refusal",
+      "measures": "Standardized red-teaming: 400 text + 110 multimodal harmful behaviors across semantic/functional categories, plus classifier and attack code.",
+      "source_type": "github",
+      "source": "https://github.com/centerforaisafety/HarmBench",
+      "commit": "8e1604d1171fe8a48d8febecd22f600e462bdcdd",
+      "license": "MIT",
+      "local_path": "refusal/harmbench-full",
+      "records": {
+        "text_all": 400,
+        "text_test": 320,
+        "text_val": 80,
+        "multimodal_all": 110
+      },
+      "notes": "Trimmed data/copyright_classifier_hashes (287 MB of precomputed .pkl classifier artifacts, not benchmark rows). Multimodal behavior images retained (62 MB).",
+      "size_bytes": 83403874,
+      "size_human": "83.4 MB",
+      "files": 329
+    },
+    {
+      "id": "harmbench-tulu3-eval",
+      "name": "HarmBench text test (Tulu-3 packaging)",
+      "category": "refusal",
+      "measures": "The 320-row HarmBench text test split as a flat CSV, convenient for quick eval harnesses.",
+      "source_type": "huggingface",
+      "source": "allenai/tulu-3-harmbench-eval",
+      "commit": "c8f90e1bf8849be43402450355fcd6bceed60e51",
+      "license": "ODC-BY",
+      "local_path": "refusal/harmbench-tulu3-eval",
+      "records": {
+        "harmbench_behaviors_text_test.csv": 320
+      },
+      "notes": "Overlaps with harmbench-full; kept for convenience.",
+      "size_bytes": 163693,
+      "size_human": "0.2 MB",
+      "files": 3
+    },
+    {
+      "id": "jailbreakbench",
+      "name": "JailbreakBench (JBB-Behaviors)",
+      "category": "refusal",
+      "measures": "100 harmful + 100 matched benign behaviors across 10 OpenAI-policy categories, with targets and sources. The benign split is an over-refusal control.",
+      "source_type": "huggingface",
+      "source": "JailbreakBench/JBB-Behaviors",
+      "commit": "886acc352a31533ffbcf4ef22c744658688086fc",
+      "license": "MIT",
+      "local_path": "refusal/jailbreakbench",
+      "records": {
+        "harmful": 100,
+        "benign": 100
+      },
+      "notes": "",
+      "size_bytes": 1016027,
+      "size_human": "1.0 MB",
+      "files": 12
+    },
+    {
+      "id": "strongreject",
+      "name": "StrongREJECT",
+      "category": "refusal",
+      "measures": "313 validation prompts with a fine-grained rubric for whether a refusal is genuine or a hollow non-answer. Includes keyword and violence subsets.",
+      "source_type": "huggingface",
+      "source": "AlignmentResearch/StrongREJECT",
+      "commit": "9f4b3397bda985e1ac6dadb655e9ca3a17974144",
+      "license": "Not declared on the Hub card (see upstream repo)",
+      "local_path": "refusal/strongreject",
+      "records": {
+        "validation": 313,
+        "train(empty)": 0,
+        "violence_val": 54,
+        "keywords_val": 20
+      },
+      "notes": "The train split is empty upstream; validation is the usable set.",
+      "size_bytes": 59280,
+      "size_human": "0.1 MB",
+      "files": 8
+    },
+    {
+      "id": "advbench",
+      "name": "AdvBench",
+      "category": "refusal",
+      "measures": "520 harmful behaviors and 574 adversarial strings (Zou et al.). The oldest of the standard refusal suites.",
+      "source_type": "github",
+      "source": "https://github.com/llm-attacks/llm-attacks",
+      "commit": "098262edf85f807224e70ecd87b9d83716bf6b73",
+      "license": "MIT",
+      "local_path": "refusal/advbench",
+      "records": {
+        "harmful_behaviors.csv": 520,
+        "harmful_strings.csv": 574
+      },
+      "notes": "Only the two data CSVs were fetched, not the full attack repo.",
+      "size_bytes": 116779,
+      "size_human": "0.1 MB",
+      "files": 2
+    },
+    {
+      "id": "xstest",
+      "name": "XSTest",
+      "category": "over-refusal",
+      "measures": "450 prompts: 250 safe prompts that look unsafe (homonyms, figurative language, safe targets) and 200 genuinely unsafe controls. The canonical over-refusal probe.",
+      "source_type": "huggingface",
+      "source": "Paul/XSTest",
+      "commit": "f600c994b256f12867dfa5b3eb3d545a3e62f8b5",
+      "license": "CC-BY-4.0",
+      "local_path": "refusal/xstest",
+      "records": {
+        "xstest_prompts.csv": 450
+      },
+      "notes": "Public mirror; the walledai/XSTest and allenai/xstest-response repos are gated and were skipped.",
+      "size_bytes": 43102,
+      "size_human": "0.0 MB",
+      "files": 3
+    },
+    {
+      "id": "sorry-bench",
+      "name": "SORRY-Bench",
+      "category": "refusal",
+      "measures": "450 prompts across a 44-class unsafe taxonomy, plus 20 linguistic/obfuscation variants (ASCII, Atbash, Caesar, Morse, role-play, translation, etc.) at 450 each.",
+      "source_type": "huggingface",
+      "source": "SillyTilly/SorryBench",
+      "commit": "87ebb821524d5f46f850dc3548136319779426bb",
+      "license": "Not declared on the Hub card (see upstream repo)",
+      "local_path": "refusal/sorry-bench",
+      "records": {
+        "question.jsonl (base)": 450,
+        "variant_files": 21,
+        "total_prompts": 9450
+      },
+      "notes": "Public mirror of sorry-bench/sorry-bench-202406, which is gated. Includes README and taxonomy image.",
+      "size_bytes": 8593974,
+      "size_human": "8.6 MB",
+      "files": 25
+    },
+    {
+      "id": "or-bench",
+      "name": "OR-Bench",
+      "category": "over-refusal",
+      "measures": "80,359 over-refusal prompts (28 categories) + a 1,319-prompt hard set + 655 toxic prompts. The largest over-refusal corpus.",
+      "source_type": "huggingface",
+      "source": "bench-llm/or-bench",
+      "commit": "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272",
+      "license": "CC-BY-4.0",
+      "local_path": "refusal/or-bench",
+      "records": {
+        "or-bench-80k.csv": 80359,
+        "or-bench-hard-1k.csv": 1319,
+        "or-bench-toxic.csv": 655
+      },
+      "notes": "Includes README figures. The hard set is 1,319 rows despite the '1k' filename.",
+      "size_bytes": 33710710,
+      "size_human": "33.7 MB",
+      "files": 34
+    },
+    {
+      "id": "abliteration-eval",
+      "name": "Abliteration-Eval",
+      "category": "uncensored-refusal",
+      "measures": "Purpose-built abliteration probe: 200 harmful prompts in 20 balanced categories, 83 over-refusal traps, 50 multilingual paired prompts (5 languages).",
+      "source_type": "huggingface",
+      "source": "treadon/abliteration-eval",
+      "commit": "3c4296633833a2237be95a1ad9582504841debb1",
+      "license": "Apache-2.0",
+      "local_path": "uncensored/abliteration-eval",
+      "records": {
+        "harmful": 200,
+        "over_refusal": 83,
+        "multilingual": 50
+      },
+      "notes": "Smallest but best-shaped set for measuring whether a refusal direction was actually removed.",
+      "size_bytes": 29380,
+      "size_human": "0.0 MB",
+      "files": 5
+    },
+    {
+      "id": "rp-bench",
+      "name": "RP-Bench (roleplay + NSFW)",
+      "category": "roleplay",
+      "measures": "Multi-turn roleplay quality and willingness. 27-dimension rubric, adversarial seeds, NSFW Round 3 refusal axes, Round 4 'should-refuse vs should-comply' discrimination (over-refusal, policy compliance, overshoot), 4,411 rater-agreement rows, human arena votes.",
+      "source_type": "huggingface",
+      "source": "lazyweasel/roleplay-bench",
+      "commit": "b30e7dc9aaf0cebf9fcdf693280b3957720a842a",
+      "license": "CC-BY-NC-4.0",
+      "local_path": "roleplay/rp-bench",
+      "records": {
+        "adversarial_seeds/train.parquet": 20,
+        "community_arena/train.parquet": 11,
+        "community_votes/train.parquet": 2013,
+        "elo/train.parquet": 8,
+        "flaw_hunter/train.parquet": 8,
+        "leaderboard/train.parquet": 11,
+        "results/train.parquet": 257,
+        "round4_continuity/train.parquet": 41,
+        "round4_leaderboard/train.parquet": 58,
+        "round4_overview/train.parquet": 72,
+        "round4_rater_agreement/train.parquet": 4411,
+        "round4_track_a_seeds/train.parquet": 16,
+        "round4_track_b_probes/train.parquet": 7,
+        "rubric/train.parquet": 26,
+        "seeds/train.parquet": 8
+      },
+      "notes": "Non-commercial license. This is the closest existing dataset to the NSFW/taboo-roleplay target.",
+      "size_bytes": 4197248,
+      "size_human": "4.2 MB",
+      "files": 64
+    },
+    {
+      "id": "t2vsafetybench",
+      "name": "T2VSafetyBench",
+      "category": "video",
+      "measures": "5,151 text-to-video prompts across 14 safety-critical categories (sexual content, violence, hate, harassment, etc.) for auditing video generators.",
+      "source_type": "github",
+      "source": "https://github.com/yibo-miao/T2VSafetyBench",
+      "commit": "97a841699fc25bc61662e6453bd6a2d9d187a9db",
+      "license": "No license declared upstream",
+      "local_path": "video/t2vsafetybench",
+      "records": {
+        "categories": 14,
+        "total_prompts": 5151
+      },
+      "notes": "Closest public analogue to NSFW-video prompt analysis, but it is generation-side, not VLM-understanding-side. Category files are 1.txt..14.txt.",
+      "size_bytes": 730594,
+      "size_human": "0.7 MB",
+      "files": 36
+    },
+    {
+      "id": "zefr-multimodal",
+      "name": "ZEFR Multimodal Content Moderation (brand safety)",
+      "category": "moderation",
+      "measures": "1,500 human-reviewed multimodal brand-safety items (YouTube/TikTok/etc.) with labels for harmful content, from the 'AI vs. Human Moderators' study.",
+      "source_type": "github",
+      "source": "https://github.com/ZEFR-INC/multimodal-content-moderation-data",
+      "commit": "0e0cd79500af69ebeeb30fb86aa7109def564e9c",
+      "license": "No license declared upstream",
+      "local_path": "moderation/zefr-multimodal",
+      "records": {
+        "dataset.csv": 1500
+      },
+      "notes": "Media is referenced by remote URL (VIEW_URL), not bundled. Moderation-classification, not generation.",
+      "size_bytes": 148945,
+      "size_human": "0.1 MB",
+      "files": 5
+    }
+  ],
+  "excluded": [
+    {
+      "id": "UGI Leaderboard",
+      "reason": "Question set is deliberately undisclosed; leaderboard-only, no dataset."
+    },
+    {
+      "id": "walledai/HarmBench, walledai/StrongREJECT, walledai/XSTest, walledai/AdvBench",
+      "reason": "Gated; requires manual approval on the Hub. Public mirrors or upstream GitHub used instead."
+    },
+    {
+      "id": "sorry-bench/sorry-bench-202406",
+      "reason": "Gated; public mirror SillyTilly/SorryBench used."
+    },
+    {
+      "id": "allenai/xstest-response",
+      "reason": "Gated response generations; not needed for prompt-level eval."
+    },
+    {
+      "id": "HarmBench copyright_classifier_hashes",
+      "reason": "287 MB of precomputed classifier .pkl artifacts, not benchmark rows; trimmed."
+    }
+  ]
+}

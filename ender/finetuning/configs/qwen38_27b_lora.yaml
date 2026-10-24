@@ -1,0 +1,54 @@
+# Run from ~/endersbench-finetune. Base weights stay in BF16; no quantization.
+model_name_or_path: Qwen/Qwen3.8-27B
+model_revision: 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0
+trust_remote_code: false
+flash_attn: sdpa
+
+stage: sft
+do_train: true
+do_eval: true
+finetuning_type: lora
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: all
+freeze_vision_tower: true
+freeze_multi_modal_projector: true
+
+dataset_dir: finetuning/data/prepared
+dataset: alignment_train
+eval_dataset: alignment_validation
+template: qwen3_8
+enable_thinking: false
+cutoff_len: 1000
+preprocessing_num_workers: 4
+dataloader_num_workers: 0
+packing: false
+train_on_prompt: false
+
+output_dir: outputs/qwen38-27b-alignment-lora
+overwrite_output_dir: false
+logging_steps: 1
+save_strategy: steps
+save_steps: 50
+save_total_limit: 2
+save_only_model: false
+plot_loss: true
+report_to: none
+
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+per_device_eval_batch_size: 1
+learning_rate: 5.0e-5
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+gradient_checkpointing: true
+# Establish a stable baseline before enabling compilation on this hybrid model.
+torch_compile: false
+eval_strategy: steps
+eval_steps: 50
+prediction_loss_only: true
+seed: 42
+data_seed: 42

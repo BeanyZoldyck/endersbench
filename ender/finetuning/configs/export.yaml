@@ -1,0 +1,11 @@
+model_name_or_path: Qwen/Qwen3.8-27B
+model_revision: 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0
+adapter_name_or_path: outputs/qwen38-27b-alignment-lora
+template: qwen3_8
+trust_remote_code: false
+finetuning_type: lora
+export_dir: outputs/qwen38-27b-alignment-merged
+export_size: 4
+export_device: cpu
+export_legacy_format: false
+infer_dtype: bfloat16

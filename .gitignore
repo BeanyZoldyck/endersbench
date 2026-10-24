@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# endersbench: collected benchmark datasets (~132 MB of raw payloads).
+# Keep the top-level README.md, MANIFEST.json, and collect.py; ignore the data
+# itself so it can be regenerated with `python3 ender/datasets/collect.py`.
+/ender/datasets/*/
