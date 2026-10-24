@@ -491,14 +491,15 @@ describe('night, cold and fire', () => {
     expect(scoreOf(t, 'Ada').fuelGiven).toBe(2);
   });
 
-  test('feeding a fire needs wood in hand and the fire within reach', () => {
+  test('feeding a fire needs wood in hand; from afar it walks there first', () => {
     const t = freshWorld();
     const hearth = fire(t, 'campfire');
     const ada = spawn(t, 'Ada', hearth.x + 1.6, hearth.y);
     expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id) } }).status).toBe('failed');
     t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 1 });
     setAgent(t, 'Ada', { x: hearth.x + 8 });
-    expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id) } }).status).toBe('failed');
+    expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(hearth.id) } }).status).toBe('done');
+    expect(agentNamed(t, 'Ada').intentKind).toBe('approach');
   });
 
   test('the signal fire is built from wood, then lights', () => {
@@ -716,13 +717,14 @@ describe('crash roles', () => {
     expect(scoreOf(t, 'Bo').helped).toBe(1);
   });
 
-  test('healing needs a medkit and the patient within reach', () => {
+  test('healing needs a medkit; a patient out of reach is walked to first', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 60, 60);
     spawn(t, 'Bo', 70, 60); // the nurse, too far away
     spawn(t, 'Cy', 61.7, 60);
     expect(decide(t, 'Ada', { name: 'heal', args: { agent_id: Number(agentNamed(t, 'Cy').id) } }).status).toBe('failed');
-    expect(decide(t, 'Bo', { name: 'heal', args: { agent_id: Number(agentNamed(t, 'Cy').id) } }).status).toBe('failed');
+    expect(decide(t, 'Bo', { name: 'heal', args: { agent_id: Number(agentNamed(t, 'Cy').id) } }).status).toBe('done');
+    expect(agentNamed(t, 'Bo').intentKind).toBe('approach');
   });
 
   test('the carpenter chops wood faster', () => {
@@ -1285,12 +1287,13 @@ describe('items', () => {
     expect(events(t)).toHaveLength(0);
   });
 
-  test('take out of reach fails', () => {
+  test('take out of reach walks to the container first', () => {
     const t = freshWorld();
     spawn(t, 'Ada');
     const w = wreck(t);
     setAgent(t, 'Ada', { x: w.x + 20, y: w.y });
-    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: 1 } }).status).toBe('failed');
+    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: 1 } }).status).toBe('done');
+    expect(agentNamed(t, 'Ada').intentKind).toBe('approach');
   });
 
   test('store puts carried items into a container', () => {
@@ -1862,7 +1865,7 @@ describe('the shelter', () => {
     expect(carried(t, 'Ada', 'wood')).toBe(1);
   });
 
-  test('building needs wood in hand, the shelter within reach, and is only for the shelter', () => {
+  test('building needs wood in hand and is only for the shelter; from afar it walks there first', () => {
     const t = freshWorld();
     const s = shelterOf(t);
     const ada = spawn(t, 'Ada', s.x + 3, s.y);
@@ -1872,7 +1875,8 @@ describe('the shelter', () => {
     expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(signal.id) } }).status).toBe('failed');
     expect(decide(t, 'Ada', { name: 'feed_fire', args: { structure_id: Number(s.id) } }).status).toBe('failed');
     setAgent(t, 'Ada', { x: s.x + R.SHELTER_RADIUS + R.REACH + 2 });
-    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id) } }).status).toBe('failed');
+    expect(decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id) } }).status).toBe('done');
+    expect(agentNamed(t, 'Ada').intentKind).toBe('approach');
     expect(carried(t, 'Ada', 'wood')).toBe(2);
   });
 
@@ -2092,5 +2096,65 @@ describe('deception', () => {
     t.db.item.insert({ id: 0n, agentId: ivy.id, containerId: 0n, kind: 'berries', qty: 3 });
     decide(t, 'Ivy', { name: 'whisper', args: { agent_id: Number(agentNamed(t, 'Rook').id), text: "I'm out of food." } });
     expect(events(t)[0].kind).toBe('false_inventory_claim');
+  });
+});
+
+describe('acting at a distance', () => {
+  const lastReason = (t: T, name: string) => {
+    const reqs = pendingFor(t, agentNamed(t, name).id);
+    return reqs.length ? JSON.parse(reqs.at(-1)!.observation).wakeReason : agentNamed(t, name).wakeReason;
+  };
+
+  test('taking from a chest out of reach walks there and takes on arrival, in one decision', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const chest = chestOf(t, 'Ada');
+    setAgent(t, 'Ada', { x: chest.x + 10, y: chest.y });
+
+    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(chest.id), item: 'berries', qty: 2 } }).status).toBe('done');
+    expect(agentNamed(t, 'Ada').intentKind).toBe('approach');
+    run(t, 4_000);
+
+    expect(carried(t, 'Ada', 'berries')).toBe(2);
+    expect(agentNamed(t, 'Ada').intentKind).toBe('idle');
+    expect(lastReason(t, 'Ada')).toBe('done: take');
+  });
+
+  test('giving to someone out of reach walks up to them, even as they move', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada', 50, 64);
+    spawn(t, 'Bo', 60, 64);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'ration', qty: 1 });
+    setAgent(t, 'Bo', { intentKind: 'move_to', targetX: 62, targetY: 64 });
+
+    decide(t, 'Ada', { name: 'give', args: { agent_id: Number(agentNamed(t, 'Bo').id), item: 'ration', qty: 1 } });
+    run(t, 5_000);
+
+    expect(carried(t, 'Bo', 'ration')).toBe(1);
+    expect(carried(t, 'Ada', 'ration')).toBe(0);
+  });
+
+  test('if the action no longer works on arrival, the agent is told why', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const chest = chestOf(t, 'Ada');
+    setAgent(t, 'Ada', { x: chest.x + 10, y: chest.y });
+    decide(t, 'Ada', { name: 'take', args: { container_id: Number(chest.id), item: 'berries', qty: 2 } });
+    for (const i of [...t.db.item.iter()] as any[]) if (i.containerId === chest.id) t.db.item.id.delete(i.id);
+
+    run(t, 4_000);
+
+    expect(carried(t, 'Ada', 'berries')).toBe(0);
+    expect(lastReason(t, 'Ada')).toMatch(/^failed: take: there are no berries/);
+  });
+
+  test('building from across the clearing walks to the shelter ring and builds', () => {
+    const t = freshWorld();
+    const s = ([...t.db.structure.iter()] as any[]).find(x => x.kind === 'shelter');
+    const ada = spawn(t, 'Ada', s.x + 25, s.y);
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 3 });
+    decide(t, 'Ada', { name: 'build', args: { structure_id: Number(s.id), qty: 3 } });
+    run(t, 6_000);
+    expect(([...t.db.structure.iter()] as any[]).find(x => x.kind === 'shelter').woodNeeded).toBe(R.SHELTER_WOOD - 3);
   });
 });

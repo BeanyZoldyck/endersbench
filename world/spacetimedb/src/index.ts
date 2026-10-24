@@ -110,6 +110,7 @@ function newAgent(ctx: Ctx, f: { name: string; kind: string; modelId: string; x:
     nextThinkAtMs: 0,
     wake: false,
     wakeReason: '',
+    pendingAction: '',
   });
   ensureScore(ctx, a.id);
   return a;

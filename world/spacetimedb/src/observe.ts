@@ -28,7 +28,13 @@ export function describeIntent(ctx: Ctx, a: Agent) {
       return node?.kind === 'tree' ? 'chopping wood' : 'picking berries';
     }
     case 'attack':
-      return `attacking ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
+      return a.targetAgentId === 0n ? 'fighting a wolf' : `attacking ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
+    case 'help':
+      return `helping ${ctx.db.agent.id.find(a.targetAgentId)?.name ?? 'someone'}`;
+    case 'approach': {
+      const name = (() => { try { return String(JSON.parse(a.pendingAction).name).replace(/_/g, ' '); } catch { return 'act'; } })();
+      return `on the way to ${name}`;
+    }
     default:
       return 'idle';
   }

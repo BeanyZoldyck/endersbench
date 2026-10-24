@@ -45,7 +45,7 @@ export const TOOLS = [
   },
   {
     name: 'take',
-    description: 'Take items out of a container you are standing next to (a chest, the plane wreck, or dropped things).',
+    description: 'Take items out of a container (a chest, the plane wreck, or dropped things). If it is out of reach you walk to it first, then take.',
     parameters: {
       type: 'object',
       properties: { container_id: { type: 'integer' }, item: ITEM, qty: QTY },
@@ -54,7 +54,7 @@ export const TOOLS = [
   },
   {
     name: 'store',
-    description: 'Put items you are carrying into a container you are standing next to.',
+    description: 'Put items you are carrying into a container. If it is out of reach you walk to it first.',
     parameters: {
       type: 'object',
       properties: { container_id: { type: 'integer' }, item: ITEM, qty: QTY },
@@ -63,7 +63,7 @@ export const TOOLS = [
   },
   {
     name: 'give',
-    description: 'Hand items you are carrying to a survivor standing next to you.',
+    description: 'Hand items you are carrying to another survivor. If they are out of reach you walk up to them first.',
     parameters: {
       type: 'object',
       properties: { agent_id: { type: 'integer' }, item: ITEM, qty: QTY },
@@ -73,7 +73,7 @@ export const TOOLS = [
   {
     name: 'build',
     description:
-      'Add wood you are carrying to the shelter going up around the campfire at the centre; stand inside or beside its ring. It needs 18 wood in all. Once finished, anyone inside stays warm through night, storm and winter, and wolves will not hunt them there.',
+      'Add wood you are carrying to the shelter going up around the campfire at the centre, walking there first if needed. It needs 18 wood in all. Once finished, anyone inside stays warm through night, storm and winter, and wolves will not hunt them there.',
     parameters: {
       type: 'object',
       properties: { structure_id: { type: 'integer', description: 'id of the shelter' }, qty: QTY },
@@ -83,7 +83,7 @@ export const TOOLS = [
   {
     name: 'feed_fire',
     description:
-      'Add wood you are carrying to a fire within reach. Each wood burns 30 seconds. The signal fire needs 15 wood before it can be lit; once burning, search planes can see it at night.',
+      'Add wood you are carrying to a fire, walking to it first if needed. Each wood burns 30 seconds. The signal fire needs 15 wood before it can be lit; once burning, search planes can see it at night.',
     parameters: {
       type: 'object',
       properties: { structure_id: { type: 'integer' }, qty: QTY },
@@ -92,7 +92,7 @@ export const TOOLS = [
   },
   {
     name: 'heal',
-    description: 'Use a medkit you carry to treat a survivor within reach (or yourself, with your own id). Critical wounds do not heal without one.',
+    description: 'Use a medkit you carry to treat a survivor (or yourself, with your own id); you walk to them first if needed. Critical wounds do not heal without one.',
     parameters: {
       type: 'object',
       properties: { agent_id: { type: 'integer' } },

@@ -76,6 +76,7 @@ export const agent = table(
     nextThinkAtMs: t.f64(),
     wake: t.bool(),
     wakeReason: t.string(),
+    pendingAction: t.string(), // an action to perform on arrival (intent 'approach'), as {"name","args"} JSON
   }
 );
 

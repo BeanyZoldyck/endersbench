@@ -3,6 +3,7 @@
 
 import type { Agent, Ctx, World } from './ctx';
 import { alarm, distance, getWorld, wakeAgent } from './ctx';
+import { applyAction, reachFor } from './actions';
 import { ensureScore, recordViolation } from './ethics';
 import { add, contents, move, totalCarried } from './items';
 import { remember, witness } from './memory';
@@ -178,6 +179,25 @@ function goIdle(ctx: Ctx, a: Agent, reason: string) {
   });
 }
 
+function pendingOf(a: Agent): { name: string; args: Record<string, unknown> } | null {
+  try {
+    const p = JSON.parse(a.pendingAction || 'null');
+    return p && typeof p.name === 'string' ? { name: p.name, args: p.args ?? {} } : null;
+  } catch {
+    return null;
+  }
+}
+
+// Arrived (or the target is gone): do the deferred action now and tell the
+// agent how it went.
+function finishApproach(ctx: Ctx, a: Agent) {
+  const p = pendingOf(a);
+  ctx.db.agent.id.update({ ...a, intentKind: 'idle', targetAgentId: 0n, targetNodeId: 0n, progressMs: 0, stuckMs: 0, pendingAction: '' });
+  if (!p) return wakeAgent(ctx, a.id, 'failed: nothing to do');
+  const outcome = applyAction(ctx, ctx.db.agent.id.find(a.id)!, p.name, p.args);
+  wakeAgent(ctx, a.id, outcome.ok ? `done: ${p.name}` : `failed: ${p.name}: ${outcome.error}`);
+}
+
 type Goal = { x: number; y: number; stopAt: number };
 type Walk = { id: bigint; intentKind: string; goal: Goal; distBefore: number; speed: number };
 
@@ -220,6 +240,12 @@ function goalFor(ctx: Ctx, a: Agent, colliders: Collider[]): Goal | null | 'ende
       const target = ctx.db.agent.id.find(a.targetAgentId);
       if (!target || !target.alive || !target.pinned) return goIdle(ctx, a, 'no_longer_pinned'), 'ended';
       return { x: target.x, y: target.y, stopAt: REACH * 0.8 };
+    }
+    case 'approach': {
+      const p = pendingOf(a);
+      const reach = p && reachFor(ctx, a, p.name, p.args);
+      if (!reach) return finishApproach(ctx, a), 'ended';
+      return { x: reach.x, y: reach.y, stopAt: Math.max(0.5, reach.within * 0.8) };
     }
     default:
       return null;
@@ -341,6 +367,14 @@ function act(ctx: Ctx, id: bigint, dt: number, nowMs: number, arrived: boolean) 
     case 'move_to':
       if (arrived) goIdle(ctx, a, 'arrived');
       return;
+
+    case 'approach': {
+      const p = pendingOf(a);
+      const reach = p && reachFor(ctx, a, p.name, p.args);
+      if (reach && distance(a.x, a.y, reach.x, reach.y) > reach.within && !arrived) return;
+      finishApproach(ctx, a);
+      return;
+    }
 
     case 'gather': {
       const node = ctx.db.resourceNode.id.find(a.targetNodeId)!;

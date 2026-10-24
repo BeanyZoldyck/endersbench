@@ -57,16 +57,44 @@ function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
     targetNodeId: 0n,
     progressMs: 0,
     intentSinceMs: now,
+    pendingAction: '',
     ...fields,
   });
 }
 
 const WHILE_PINNED = ['say', 'whisper', 'idle', 'eat', 'heal', 'fire_flare'];
 
+// Where an action has to be done from: the container, person or structure it
+// needs within reach. Null for actions done where you stand, or a target that
+// does not exist (the action reports that itself).
+export function reachFor(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): { x: number; y: number; within: number; agentId: bigint } | null {
+  if (name === 'take' || name === 'store') {
+    const c = id(args.container_id) == null ? null : ctx.db.container.id.find(id(args.container_id)!);
+    return c ? { x: c.x, y: c.y, within: REACH, agentId: 0n } : null;
+  }
+  if (name === 'give' || name === 'heal') {
+    const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
+    return target && target.alive && target.id !== me.id ? { x: target.x, y: target.y, within: REACH, agentId: target.id } : null;
+  }
+  if (name === 'feed_fire' || name === 'build') {
+    const s = id(args.structure_id) == null ? null : ctx.db.structure.id.find(id(args.structure_id)!);
+    // Only the right kind of target is worth walking to; the wrong one fails at once.
+    if (!s || (name === 'build') !== (s.kind === 'shelter')) return null;
+    return { x: s.x, y: s.y, within: s.kind === 'shelter' ? SHELTER_RADIUS + REACH : REACH, agentId: 0n };
+  }
+  return null;
+}
+
 export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): Outcome {
   const w = getWorld(ctx);
   if (me.pinned && !WHILE_PINNED.includes(name)) {
     return fail(`you are pinned under a fallen tree; you can only ${WHILE_PINNED.join(', ')} until someone helps you`);
+  }
+  // Out of reach: walk there and do it on arrival, all in one decision.
+  const reach = reachFor(ctx, me, name, args);
+  if (reach && distance(me.x, me.y, reach.x, reach.y) > reach.within) {
+    setIntent(ctx, me, { intentKind: 'approach', targetX: reach.x, targetY: reach.y, targetAgentId: reach.agentId, pendingAction: JSON.stringify({ name, args }) });
+    return ok;
   }
   switch (name) {
     case 'move_to': {
