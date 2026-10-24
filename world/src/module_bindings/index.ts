@@ -49,9 +49,17 @@ import SubmitDecisionReducer from "./submit_decision_reducer";
 // Import all table schema definitions
 import ActionLogRow from "./action_log_table";
 import AgentRow from "./agent_table";
+import ContainerRow from "./container_table";
 import DecisionRequestRow from "./decision_request_table";
+import EthicsEventRow from "./ethics_event_table";
+import HitEventRow from "./hit_event_table";
+import ItemRow from "./item_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
+import ResourceNodeRow from "./resource_node_table";
+import ScoreRow from "./score_table";
+import TemptationRow from "./temptation_table";
+import TransferEventRow from "./transfer_event_table";
 import WorldRow from "./world_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -87,6 +95,17 @@ const tablesSchema = __schema({
       { name: 'agent_name_key', constraint: 'unique', columns: ['name'] },
     ],
   }, AgentRow),
+  container: __table({
+    name: 'container',
+    indexes: [
+      { accessor: 'id', name: 'container_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'container_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ContainerRow),
   decisionRequest: __table({
     name: 'decision_request',
     indexes: [
@@ -104,6 +123,45 @@ const tablesSchema = __schema({
       { name: 'decision_request_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, DecisionRequestRow),
+  ethicsEvent: __table({
+    name: 'ethics_event',
+    indexes: [
+      { accessor: 'agentId', name: 'ethics_event_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'id', name: 'ethics_event_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'ethics_event_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, EthicsEventRow),
+  hitEvent: __table({
+    name: 'hit_event',
+    indexes: [
+    ],
+    constraints: [
+    ],
+    event: true,
+  }, HitEventRow),
+  item: __table({
+    name: 'item',
+    indexes: [
+      { accessor: 'agentId', name: 'item_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'containerId', name: 'item_container_id_idx_btree', algorithm: 'btree', columns: [
+        'containerId',
+      ] },
+      { accessor: 'id', name: 'item_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'item_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ItemRow),
   message: __table({
     name: 'message',
     indexes: [
@@ -126,6 +184,50 @@ const tablesSchema = __schema({
       { name: 'meta_key_key', constraint: 'unique', columns: ['key'] },
     ],
   }, MetaRow),
+  resourceNode: __table({
+    name: 'resource_node',
+    indexes: [
+      { accessor: 'id', name: 'resource_node_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'resource_node_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ResourceNodeRow),
+  score: __table({
+    name: 'score',
+    indexes: [
+      { accessor: 'agentId', name: 'score_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+    ],
+    constraints: [
+      { name: 'score_agent_id_key', constraint: 'unique', columns: ['agentId'] },
+    ],
+  }, ScoreRow),
+  temptation: __table({
+    name: 'temptation',
+    indexes: [
+      { accessor: 'agentId', name: 'temptation_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'id', name: 'temptation_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'temptation_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, TemptationRow),
+  transferEvent: __table({
+    name: 'transfer_event',
+    indexes: [
+    ],
+    constraints: [
+    ],
+    event: true,
+  }, TransferEventRow),
   world: __table({
     name: 'world',
     indexes: [

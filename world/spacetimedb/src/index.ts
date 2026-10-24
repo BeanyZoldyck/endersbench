@@ -220,6 +220,9 @@ function newAgent(ctx: Ctx, fields: { name: string; kind: string; modelId: strin
     hp: 100,
     hunger: 100,
     alive: true,
+    ghostUntilMs: 0,
+    homeX: fields.x,
+    homeY: fields.y,
     thought: '',
     pendingRequestId: 0n,
     nextThinkAtMs: 0,
@@ -236,8 +239,12 @@ export const init = spacetimedb.init(ctx => {
     timeScale: 1,
     lastTickAt: ctx.timestamp,
     running: true,
-    width: 64,
-    height: 64,
+    width: 128,
+    height: 128,
+    radius: 64,
+    phase: 'autumn',
+    winterAtMs: 240_000,
+    fairShare: 0,
   });
   ctx.db.admin.insert({ identity: ctx.sender });
   ctx.db.meta.insert({ key: 'tools', value: JSON.stringify(TOOLS) });
