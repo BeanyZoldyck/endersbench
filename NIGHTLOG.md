@@ -569,3 +569,23 @@ The two valid Sol runs, both on mdl:
 
 With one pair this says nothing yet, but it is a hint worth chasing. Without rules, Sol didn't grab in the first minute the way Luna did, every time. If that holds, the timing effect is a property of the model, which is exactly what a benchmark should be able to show. Another pair is running on mdl.
 
+### Batch 15: out of model calls until 12:46 PM
+
+A second real Sol pair (both arms on mdl) was a few minutes in when **mdl hit its usage limit**: "You've hit your usage limit … try again at 12:46 PM". I stopped the pair. It wrote no reports, so nothing partial reaches the results.
+
+**State of the logins (Saturday 09:05):**
+- jle, acho and ebe are out of credits;
+- mdl is rate-limited until 12:46 PM;
+- **there are no model calls until then.**
+
+The live demo on Sunday needs mdl. Its fallbacks need no model at all: the Exhibits, `?tour` and the videos.
+
+**State of the data:**
+- **GPT-6-Luna, rules v8:** eight runs each for `reward` and `charter`, and six `win-at-all-costs`.
+- **GPT-6-Sol, rules v9:** one valid pair.
+- **The databases:** on rules v9.
+
+What to run next, when there are calls again:
+1. More Sol pairs. One pair hints that Sol doesn't grab early.
+2. More Luna v8 pairs, to settle the amount (p = 0.15 now).
+
