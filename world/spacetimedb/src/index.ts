@@ -11,9 +11,19 @@ import { centre, clampToCircle, getWorld } from './ctx';
 import { applyAction, type Outcome } from './actions';
 import { ensureScore, updateTemptations } from './ethics';
 import { observe } from './observe';
-import { seedWorld, settleSurvivor, updateFairShare } from './scenario';
+import { physicsContract, seedWorld, settleSurvivor, updateFairShare } from './scenario';
 import { dropAll, tickWorld } from './sim';
-import { HEARTBEAT_MS, MAP_RADIUS, MAP_SIZE, REQUEST_TIMEOUT_MS, RETRY_MS, WINTER_AT_MS } from './rules';
+import {
+  DAY_LENGTH_MS,
+  DAY_OFFSET_MS,
+  HEARTBEAT_MS,
+  MAP_RADIUS,
+  MAP_SIZE,
+  REQUEST_TIMEOUT_MS,
+  RESCUE_AT_MS,
+  RETRY_MS,
+  WINTER_AT_MS,
+} from './rules';
 
 export { default } from './schema';
 
@@ -43,6 +53,16 @@ function startTimers(ctx: Ctx) {
   }
 }
 
+// The tool catalog and physics contract. Refreshed whenever a harness
+// connects, so a hot-published module's new actions reach the models.
+function publishMeta(ctx: Ctx) {
+  const entries = { tools: JSON.stringify(TOOLS), physics: physicsContract(getWorld(ctx)) };
+  for (const [key, value] of Object.entries(entries)) {
+    if (ctx.db.meta.key.find(key)) ctx.db.meta.key.update({ key, value });
+    else ctx.db.meta.insert({ key, value });
+  }
+}
+
 function controlledBy(ctx: Ctx): Agent | undefined {
   return [...ctx.db.agent.iter()].find(a => a.controller?.equals(ctx.sender));
 }
@@ -67,8 +87,16 @@ function newAgent(ctx: Ctx, f: { name: string; kind: string; modelId: string; x:
     modelId: f.modelId,
     controller: f.controller,
     color: COLORS[index % COLORS.length],
+    role: '',
+    backstory: '',
     x: f.x,
     y: f.y,
+    vx: 0,
+    vy: 0,
+    kx: 0,
+    ky: 0,
+    stunnedUntilMs: 0,
+    stuckMs: 0,
     intentKind: 'idle',
     targetX: f.x,
     targetY: f.y,
@@ -78,6 +106,8 @@ function newAgent(ctx: Ctx, f: { name: string; kind: string; modelId: string; x:
     progressMs: 0,
     hp: 100,
     hunger: 100,
+    warmth: 100,
+    pinned: false,
     alive: true,
     ghostUntilMs: 0,
     homeX: f.x,
@@ -120,9 +150,14 @@ export const init = spacetimedb.init(ctx => {
     phase: 'autumn',
     winterAtMs: WINTER_AT_MS,
     fairShare: 0,
+    dayLengthMs: DAY_LENGTH_MS,
+    dayOffsetMs: DAY_OFFSET_MS,
+    daylight: 'day',
+    rescueAtMs: RESCUE_AT_MS,
+    rescueState: 'waiting',
   });
   ctx.db.admin.insert({ identity: ctx.sender });
-  ctx.db.meta.insert({ key: 'tools', value: JSON.stringify(TOOLS) });
+  publishMeta(ctx);
   seedWorld(ctx);
   updateFairShare(ctx);
   startTimers(ctx);
@@ -234,9 +269,11 @@ export const failDecision = spacetimedb.reducer(
 
 // Trust on first use: the first harness to connect to a fresh world owns it.
 export const claimHarness = spacetimedb.reducer(ctx => {
-  if (isWorker(ctx)) return;
-  if (ctx.db.harnessWorker.count() > 0n && !isAdmin(ctx)) throw new SenderError('harness already claimed');
-  ctx.db.harnessWorker.insert({ identity: ctx.sender });
+  if (!isWorker(ctx)) {
+    if (ctx.db.harnessWorker.count() > 0n && !isAdmin(ctx)) throw new SenderError('harness already claimed');
+    ctx.db.harnessWorker.insert({ identity: ctx.sender });
+  }
+  publishMeta(ctx);
 });
 
 // Adds an LLM survivor with a home and a chest. Idempotent by name, so a

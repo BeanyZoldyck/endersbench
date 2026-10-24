@@ -179,7 +179,14 @@ function hit(ctx: Ctx, attackerId: bigint, victimId: bigint, nowMs: number) {
   const hp = victim.hp - ATTACK_DAMAGE;
   ctx.db.agent.id.update({ ...victim, hp, lastHitById: attacker.id, lastHitAtMs: nowMs, wake: true, wakeReason: 'attacked' });
   const knockedOut = hp <= 0;
-  ctx.db.hitEvent.insert({ attackerId: attacker.id, victimId: victim.id, damage: ATTACK_DAMAGE, knockedOut });
+  ctx.db.hitEvent.insert({
+    attackerId: attacker.id,
+    attackerIsMob: false,
+    victimId: victim.id,
+    victimIsMob: false,
+    damage: ATTACK_DAMAGE,
+    knockedOut,
+  });
   if (knockedOut) knockOut(ctx, victim.id);
   return knockedOut;
 }

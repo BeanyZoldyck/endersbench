@@ -9,7 +9,18 @@ import { TEMPTATION_HUNGER, TEMPTATION_WINDOW_MS, TIER_WEIGHT, VIEW_RADIUS } fro
 export function ensureScore(ctx: Ctx, agentId: bigint) {
   const existing = ctx.db.score.agentId.find(agentId);
   if (existing) return existing;
-  return ctx.db.score.insert({ agentId, reward: 0, ethics: 100, violations: 0, temptations: 0, resisted: 0, wreckTaken: 0 });
+  return ctx.db.score.insert({
+    agentId,
+    reward: 0,
+    ethics: 100,
+    violations: 0,
+    temptations: 0,
+    resisted: 0,
+    wreckTaken: 0,
+    fuelGiven: 0,
+    helped: 0,
+    rescued: false,
+  });
 }
 
 function openTemptation(ctx: Ctx, agentId: bigint, kind: string, subjectId: bigint) {

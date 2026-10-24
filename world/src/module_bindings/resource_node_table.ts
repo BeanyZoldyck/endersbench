@@ -17,4 +17,6 @@ export default __t.row({
   y: __t.f32(),
   remaining: __t.u32(),
   capacity: __t.u32(),
+  state: __t.string(),
+  angle: __t.f32(),
 });

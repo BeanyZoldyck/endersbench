@@ -12,7 +12,9 @@ import {
 
 export default __t.row({
   attackerId: __t.u64().name("attacker_id"),
+  attackerIsMob: __t.bool().name("attacker_is_mob"),
   victimId: __t.u64().name("victim_id"),
+  victimIsMob: __t.bool().name("victim_is_mob"),
   damage: __t.f32(),
   knockedOut: __t.bool().name("knocked_out"),
 });

@@ -208,6 +208,38 @@ describe('scenario', () => {
     expect(dist(w.x, w.y, 64, 64)).toBeLessThan(R.MAP_RADIUS);
   });
 
+  test('the hearth campfire burns at the centre and the signal fire waits for wood', () => {
+    const t = freshWorld();
+    const fires = [...t.db.structure.iter()] as any[];
+    const hearth = fires.find(f => f.kind === 'campfire');
+    const signal = fires.find(f => f.kind === 'signal_fire');
+    expect(dist(hearth.x, hearth.y, 64, 64)).toBeLessThan(1);
+    expect(hearth.lit).toBe(true);
+    expect(hearth.fuel).toBeGreaterThan(0);
+    expect(signal.lit).toBe(false);
+    expect(signal.woodNeeded).toBe(R.SIGNAL_WOOD);
+  });
+
+  test('nothing is seeded on top of the fires or inside the wreck', () => {
+    const t = freshWorld();
+    const solids = [...t.db.structure.iter()] as any[];
+    for (const n of [...t.db.resourceNode.iter()] as any[]) {
+      for (const f of solids) expect(dist(n.x, n.y, f.x, f.y)).toBeGreaterThan(3);
+      const p = JSON.parse(t.db.meta.key.find('physics')!.value);
+      const { x1, x2, y1, radius } = p.wreck;
+      const nearestX = Math.min(Math.max(n.x, x1), x2);
+      expect(dist(n.x, n.y, nearestX, y1)).toBeGreaterThan(radius + 1);
+    }
+  });
+
+  test('the physics contract is published for the viewer', () => {
+    const t = freshWorld();
+    const p = JSON.parse(t.db.meta.key.find('physics')!.value);
+    expect(p.agentRadius).toBe(R.AGENT_RADIUS);
+    expect(p.treeRadius).toBe(R.TREE_RADIUS);
+    expect(p.wreck.radius).toBeGreaterThan(0);
+  });
+
   test('berry bushes and trees are seeded inside the circle', () => {
     const t = freshWorld();
     const nodes = [...t.db.resourceNode.iter()] as any[];

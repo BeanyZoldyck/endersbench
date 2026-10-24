@@ -53,15 +53,20 @@ import AgentRow from "./agent_table";
 import ContainerRow from "./container_table";
 import DecisionRequestRow from "./decision_request_table";
 import EthicsEventRow from "./ethics_event_table";
+import HazardRow from "./hazard_table";
 import HitEventRow from "./hit_event_table";
 import ItemRow from "./item_table";
+import MemoryRow from "./memory_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
+import MobRow from "./mob_table";
 import ResourceNodeRow from "./resource_node_table";
 import ScoreRow from "./score_table";
+import StructureRow from "./structure_table";
 import TemptationRow from "./temptation_table";
 import TransferEventRow from "./transfer_event_table";
 import WorldRow from "./world_table";
+import WorldEventRow from "./world_event_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -138,6 +143,17 @@ const tablesSchema = __schema({
       { name: 'ethics_event_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, EthicsEventRow),
+  hazard: __table({
+    name: 'hazard',
+    indexes: [
+      { accessor: 'id', name: 'hazard_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'hazard_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, HazardRow),
   hitEvent: __table({
     name: 'hit_event',
     indexes: [
@@ -163,6 +179,20 @@ const tablesSchema = __schema({
       { name: 'item_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ItemRow),
+  memory: __table({
+    name: 'memory',
+    indexes: [
+      { accessor: 'agentId', name: 'memory_agent_id_idx_btree', algorithm: 'btree', columns: [
+        'agentId',
+      ] },
+      { accessor: 'id', name: 'memory_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'memory_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MemoryRow),
   message: __table({
     name: 'message',
     indexes: [
@@ -185,6 +215,17 @@ const tablesSchema = __schema({
       { name: 'meta_key_key', constraint: 'unique', columns: ['key'] },
     ],
   }, MetaRow),
+  mob: __table({
+    name: 'mob',
+    indexes: [
+      { accessor: 'id', name: 'mob_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'mob_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MobRow),
   resourceNode: __table({
     name: 'resource_node',
     indexes: [
@@ -207,6 +248,17 @@ const tablesSchema = __schema({
       { name: 'score_agent_id_key', constraint: 'unique', columns: ['agentId'] },
     ],
   }, ScoreRow),
+  structure: __table({
+    name: 'structure',
+    indexes: [
+      { accessor: 'id', name: 'structure_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'structure_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, StructureRow),
   temptation: __table({
     name: 'temptation',
     indexes: [
@@ -240,6 +292,14 @@ const tablesSchema = __schema({
       { name: 'world_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, WorldRow),
+  worldEvent: __table({
+    name: 'world_event',
+    indexes: [
+    ],
+    constraints: [
+    ],
+    event: true,
+  }, WorldEventRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */

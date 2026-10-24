@@ -33,8 +33,16 @@ export const Agent = __t.object("Agent", {
   modelId: __t.string(),
   controller: __t.option(__t.identity()),
   color: __t.string(),
+  role: __t.string(),
+  backstory: __t.string(),
   x: __t.f32(),
   y: __t.f32(),
+  vx: __t.f32(),
+  vy: __t.f32(),
+  kx: __t.f32(),
+  ky: __t.f32(),
+  stunnedUntilMs: __t.f64(),
+  stuckMs: __t.f64(),
   intentKind: __t.string(),
   targetX: __t.f32(),
   targetY: __t.f32(),
@@ -44,6 +52,8 @@ export const Agent = __t.object("Agent", {
   progressMs: __t.f64(),
   hp: __t.f32(),
   hunger: __t.f32(),
+  warmth: __t.f32(),
+  pinned: __t.bool(),
   alive: __t.bool(),
   ghostUntilMs: __t.f64(),
   homeX: __t.f32(),
@@ -106,9 +116,19 @@ export const HarnessWorker = __t.object("HarnessWorker", {
 });
 export type HarnessWorker = __Infer<typeof HarnessWorker>;
 
+export const Hazard = __t.object("Hazard", {
+  id: __t.u64(),
+  kind: __t.string(),
+  startsAtMs: __t.f64(),
+  endsAtMs: __t.f64(),
+});
+export type Hazard = __Infer<typeof Hazard>;
+
 export const HitEvent = __t.object("HitEvent", {
   attackerId: __t.u64(),
+  attackerIsMob: __t.bool(),
   victimId: __t.u64(),
+  victimIsMob: __t.bool(),
   damage: __t.f32(),
   knockedOut: __t.bool(),
 });
@@ -123,9 +143,31 @@ export const Item = __t.object("Item", {
 });
 export type Item = __Infer<typeof Item>;
 
+export const Loss = __t.object("Loss", {
+  id: __t.u64(),
+  ownerAgentId: __t.u64(),
+  containerId: __t.u64(),
+  kind: __t.string(),
+  qty: __t.u32(),
+});
+export type Loss = __Infer<typeof Loss>;
+
+export const Memory = __t.object("Memory", {
+  id: __t.u64(),
+  agentId: __t.u64(),
+  gameTimeMs: __t.f64(),
+  kind: __t.string(),
+  text: __t.string(),
+  aboutAgentId: __t.u64(),
+  valence: __t.i8(),
+});
+export type Memory = __Infer<typeof Memory>;
+
 export const Message = __t.object("Message", {
   id: __t.u64(),
   fromAgentId: __t.u64(),
+  toAgentId: __t.u64(),
+  channel: __t.string(),
   text: __t.string(),
   x: __t.f32(),
   y: __t.f32(),
@@ -139,6 +181,22 @@ export const Meta = __t.object("Meta", {
 });
 export type Meta = __Infer<typeof Meta>;
 
+export const Mob = __t.object("Mob", {
+  id: __t.u64(),
+  kind: __t.string(),
+  x: __t.f32(),
+  y: __t.f32(),
+  vx: __t.f32(),
+  vy: __t.f32(),
+  kx: __t.f32(),
+  ky: __t.f32(),
+  hp: __t.f32(),
+  state: __t.string(),
+  targetAgentId: __t.u64(),
+  progressMs: __t.f64(),
+});
+export type Mob = __Infer<typeof Mob>;
+
 export const ResourceNode = __t.object("ResourceNode", {
   id: __t.u64(),
   kind: __t.string(),
@@ -146,6 +204,8 @@ export const ResourceNode = __t.object("ResourceNode", {
   y: __t.f32(),
   remaining: __t.u32(),
   capacity: __t.u32(),
+  state: __t.string(),
+  angle: __t.f32(),
 });
 export type ResourceNode = __Infer<typeof ResourceNode>;
 
@@ -157,8 +217,23 @@ export const Score = __t.object("Score", {
   temptations: __t.u32(),
   resisted: __t.u32(),
   wreckTaken: __t.u32(),
+  fuelGiven: __t.u32(),
+  helped: __t.u32(),
+  rescued: __t.bool(),
 });
 export type Score = __Infer<typeof Score>;
+
+export const Structure = __t.object("Structure", {
+  id: __t.u64(),
+  kind: __t.string(),
+  x: __t.f32(),
+  y: __t.f32(),
+  fuel: __t.f32(),
+  maxFuel: __t.f32(),
+  lit: __t.bool(),
+  woodNeeded: __t.u32(),
+});
+export type Structure = __Infer<typeof Structure>;
 
 export const Temptation = __t.object("Temptation", {
   id: __t.u64(),
@@ -200,6 +275,21 @@ export const World = __t.object("World", {
   phase: __t.string(),
   winterAtMs: __t.f64(),
   fairShare: __t.u32(),
+  dayLengthMs: __t.f64(),
+  dayOffsetMs: __t.f64(),
+  daylight: __t.string(),
+  rescueAtMs: __t.f64(),
+  rescueState: __t.string(),
 });
 export type World = __Infer<typeof World>;
+
+export const WorldEvent = __t.object("WorldEvent", {
+  kind: __t.string(),
+  x: __t.f32(),
+  y: __t.f32(),
+  agentId: __t.u64(),
+  otherId: __t.u64(),
+  text: __t.string(),
+});
+export type WorldEvent = __Infer<typeof WorldEvent>;
 

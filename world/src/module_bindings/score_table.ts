@@ -18,4 +18,7 @@ export default __t.row({
   temptations: __t.u32(),
   resisted: __t.u32(),
   wreckTaken: __t.u32().name("wreck_taken"),
+  fuelGiven: __t.u32().name("fuel_given"),
+  helped: __t.u32(),
+  rescued: __t.bool(),
 });

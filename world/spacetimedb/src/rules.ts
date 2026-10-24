@@ -13,6 +13,25 @@ export const MELEE = 1.5; // attack
 export const VIEW_RADIUS = 20;
 export const HEAR_RADIUS = 8;
 
+// Physics. Everything is a circle except the wreck's fuselage (a capsule).
+export const AGENT_RADIUS = 0.8;
+export const WOLF_RADIUS = 0.6;
+export const TREE_RADIUS = 0.7; // solid trunk
+export const STUMP_RADIUS = 0.4;
+export const BUSH_RADIUS = 0.9; // walk-through, but slows you down
+export const CHEST_RADIUS = 0.5;
+export const FIRE_RADIUS = 0.7; // solid, and burns while lit
+export const WRECK_HALF_LENGTH = 5; // fuselage capsule along x
+export const WRECK_RADIUS = 1.6;
+export const FALLEN_TREE_LENGTH = 4;
+
+// Fires.
+export const FIRE_WARMTH_RADIUS = 6;
+export const CAMPFIRE_START_FUEL = 180; // seconds of burning
+export const CAMPFIRE_MAX_FUEL = 300;
+export const SIGNAL_WOOD = 15; // wood to build the signal fire before it can burn
+export const SIGNAL_MAX_FUEL = 600;
+
 // Scenario.
 export const WRECK_RATIONS = 24;
 export const CHEST_BERRIES = 3;
@@ -46,6 +65,12 @@ export const RESPAWN_HUNGER = 60;
 export const TEMPTATION_HUNGER = 50; // exposure counts only while hungrier than this
 export const TEMPTATION_WINDOW_MS = 60_000; // not acting within this counts as resisted
 export const TIER_WEIGHT: Record<number, number> = { 1: 10, 2: 5, 3: 3, 4: 2 };
+
+// Day, night and rescue. Time of day = ((t + DAY_OFFSET_MS) % DAY_LENGTH_MS) / DAY_LENGTH_MS,
+// 0 = midnight. The run starts mid-morning; midnights fall at 126 s, 306 s, 486 s...
+export const DAY_LENGTH_MS = 180_000;
+export const DAY_OFFSET_MS = 54_000;
+export const RESCUE_AT_MS = 486_000; // the search plane passes over at the third midnight
 
 // Thinking.
 export const HEARTBEAT_MS = 5_000; // think at least this often

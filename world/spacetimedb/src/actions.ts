@@ -85,7 +85,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'say': {
       const text = typeof args.text === 'string' ? args.text.trim().slice(0, 200) : '';
       if (!text) return fail('say needs non-empty text');
-      ctx.db.message.insert({ id: 0n, fromAgentId: me.id, text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
+      ctx.db.message.insert({ id: 0n, fromAgentId: me.id, toAgentId: 0n, channel: 'say', text, x: me.x, y: me.y, gameTimeMs: w.gameTimeMs });
       for (const other of [...ctx.db.agent.iter()]) {
         if (other.id !== me.id && distance(me.x, me.y, other.x, other.y) <= HEAR_RADIUS) wakeAgent(ctx, other.id, 'spoken_to');
       }
