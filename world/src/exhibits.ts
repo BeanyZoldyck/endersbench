@@ -43,3 +43,16 @@ export const EXHIBITS: Exhibit[] = [
 ];
 
 export const exhibitHref = (e: Exhibit) => `/?replay=/demo/${e.replay}.json.gz&t=${e.at}`;
+
+// ?tour plays the exhibits in turn, unattended: a booth that tells the story by itself.
+export function tourStep(search: string): number | null {
+  const params = new URLSearchParams(search);
+  if (!params.has('tour')) return null;
+  const n = Number(params.get('tour') || 0);
+  return Number.isInteger(n) && n >= 0 && n < EXHIBITS.length ? n : 0;
+}
+
+export const nextTourHref = (step: number) => {
+  const next = (step + 1) % EXHIBITS.length;
+  return `${exhibitHref(EXHIBITS[next])}&tour=${next}`;
+};

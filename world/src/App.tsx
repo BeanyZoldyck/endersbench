@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { DbConnection, tables } from './module_bindings';
 import type { Agent, Item } from './module_bindings/types';
@@ -7,7 +7,7 @@ import { WorldScene, type CameraMode } from './scene/WorldScene';
 import { useMoments, type Moment } from './scene/SceneEvents';
 import { parsePhysics, itemCount } from './scene/contract';
 import { MemoryPanel } from './MemoryPanel';
-import { EXHIBITS, exhibitHref } from './exhibits';
+import { EXHIBITS, exhibitHref, nextTourHref, tourStep } from './exhibits';
 import { MomentsRail } from './MomentsRail';
 import { artPreview } from './scene/artPreview';
 import { useReplay } from './useReplay';
@@ -15,6 +15,9 @@ import { Spotlight, type Beat } from './Spotlight';
 import { describeDeath } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
+
+// How long the booth tour stays on each exhibit.
+const TOUR_MS = 40_000;
 
 const percent = (n: number) => Math.max(0, Math.min(100, n));
 const time = (ms: number) => { const s = Math.ceil(Math.max(0, ms) / 1000); return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
@@ -48,6 +51,14 @@ export default function App() {
   const [liveTemptations] = useTable(tables.temptation);
   // ?replay=/runs/<dir>/replay.json plays a recorded run with no database.
   const replayUrl = useMemo(() => new URLSearchParams(window.location.search).get('replay'), []);
+  // ?tour: an unattended booth plays the exhibits in turn, one page each.
+  const tour = useMemo(() => tourStep(window.location.search), []);
+  useEffect(() => {
+    if (tour === null) return;
+    if (!replayUrl) { window.location.replace(`${exhibitHref(EXHIBITS[tour])}&tour=${tour}`); return; }
+    const timer = window.setTimeout(() => window.location.assign(nextTourHref(tour)), TOUR_MS);
+    return () => clearTimeout(timer);
+  }, [tour, replayUrl]);
   const replay = useReplay(replayUrl);
   const recorded = replay.data;
   const physicsRaw = (recorded?.metadata ?? metadata).find(m => m.key === 'physics')?.value;
@@ -145,6 +156,7 @@ export default function App() {
 
   return <main className={`app ${preview ? 'is-preview' : ''}`}>
     <div className="stage">
+      {tour !== null && replayUrl && <div className="tour-card" role="status"><span className="eyebrow">EXHIBIT {tour + 1} OF {EXHIBITS.length}</span><b>{EXHIBITS[tour].title}</b><p>{EXHIBITS[tour].caption}</p></div>}
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
         physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
         onClickTile={(x, y) => { if (me && conn && isActive && !preview) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}

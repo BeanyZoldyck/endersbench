@@ -68,6 +68,8 @@ The viewer's **Exhibits** button (top right) lists the recorded moments the pitc
 
 Each opens its replay a few seconds before the moment. `src/exhibits.test.ts` checks every one still lands inside its recording.
 
+**Unattended booth:** open `http://localhost:5173/?tour`. It plays the exhibits in turn, 40 seconds each, with a card naming each one, and loops. It needs no server and no credits.
+
 ## In any replay
 
 - **`?t=m:ss`** opens the replay at that moment.
