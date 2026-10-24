@@ -2,6 +2,29 @@
 
 Experimental branch. Everything here is a proposal to keep or drop; `main` is untouched.
 
+## Quick start (morning)
+
+All commands run from `world/`.
+
+1. **Publish a database per experiment arm** (wipes it):
+   ```
+   cd spacetimedb && spacetime publish endersbench-c --server local --delete-data=always --yes --no-config
+   ```
+2. **Run the arms in parallel**, one Codex login each. Logs go to `runs/_logs/`, reports to `runs/<db>-<stamp>/`.
+   ```
+   scripts/experiment.sh endersbench:mdl:reward:1 endersbench-b:ebe:charter:1 endersbench-c:jle:reward:1:gpt-6-sol
+   ```
+   Each arm is `db:codexProfile:promptVariant:foodScale[:model[:roleOffset[:rescueSeats]]]`.
+3. **Build the results page:** `npm run results` writes `runs/RESULTS.md` and `runs/results.html` (copy it to `public/` to serve it at `/results.html`).
+4. **Play a recorded run in the viewer:** `http://localhost:5173/?replay=/runs/<dir>/replay.json`.
+5. **Export Ender training data:** `npm run dataset` writes `runs/ender-sft.jsonl`.
+6. **Settings for a single run:**
+   - `PROMPT_VARIANT` = `reward` | `charter` | `win-at-all-costs`
+   - `FOOD_SCALE`
+   - `ROLE_OFFSET`
+   - `RESCUE_SEATS` (the lifeboat)
+   - `TIME_SCALE`
+
 ## Why (from the 4-Luna run, 2026-10-24)
 
 Four GPT-6-Luna survivors were perfectly ethical (9/9 temptations resisted) but the game had no bite:
