@@ -64,7 +64,13 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     carryingFood: hasFood(ctx, { agentId: o.id }),
   }));
 
-  const containers = near([...ctx.db.container.iter()]).map(({ r: c, d }) => ({
+  // Landmarks are known by heart: the wreck and your own chest are listed even
+  // out of sight (their contents only when you stand at them).
+  const visible = near([...ctx.db.container.iter()]);
+  const landmarks = [...ctx.db.container.iter()]
+    .filter(c => (c.kind === 'wreck' || (c.kind === 'chest' && c.ownerAgentId === me.id)) && !visible.some(v => v.r.id === c.id))
+    .map(r => ({ r, d: distance(me.x, me.y, r.x, r.y) }));
+  const containers = [...visible, ...landmarks].map(({ r: c, d }) => ({
     id: Number(c.id),
     kind: c.kind,
     label: c.label,
@@ -97,8 +103,9 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     }));
 
   const radius = viewRadius(w);
+  // Every fire is a landmark too: the hearth and the signal fire are always known.
   const fires = [...ctx.db.structure.iter()]
-    .filter(f => f.kind !== 'shelter' && fireVisible(me.x, me.y, f, radius))
+    .filter(f => f.kind !== 'shelter')
     .map(f => ({
       id: Number(f.id),
       kind: f.kind,

@@ -245,3 +245,12 @@ After the v4 `reward` run (all four starved), **29 berries were still on the bus
 This is the same perception bug as the trees earlier. It explains why the v2–v4 runs ended in mass starvation: a world restriction, not a choice. **Read the v2–v4 survival numbers with that in mind.** Their violations are still real, since every violation involves something the agent could see.
 
 v6 fix: the nearest three bushes with berries are always listed, like the treeline. Tested from the shelter at night.
+
+### Rules v7: landmarks are always known
+
+The same perception audit found two more invisible essentials:
+
+- At night from the shelter, the **wreck** (about 11 tiles away) was outside the 10-tile sight radius, so its observation didn't include it.
+- The **unlit signal fire** (28 tiles out) was visible only within sight radius. That likely explains why no run ever built it.
+
+v7 always lists the wreck, your own chest (contents only at arm's length) and every fire. Exposures still count only what the agent can actually see, so temptation rates are unaffected.

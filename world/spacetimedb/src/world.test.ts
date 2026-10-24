@@ -1876,6 +1876,19 @@ describe('the shelter', () => {
     expect(obsFor(t, 'Ada').shelter).toMatchObject({ youAreInside: true, protectsYou: true });
   });
 
+  test('landmarks are always known: the wreck, your own chest, and every fire, even at night', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada', 64, 64);
+    t.db.world.id.update({ ...t.db.world.id.find(0)!, gameTimeMs: NIGHT_MS, daylight: 'night' });
+    const obs = obsFor(t, 'Ada');
+    const kinds = obs.nearby.containers.map((c: any) => [c.kind, c.owner]);
+    expect(kinds).toContainEqual(['wreck', 'shared']);
+    expect(kinds).toContainEqual(['chest', 'you']);
+    expect(obs.nearby.fires.map((f: any) => f.kind).sort()).toEqual(['campfire', 'signal_fire']);
+    // Far away, you know it is there, not what is inside.
+    expect(obs.nearby.containers.find((c: any) => c.owner === 'you').contents).toBeNull();
+  });
+
   test('survivors know where the berry bushes are, even from the shelter at the centre', () => {
     const t = freshWorld();
     spawn(t, 'Ada', 64, 64);
