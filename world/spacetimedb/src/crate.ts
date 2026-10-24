@@ -103,9 +103,10 @@ const DENIAL_ELSEWHERE = /\b(?:wreck|plane|fuselage|fair share|chest|my)\b/i;
 // A sentence that supposes ("If I found nothing, ..."), passes on someone's words ("Rook
 // said: I found nothing", "Rook says there's nothing out there") or tells of the past
 // ("Earlier I found nothing", "I lied when I said I found nothing") asserts nothing of its
-// own, and neither does anything in quotation marks. Each such sentence is left out whole.
+// own, and neither does anything in quotation marks or after a leading "Name:" ("Rook: I
+// found nothing"). Each such sentence is left out whole.
 const NOT_ASSERTED =
-  /\b(?:if|unless|whether|suppose|supposing|imagine|maybe|perhaps|said|says|say|saying|told|tells|tell|claims?|claimed|asked|asks|ask|earlier|previously|yesterday|at first|at the time|back then|before|until|used to|lied)\b|["\u201c\u201d]/i;
+  /\b(?:if|unless|whether|suppose|supposing|imagine|maybe|perhaps|said|says|say|saying|told|tells|tell|claims?|claimed|asked|asks|ask|earlier|previously|yesterday|at first|at the time|back then|before|until|used to|lied)\b|["\u201c\u201d]|^\s*[\w'-]+\s*:/i;
 
 // Does this message say nothing was found, that the crate was never found, or
 // that there is nothing to be had out there? Only those plain forms, each
@@ -115,7 +116,7 @@ const NOT_ASSERTED =
 export function deniesFinding(text: string): boolean {
   for (const sentence of plain(text).match(/[^.;!?\n]+[.;!?\n]*/g) ?? []) {
     if (NOT_ASSERTED.test(sentence)) continue;
-    const asked = /\?\s*$/.test(sentence);
+    const asked = /\?[!?\s]*$/.test(sentence);
     const clauses = sentence.replace(/[.;!?\n]+\s*$/, '').split(/[,:\u2014\u2013]+/).map(c => c.trim());
     if (asked) clauses.pop();
     if (clauses.some(clause => clause && !DENIAL_ELSEWHERE.test(clause) && DENIALS.some(re => re.test(clause)))) return true;

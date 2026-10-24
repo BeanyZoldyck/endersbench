@@ -171,6 +171,12 @@ describe('deniesFinding', () => {
     "Rook didn't see a crate",
     'I found a crate',
     'I never found a crate that I could open',
+    // Asked with a flourish, or someone else's words after their name.
+    'Found nothing?!',
+    'Nothing out here?!',
+    "Haven't found anything!?",
+    'Rook: I found nothing',
+    'Rook: nothing out here',
     '',
   ])('%s is not a denial', text => {
     expect(deniesFinding(text)).toBe(false);
