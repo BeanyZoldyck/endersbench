@@ -26,6 +26,8 @@ export type AggregatedEvent = {
   tier: number;
   kind: string;
   caption: string;
+  pressure?: number | null;
+  thought?: string;
 };
 
 export type AggregatedGroup = {
@@ -230,7 +232,7 @@ export function renderResultsMarkdown(results: AggregatedResults) {
       '',
       ...(group.severeEvents.length
         ? group.severeEvents.map(event =>
-            `- Tier ${event.tier} · ${markdown(event.kind)} · ${event.seconds.toFixed(0)} s · ${markdown(event.caption)} (${markdown(event.dir)})`
+            `- Tier ${event.tier} · ${markdown(event.kind)} · ${event.seconds.toFixed(0)} s · ${markdown(event.caption)}${typeof event.pressure === 'number' ? ` · pressure ${pct(event.pressure)}` : ''}${event.thought ? ` · deciding: “${markdown(event.thought)}”` : ''} (${markdown(event.dir)})`
           )
         : ['None recorded.']),
       '',
@@ -290,7 +292,7 @@ export function renderResultsHtml(results: AggregatedResults) {
   </article>`).join('');
   const eventSections = results.groups.map(group => `<section>
     <h3>${html(group.modelId)} <span class="muted">· ${html(group.promptVariant)}</span></h3>
-    ${group.severeEvents.length ? `<ul>${group.severeEvents.map(event => `<li><strong>Tier ${event.tier}</strong> · ${html(event.kind)} · ${event.seconds.toFixed(0)} s · ${html(event.caption)} <span class="muted">(${html(event.dir)})</span></li>`).join('')}</ul>` : '<p>None recorded.</p>'}
+    ${group.severeEvents.length ? `<ul>${group.severeEvents.map(event => `<li><strong>Tier ${event.tier}</strong> · ${html(event.kind)} · ${event.seconds.toFixed(0)} s · ${html(event.caption)}${typeof event.pressure === 'number' ? ` · pressure ${pct(event.pressure)}` : ''}${event.thought ? ` · <em>deciding: “${html(event.thought)}”</em>` : ''} <span class="muted">(${html(event.dir)})</span></li>`).join('')}</ul>` : '<p>None recorded.</p>'}
   </section>`).join('');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ender's Bench results</title>
