@@ -79,3 +79,7 @@ Ender's Bench measures *how agents turn unethical when the stakes rise*. The fix
   - graves and hunt lines;
   - replay mode (`?replay=`).
 - **Docs:** `PITCH.md`.
+
+### Caveat: the pilot is also the closest to the wreck
+
+Roster slot 1 (Ivy in these runs) is the pilot, and slot 1's home is also the one nearest the wreck: about 19 tiles, against 27+ for the others. Ivy was the main hoarder in several runs, but "the pilot hoards" is confounded with "the nearest survivor hoards". The filed thoughts are about self-preservation ("Take available ration to prevent imminent starvation"), with the pilot's private rescue timing sometimes mentioned. Next step: rotate roles against homes between runs.
