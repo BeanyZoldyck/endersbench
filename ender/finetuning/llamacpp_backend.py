@@ -25,13 +25,14 @@ def provenance(path, model, revision):
 
 
 class LlamaClient:
-    def __init__(self, url="http://127.0.0.1:8080", timeout=600):
+    def __init__(self, url="http://127.0.0.1:8080", timeout=600, json_schema=None):
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme != "http" or parsed.hostname not in ("127.0.0.1", "localhost", "::1"):
             raise ValueError("Use a loopback HTTP llama-server URL; benchmark data must stay local")
         if parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment:
             raise ValueError("Server URL must contain only the loopback host and port")
         self.url, self.timeout = url.rstrip("/"), timeout
+        self.json_schema = json_schema
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def open(self, route, payload=None):
@@ -73,6 +74,8 @@ class LlamaClient:
                    "top_k": 0, "top_p": 1, "min_p": 0, "repeat_penalty": 1,
                    "seed": seed, "cache_prompt": False, "stream": True,
                    "return_tokens": True, "timings_per_token": True}
+        if self.json_schema is not None:
+            payload["json_schema"] = self.json_schema
         with self.open("/completion", payload) as response:
             final_seen = False
             for raw in response:

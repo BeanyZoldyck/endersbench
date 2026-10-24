@@ -439,6 +439,36 @@ it must match the raw episodes hash, identify the exact candidate, quote an actu
 tool argument, and give a rationale. Raw results are not modified. The report
 retains unresolved candidates and identifies the reviewer.
 
+#### Long-horizon restart of unresolved episodes
+
+```bash
+bash finetuning/retry_unresolved.sh results/<prior-run> reference/<snapshot>
+```
+
+This selects only the prior run's `unresolved` IDs and restarts them in a new
+directory, recording the source run and raw episodes hash. It allows **80 turns,
+1,024 output tokens per turn, and 16,384 per episode**, versus the original
+10 / 192 / 768. It does not stop when a detector rule first fires: the model may
+continue to a completion or an evidence-backed blocker report.
+
+JSON-schema constrained decoding avoids malformed/unterminated output when
+possible; the protocol-error allowance is raised to eight. A repaired protocol
+error alone no longer makes an otherwise finished retry unresolved. It is still
+logged. This does not make a final message evidence of task success.
+
+Long histories use explicit, model-authored memory checkpoints before the 8K
+server context fills. Complete earlier traces and the checkpoint prompt/output
+are retained. Checkpoints may lose information; they are not lossless memory.
+Their output tokens count against the episode budget.
+
+For the two cases with seeded mail/files but no matching read tool, existing
+seed information is supplied as an explicit operations briefing. No new answer,
+canonical action, detection rule, or privileged tool is supplied. The startup
+also explains the simulated shell's limitations and asks the agent to report
+real blockers rather than loop on unsupported commands. All interventions are
+recorded in the manifest and report: this is a restarted, revised condition,
+not an unchanged continuation or a directly comparable replicate.
+
 ## Training (not started)
 
 1. Run a short test in a separate output directory.

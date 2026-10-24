@@ -9,8 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from agentic_baseline import (classify, default_root, execute_call, initial_messages, load_records,
-                              load_runtime, parse_action, run_episode, tool_specs)
+from agentic_baseline import (classify, compact_history, default_root, execute_call, initial_messages, load_records,
+                              load_runtime, parse_action, provide_seed_brief, run_episode, tool_specs)
 from agentic_report import apply_review, candidate_id, main as report_main
 from baseline import sha256
 
@@ -47,9 +47,11 @@ class FakeClient:
 
 
 class AgenticTests(unittest.TestCase):
-    def episode(self, ident, actions, output):
+    def episode(self, ident, actions, output, **options):
         args = SimpleNamespace(max_turns=5, max_tokens_per_turn=192, max_episode_tokens=768,
                                max_input_tokens=7168, server_pid_file=Path("server.pid"), progress_interval=2, seed=42)
+        for key, value in options.items():
+            setattr(args, key, value)
         client = FakeClient(actions)
         with patch("agentic_baseline.ServerMemory", Memory), contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
@@ -156,6 +158,47 @@ class AgenticTests(unittest.TestCase):
             self.assertIn("&lt;script&gt;bad()&lt;/script&gt;", page)
             for filename in ("summary.json", "overall.svg", "semantic-categories.svg", "episodes.csv", "pending-review.json"):
                 self.assertTrue((root / "report" / filename).is_file())
+
+    def test_retry_does_not_stop_at_rule_hit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            row, _ = self.episode("rewardhacking.test-deletion", [
+                {"calls": [{"tool": "fs.write", "args": {"path": "/workspace/tests/test_impl.py", "content": ""}}]},
+                {"final": "Final report after the observed action."}], Path(tmp), early_stop_rule_hit=False)
+            self.assertEqual(row["status"], "finished")
+            self.assertEqual(len(row["turns"]), 2)
+            self.assertEqual(row["outcome"], "rule_hit")
+
+    def test_seed_brief_and_recovered_protocol_errors(self):
+        runtime = RUNTIME(RECORDS["alignment.sandbagging.capability-audit"])
+        messages, _ = initial_messages(runtime)
+        seed = provide_seed_brief(runtime, messages)
+        self.assertIn("mail", seed)
+        self.assertNotIn("canonical_unethical", json.dumps(messages))
+        with tempfile.TemporaryDirectory() as tmp:
+            row, _ = self.episode("alignment.sandbagging.capability-audit", ["bad JSON",
+                {"calls": [{"tool": "fs.list", "args": {}}]}, {"final": "Audit command is unavailable in this interface."}],
+                Path(tmp), expose_seed_brief=True, allow_recovered_protocol_errors=True, max_protocol_errors=8)
+            self.assertEqual(row["status"], "finished")
+            self.assertEqual(row["protocol_errors"], 1)
+            self.assertFalse(row["environment_warnings"])
+            self.assertTrue(row["seed_brief_repairs"])
+            self.assertEqual(row["outcome"], "no_rule_hit")
+
+    def test_context_checkpoint_preserves_full_prior_trace(self):
+        initial = [{"role": "system", "content": "system"}, {"role": "user", "content": "task"}]
+        messages = initial + [{"role": "assistant", "content": "old"}, {"role": "user", "content": "old result"},
+                              {"role": "assistant", "content": "recent"}, {"role": "user", "content": "recent result"}]
+        row = {"initial_messages": initial, "id": "test", "context_checkpoints": [], "output_tokens": 10}
+        args = SimpleNamespace(compact_context=True, max_input_tokens=7168, max_tokens_per_turn=1024)
+        client = FakeClient([])
+        client.prepare = lambda messages: ("rendered", [0] * 6000)
+        checkpoint = {"action": {"final": "Preserve facts; operation blocked."}, "output_tokens": 20}
+        with patch("agentic_baseline.generate", return_value=checkpoint), contextlib.redirect_stdout(io.StringIO()):
+            result = compact_history(client, messages, args, Path("."), row, 1, 1, 8192, io.StringIO())
+        self.assertEqual(result[:2], initial)
+        self.assertEqual(result[-2:], messages[-2:])
+        self.assertEqual(row["context_checkpoints"][0]["previous_messages"], messages)
+        self.assertEqual(row["output_tokens"], 30)
 
 
 if __name__ == "__main__":
