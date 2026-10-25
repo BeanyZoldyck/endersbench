@@ -3,13 +3,16 @@
 // variant. Each one is answered with the same call the bench loop makes for
 // that turn (claudeTurn / openAiTurn in drivers.ts): same system prompt,
 // tools and observation, so a case run in the world matches one run offline.
+// With a live CRS client, a CRS tool call is sent to the sandbox here, as in
+// finance:bench --live-crs, and its answer goes to the module with the action.
 // harness/main.ts hands desk requests here.
 import Anthropic from '@anthropic-ai/sdk';
 import { FINANCE_BENCHMARK_VERSION } from '../../spacetimedb/src/finance/scenarios';
 import { codexBrain } from '../brains';
 import { BASELINES, REFERENCE_AGENTS } from '../../spacetimedb/src/finance/brains';
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
-import type { Observation, Seat } from '../../spacetimedb/src/finance/types';
+import type { CrsCall, Observation, Seat } from '../../spacetimedb/src/finance/types';
+import type { LiveCrs } from './crslive';
 import { type DeskTool, type TakeTurn, claudeTurn, openAiTurn } from './drivers';
 import { OPENAI_COMPATIBLE, envValue, trustSystemCertificates } from './providers';
 
@@ -97,6 +100,15 @@ export async function answerDesk(takeTurn: TakeTurn, req: DeskRequest, variant: 
   return { action: JSON.stringify({ name: turn.call.name, args: turn.call.args }), thought: notes };
 }
 
+// The action with the live CRS answer for it, when it is a CRS tool call on a
+// test identity: the module scores that answer instead of its saved card. The
+// full response stays here; the desk's agents are shown cards.
+export async function withLiveCrs(action: string, live: LiveCrs): Promise<string> {
+  const call = JSON.parse(action) as { name: string; args: Record<string, unknown> };
+  const answer = await live(call.name, call.args);
+  return answer ? JSON.stringify({ ...call, crs: { result: answer.result, call: answer.crs } }) : action;
+}
+
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`no answer within ${ms} ms`)), ms))]);
 }
@@ -112,7 +124,7 @@ const caseOf = (conn: DeskConnection, requestId: bigint) =>
 export async function answerDeskRequest(
   conn: DeskConnection,
   req: DeskRequest,
-  opts: { timeoutMs?: number; caseWaitMs?: number; turnFor?: (modelId: string) => TakeTurn } = {}
+  opts: { timeoutMs?: number; caseWaitMs?: number; turnFor?: (modelId: string) => TakeTurn; live?: LiveCrs } = {}
 ) {
   if (inFlight.has(req.id)) return;
   inFlight.add(req.id);
@@ -137,9 +149,14 @@ export async function answerDeskRequest(
       console.log(`desk #${req.id} ${req.modelId}  ${latency()} ms  ${answer.error.split('\n')[0].slice(0, 80)}`);
       return answer;
     }
-    await conn.reducers.submitDecision({ requestId: req.id, action: answer.action, thought: answer.thought, latencyMs: latency() });
-    console.log(`desk #${req.id} ${req.modelId}  ${latency()} ms  ${answer.action.slice(0, 120)}`);
-    return answer;
+    // The model's latency is its own; the CRS call's is recorded in the call.
+    const latencyMs = latency();
+    const action = opts.live ? await withLiveCrs(answer.action, opts.live) : answer.action;
+    await conn.reducers.submitDecision({ requestId: req.id, action, thought: answer.thought, latencyMs });
+    const crs = action !== answer.action ? (JSON.parse(action).crs.call as CrsCall) : undefined;
+    const via = crs ? `  CRS ${crs.source === 'live' ? `live ${crs.latencyMs} ms ${crs.requestId}` : `snapshot (${crs.error})`}` : '';
+    console.log(`desk #${req.id} ${req.modelId}  ${latencyMs} ms  ${answer.action.slice(0, 120)}${via}`);
+    return { ...answer, action };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     console.warn(`desk #${req.id} ${req.modelId} failed after ${latency()} ms: ${error}`);

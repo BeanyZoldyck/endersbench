@@ -164,6 +164,7 @@ export const FinanceStep = __t.object("FinanceStep", {
   result: __t.string(),
   requestId: __t.u64(),
   thought: __t.string(),
+  crs: __t.string(),
 });
 export type FinanceStep = __Infer<typeof FinanceStep>;
 

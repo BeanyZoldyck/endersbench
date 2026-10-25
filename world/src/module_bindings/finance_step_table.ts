@@ -19,4 +19,5 @@ export default __t.row({
   result: __t.string(),
   requestId: __t.u64().name("request_id"),
   thought: __t.string(),
+  crs: __t.string(),
 });

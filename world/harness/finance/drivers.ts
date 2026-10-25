@@ -1,6 +1,7 @@
 // Runs one finance case against Claude, two ways, so the benchmark can tell
 // the model apart from the harness around it. Both see the same neutral
-// prompt, the same tools and the same saved CRS cards.
+// prompt, the same tools and the same CRS answers: the saved cards, or with
+// --live-crs what the CRS sandbox returns for each call.
 //  - messages: the benchmark's own loop. Every call is fresh: system prompt,
 //    tools, and the whole case so far as one observation.
 //  - managed: a Claude Managed Agents session. Anthropic runs the loop and
@@ -10,6 +11,8 @@ import { EVENT_STEP, deliver, observe, phase, takeStep, type RawCrs } from '../.
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Scenario, Seat, Step } from '../../spacetimedb/src/finance/types';
+import type { Brain } from '../../spacetimedb/src/finance/brains';
+import type { LiveCrs } from './crslive';
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
@@ -113,8 +116,9 @@ export function claudeTurn(client: Anthropic, opts: { model: string; effort?: Ef
 
 // The benchmark's own loop: a fresh call every turn with the whole case so
 // far, until the case closes, the model refuses, or it stops calling tools.
-// With `raw`, CRS tools answer with the full CRS response instead of the card.
-function benchLoop(takeTurn: TakeTurn, raw?: RawCrs): RunCase {
+// With `raw`, CRS tools answer with the full CRS response instead of the card;
+// with `live`, with what the CRS sandbox returns for the call right now.
+function benchLoop(takeTurn: TakeTurn, raw?: RawCrs, live?: LiveCrs): RunCase {
   return async (scenario, variant) => {
     const run = newRun();
     const system = financeSystemPrompt(scenario.seat, variant);
@@ -143,15 +147,32 @@ function benchLoop(takeTurn: TakeTurn, raw?: RawCrs): RunCase {
         continue;
       }
       stalled = 0;
-      steps = takeStep(scenario, steps, turn.call.name, turn.call.args, { raw });
+      const answer = await live?.(turn.call.name, turn.call.args);
+      steps = takeStep(scenario, steps, turn.call.name, turn.call.args, { raw, answer });
     }
     run.steps = steps;
     return run;
   };
 }
 
-export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort; raw?: RawCrs }): RunCase {
-  return benchLoop(claudeTurn(client, opts), opts.raw);
+export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort; raw?: RawCrs; live?: LiveCrs }): RunCase {
+  return benchLoop(claudeTurn(client, opts), opts.raw, opts.live);
+}
+
+// A test script played through a case, as runBrain does, but able to wait on
+// live CRS answers. Scripts read cards, whatever the agent format.
+export function scriptDriver(brain: Brain, opts: { raw?: RawCrs; live?: LiveCrs } = {}): RunCase {
+  return async scenario => {
+    const run = newRun();
+    let steps = deliver(scenario, []);
+    while (phase(scenario, steps) !== 'closed') {
+      const action = brain(JSON.parse(observe(scenario, steps, 'card')));
+      const answer = await opts.live?.(action.tool, action.args);
+      steps = takeStep(scenario, steps, action.tool, action.args, { raw: opts.raw, answer });
+    }
+    run.steps = steps;
+    return run;
+  };
 }
 
 const OPENAI_ATTEMPTS = 4;
@@ -182,8 +203,8 @@ export interface OpenAiOptions {
   fetchImpl?: typeof fetch;
 }
 
-export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs }): RunCase {
-  return benchLoop(openAiTurn(opts), opts.raw);
+export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs; live?: LiveCrs }): RunCase {
+  return benchLoop(openAiTurn(opts), opts.raw, opts.live);
 }
 
 export function openAiTurn(opts: OpenAiOptions): TakeTurn {
@@ -352,7 +373,7 @@ type SendEvent = Anthropic.Beta.Sessions.EventSendParams['events'][number];
 // Polls the session's event list instead of holding its SSE stream open: on
 // a laptop whose security software inspects TLS (CrowdStrike here) the stream
 // is buffered and delivers nothing, while the list works through any proxy.
-export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { pollMs?: number } = {}): RunCase {
+export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { pollMs?: number; live?: LiveCrs } = {}): RunCase {
   const pollMs = opts.pollMs ?? 1000;
   return async (scenario, variant) => {
     const run = newRun();
@@ -396,7 +417,8 @@ export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { po
           }
           stalled = 0;
           const before = steps;
-          steps = takeStep(scenario, steps, event.name, event.input);
+          const answer = await opts.live?.(event.name, event.input);
+          steps = takeStep(scenario, steps, event.name, event.input, { answer });
           const reply = JSON.stringify(toolReply(scenario, before, steps));
           await send([{ type: 'user.custom_tool_result', custom_tool_use_id: event.id, content: [{ type: 'text', text: reply }] }]);
           return;

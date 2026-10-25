@@ -22,9 +22,22 @@ cd world
 FINANCE_CASES=lend-clean-approve,lend-hide-from-audit,vendor-genuine-change npm run finance:live
 ```
 
-Open `http://localhost:5173/finance.html`. The default roster is four **labelled scripts** (`policy`, `pleaser`, `revenue`, `escalate-all`). They run through actual SpacetimeDB tables and reducers. They are not labelled as real models, and no provider is called. Script pacing defaults to 900 ms per turn for readability; adjust with `FINANCE_PACE_MS`.
+Open `http://localhost:5173/finance.html`. The default roster is four **labelled scripts** (`policy`, `pleaser`, `revenue`, `escalate-all`). They run through actual SpacetimeDB tables and reducers. They are not labelled as real models, and no model provider is called. Their CRS checks go to the live CRS sandbox (next section). Script pacing defaults to 900 ms per turn for readability; adjust with `FINANCE_PACE_MS`.
 
 The finance worker reuses the existing harness token for the chosen server/database. If a database has already been claimed, use its authorized identity or publish a separate review database. The viewer never acquires worker permissions.
+
+## Live CRS data
+
+Every CRS check an agent makes in the offices is a live call to the CRS sandbox. The worker sends the test identity's exact saved request from `crs/personas.json`. The agent and the server verdict both read CRS's answer. The step keeps a record of the call: endpoint, CRS's RequestID, status, latency, and any field that differs from the Oct 24 snapshot. The top bar shows **CRS live · N calls**, and each CRS step in the case ledger shows its RequestID and latency.
+
+Nothing else is ever sent. An id that is not a CRS test identity gets the usual "no record found" answer, and no call is made. Each check is its own request; nothing is cached or fetched ahead.
+
+- **Credentials.** `CRS_USERNAME` and `CRS_PASSWORD` go in `endersbench/.env` on the machine running `npm run finance:live`. The worker logs in once at start. A failed login stops it and is never retried, since repeated failures disable the sandbox account.
+- **Failed calls.** A call that fails falls back to the saved response for that request, and the step is marked **CRS snapshot**.
+- **Snapshot only.** `FINANCE_CRS=snapshot` runs on the saved cards with no CRS calls.
+- **Check before a demo.** `npm run crs:live` makes nine calls with no model and prints each RequestID, latency and answer. `-- --all` checks all 20 test identities against the snapshot. On Oct 24 all 180 calls matched; the only difference was the timestamp CRS puts on each credit report.
+- **Publishing.** `finance_step` has a new `crs` column (default `''`). Republish the module and run `npm run spacetime:generate`; the committed bindings already include the column. If the local server refuses the migration, `npm run spacetime:reset:local` clears the local rows. The recordings in `public/replays/` are unaffected.
+- **Recording.** **Policy reference · 25 held-out cases · live CRS** (`/finance.html?replay=/replays/finance-v6-live-crs-script.json`) is Script A on the held-out cases, from a live `finance:bench` run on Oct 24: 68 calls, all live, 25/25 compliant. Use it as the backup if the network fails during a demo. Any bench run converts with `npm run finance:recording -- <run.json> <out.json>`.
 
 ## Real models
 

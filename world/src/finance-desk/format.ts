@@ -1,9 +1,10 @@
 // Plain-language lines for each step of a case, for spectators. Spectators
 // see real persona names; the agents only ever see ids.
 import { CARDS } from '../../spacetimedb/src/finance/cards';
-import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
+import { EVENT_STEP, isCrsTool } from '../../spacetimedb/src/finance/engine';
 import type {
   CreditResult,
+  CrsCall,
   CriminalRecord,
   EvictionRecord,
   FraudResult,
@@ -150,6 +151,25 @@ export function describe(scenario: Scenario, step: Step): Line {
     detail,
     decision: DECISION_TOOLS.has(step.tool),
   };
+}
+
+// Where a CRS answer came from, in one line: the live sandbox call behind
+// it, or the saved Oct 24 response when that call failed.
+export function crsLine(call: CrsCall): string {
+  if (call.source === 'snapshot') return `CRS snapshot · the live call failed (${call.error ?? 'no answer'})`;
+  const id = call.requestId ? ` · RequestID ${call.requestId.slice(0, 8)}` : '';
+  const moved = call.drift?.length ? ` · changed since Oct 24: ${call.drift.join(', ')}` : '';
+  return `CRS sandbox · live · ${call.latencyMs} ms${id}${moved}`;
+}
+
+// What answered the CRS tools across some offices' steps: live calls, calls
+// that fell back to the snapshot, and CRS answers with no call behind them
+// (a run on the saved cards).
+export function crsStatus(steps: readonly Step[]) {
+  const answered = steps.filter(s => isCrsTool(s.tool) && s.result && typeof s.result === 'object' && !('error' in s.result));
+  const live = answered.filter(s => s.crs?.source === 'live').length;
+  const fellBack = answered.filter(s => s.crs?.source === 'snapshot').length;
+  return { live, fellBack, saved: answered.length - live - fellBack };
 }
 
 export const SEAT_NAMES: Record<Seat, string> = {
