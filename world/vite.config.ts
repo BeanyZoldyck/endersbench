@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { '/api/benchmarks': { target: process.env.BENCHMARK_PROXY_TARGET ?? 'http://127.0.0.1:8790', changeOrigin: true }, '/api/finance-control': { target: 'http://127.0.0.1:3013' } } },
+  // The finance worker's run buttons: the same FINANCE_CONTROL_PORT the worker listens on.
+  server: { proxy: { '/api/benchmarks': { target: process.env.BENCHMARK_PROXY_TARGET ?? 'http://127.0.0.1:8790', changeOrigin: true }, '/api/finance-control': { target: `http://127.0.0.1:${process.env.FINANCE_CONTROL_PORT ?? 3013}` } } },
   build: { rollupOptions: { input: {
     clearing: fileURLToPath(new URL('./index.html', import.meta.url)),
     finance: fileURLToPath(new URL('./finance.html', import.meta.url)),
