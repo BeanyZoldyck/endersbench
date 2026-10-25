@@ -145,9 +145,9 @@
 .agent-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
 .agent-cards button{display:grid;grid-template-columns:42px 1fr;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;background:transparent;color:var(--ink);border:1px solid transparent;padding:9px;text-align:left;min-width:0}
 .agent-cards button.active,.agent-cards button:hover{background:var(--surface);border-color:var(--line)}
-.agent-cards .avatar{grid-row:1/4}
-.agent-cards strong{font-size:.9rem;white-space:nowrap}
-.agent-cards small,.agent-cards button>span:last-child{font-size:.71rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agent-cards button>.agent-avatar-halo,.agent-cards button>.avatar{grid-column:1;grid-row:1/3}
+.agent-cards strong{grid-column:2;grid-row:1;font-size:.9rem;white-space:normal;overflow-wrap:anywhere}
+.agent-cards small{grid-column:2;grid-row:2;min-width:0;font-size:.71rem;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
 .inspector-column>.eyebrow{display:block;margin:1px 0 19px}
 .inspector-column h2{font-size:1.55rem;line-height:1.25;margin-bottom:10px}
 .inspector-column>p{color:var(--muted);font-size:.92rem;line-height:1.65}

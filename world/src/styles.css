@@ -560,7 +560,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .app .cast-info { flex:1; min-width:0; }
 .app .cast-name { display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin:0; }
 .app .cast-name strong { font-size:1rem; line-height:1.15; }
-.app .cast-name > span { font-size:.66rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.app .cast-name > span { display:block; font-size:.66rem; white-space:normal; overflow-wrap:anywhere; max-width:100%; }
 .app .role-label { margin:1px 0 0; font-size:.62rem; }
 .app .model-name { font-size:.6rem; max-width:120px; }
 .app .card-pressure { align-self:center; margin-right:2px; }
