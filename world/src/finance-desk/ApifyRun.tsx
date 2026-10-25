@@ -5,7 +5,8 @@ import { withRunPassword } from '../frontend/run-password';
 // Starts an Ender's Bench run on Apify from the viewer. It appears only where
 // the site Actor serves the page and answers /api/apify/config; the site
 // holds the keys and offers only the models it was set up with. Up to four
-// agents run at once, each in its own office, on the same policy and cases.
+// agents run at once, each in its own office, on the same policy and cases,
+// as many as Apify has room for: it runs a few jobs at once per account.
 type RunInfo = { runId: string; label: string; status: string; statusMessage: string; startedAt: string; finishedAt: string | null; replayUrl: string };
 type Config = {
   models: { id: string; label: string }[];
@@ -16,6 +17,7 @@ type Config = {
   benchActor: string;
   active: RunInfo | null;
   recent: RunInfo[];
+  slots?: { max: number; going: number; free: number } | null;
   passwordRequired?: boolean;
 };
 
@@ -54,6 +56,8 @@ export function ApifyRun({ replayUrl }: { replayUrl?: string }) {
   }, []);
   if (!config) return null;
   const current = config.recent.find(r => r.replayUrl === replayUrl);
+  // Agents Apify could start now; without the account's numbers, one lineup at a time.
+  const room = config.slots ? config.slots.free : config.active ? 0 : MAX_AGENTS;
   const toggle = (id: string) => setModels(picked => picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id]);
   const start = async () => {
     setSending(true); setError('');
@@ -78,7 +82,8 @@ export function ApifyRun({ replayUrl }: { replayUrl?: string }) {
       </fieldset>
       <label className="run-policy-label">Policy <select aria-label="Policy" disabled={sending} value={variant} onChange={e => setVariant(e.target.value)}>{config.variants.map(id => <option key={id} value={id}>{CONDITION_NAMES[id] ?? id}</option>)}</select></label>
       <label className="run-policy-label">Cases <select aria-label="Cases" disabled={sending} value={caseSet} onChange={e => setCaseSet(e.target.value)}>{config.caseSets.map(c => <option key={c.id} value={c.id}>{c.label} · {c.count}</option>)}</select></label>
-      <button disabled={sending || !!config.active || !models.length} onClick={() => void start()}>{sending ? 'Starting the Actor…' : models.length > 1 ? `Start ${models.length} agents` : 'Start run'}</button>
+      <button disabled={sending || !models.length || models.length > room} onClick={() => void start()}>{sending ? 'Starting the Actor…' : models.length > 1 ? `Start ${models.length} agents` : 'Start run'}</button>
+      {models.length > room && <small className="apify-room">{room ? `Apify has room for ${room} more agent${room === 1 ? '' : 's'} right now. Untick ${models.length - room}, or start when a run ends.` : 'Apify is running as many jobs as this account allows. Start when a run ends.'}</small>}
       {config.active && config.active.replayUrl !== replayUrl && <a className="apify-link" href={watch(config.active)}>Watch the run in progress →</a>}
       {config.recent.length > 0 && <div className="apify-runs">
         <span className="more-heading">Recent runs</span>

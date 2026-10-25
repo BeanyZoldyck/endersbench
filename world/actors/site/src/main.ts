@@ -25,7 +25,7 @@ import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/
 import { CASE_SETS } from '../../enders-bench/src/input';
 import { queuedRecording } from '../../enders-bench/src/queued';
 import { historyEntry, lineupEntry, type BenchRunInput } from './history';
-import { DONE, groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, type Recording } from './lineup';
+import { DONE, groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, roomLine, type Recording, type Slots } from './lineup';
 import { PasswordGuard, RequestError, RunLimiter, lineupInputs, publicConfig, siteConfig } from './runs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -108,12 +108,14 @@ async function labelFor(runId: string, storeId: string) {
 }
 
 // Ledger Street lineups: the bench runs started together, one per agent. Kept
-// in this run's store too, so a site run Apify migrates still groups them.
+// in a named store too, so a restarted or migrated site still groups them.
+const lineupStore = await Actor.openKeyValueStore('endersbench-site');
 const lineups = new Map<string, string[]>(); // run id -> every run id in its lineup
-for (const ids of (await Actor.getValue<string[][]>('LINEUPS').catch(() => null)) ?? []) for (const id of ids) lineups.set(id, ids);
+for (const ids of (await lineupStore.getValue<string[][]>('LINEUPS').catch(() => null)) ?? []) for (const id of ids) lineups.set(id, ids);
 async function rememberLineup(ids: string[]) {
   for (const id of ids) lineups.set(id, ids);
-  await Actor.setValue('LINEUPS', [...new Set(lineups.values())]);
+  // The newest hundred lineups are plenty for the history the site lists.
+  await lineupStore.setValue('LINEUPS', [...new Set(lineups.values())].slice(-100));
 }
 const lineupOf = (runId: string) => lineups.get(runId);
 
@@ -217,19 +219,37 @@ async function newestLedger() {
   return newest ? `/finance.html?replay=${newest.replayUrl}&live=1` : `/finance.html?replay=${FALLBACK_REPLAY}`;
 }
 
-// One Ledger Street lineup at a time and a few an hour, from Run on Apify or the setup page.
-async function refuseWhileBusy() {
+// Apify runs only so many jobs at once on an account (five on this plan),
+// this site among them. A lineup starts if its agents fit in what's free.
+async function freeSlots(fresh = false): Promise<Slots | null> {
+  if (fresh) cache.delete('slots');
+  return cached('slots', 5000, async () => {
+    const usage = await client.user('me').limits().catch(() => undefined);
+    if (!usage) return null;
+    const max = usage.limits.maxConcurrentActorJobs, going = usage.current.activeActorJobCount;
+    return { max, going, free: Math.max(0, max - going) };
+  });
+}
+
+// Room for these agents and a few lineups an hour, from Run on Apify or the setup page.
+async function refuseUnlessRoom(agents: number) {
+  const limited = limiter.check();
+  if (limited) throw new RequestError(limited, 429);
+  const slots = await freeSlots(true);
+  if (slots) {
+    if (agents > slots.free) throw new RequestError(roomLine(slots, agents), 409);
+    return;
+  }
+  // Without the account's limits, one lineup at a time.
   cache.delete('recent');
   const active = (await recentRuns()).find(r => !DONE.has(r.status));
   if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
-  const limited = limiter.check();
-  if (limited) throw new RequestError(limited, 429);
 }
 
 // A bench run per agent, started together. If Apify refuses one (say the
 // account's memory is used up), the ones already started are stopped.
 async function startBenchRuns(requests: ReturnType<typeof lineupInputs>) {
-  await refuseWhileBusy();
+  await refuseUnlessRoom(requests.length);
   const ids: string[] = [];
   for (const request of requests) {
     try {
@@ -245,6 +265,7 @@ async function startBenchRuns(requests: ReturnType<typeof lineupInputs>) {
   limiter.record();
   if (ids.length > 1) await rememberLineup(ids);
   cache.delete('recent');
+  cache.delete('slots');
   return ids;
 }
 
@@ -421,7 +442,7 @@ async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
     return job;
   }
   // Refuse now rather than after minutes of waking the worker.
-  await refuseWhileBusy();
+  await refuseUnlessRoom(requests.length);
   const job: LobbyJob = { id: `ledger-${Date.now().toString(36)}`, status: 'starting', ...base, viewerHref: '/?studio=setup' };
   jobs.set(job.id, job);
   void (async () => {
@@ -496,7 +517,7 @@ await serve({
       if (!url.pathname.startsWith('/api/apify/')) return url.pathname.startsWith('/api/') ? { status: 404, json: { error: 'Route not found.' } } : undefined;
       if (url.pathname === '/api/apify/config' && req.method === 'GET') {
         const recent = await recentRuns();
-        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent, passwordRequired: password.required } };
+        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent, slots: await freeSlots(), passwordRequired: password.required } };
       }
       if (url.pathname === '/api/apify/runs' && req.method === 'POST') {
         // A custom header forces a preflight, so another site's page can't press Run for a visitor.

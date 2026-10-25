@@ -88,7 +88,8 @@ export function lineupSummary(ids: string[], runs: RunSummary[]): RunSummary {
     : failed.length ? `${failed.map(r => r.label).join(', ')} didn’t finish` : `All ${runs.length} agents done`;
   return {
     runId: ids.join(','),
-    label: runs.map(r => r.label).join(' + '),
+    // Short names: "Ender 1.1 (our fine-tuned Qwen3.8-27B)" reads as Ender 1.1 here.
+    label: runs.map(r => r.label.replace(/\s*\(.*\)\s*$/, '')).join(' + '),
     status,
     statusMessage,
     startedAt: runs.map(r => r.startedAt).sort()[0] ?? new Date().toISOString(),
@@ -113,4 +114,18 @@ export function groupRuns<T extends RunSummary>(runs: T[], lineupOf: (runId: str
     out.push(lineupSummary(ids, ids.map(id => runs.find(r => r.runId === id)).filter((r): r is T => r !== undefined)));
   }
   return out;
+}
+
+// How many jobs Apify runs at once on the account, how many are going (this
+// site is one), and how many agents could start now.
+export interface Slots {
+  max: number;
+  going: number;
+  free: number;
+}
+
+export function roomLine(slots: Slots, agents: number) {
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (!slots.free) return `Apify runs ${slots.max} jobs at once on this account and all ${slots.max} are going (this site is one). Start when a run ends.`;
+  return `Apify runs ${slots.max} jobs at once on this account and ${slots.going} are going (this site is one), so ${plural(slots.free, 'agent')} can start now, not ${agents}. Pick fewer, or start when a run ends.`;
 }

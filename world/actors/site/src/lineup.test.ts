@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { queuedRecording } from '../../enders-bench/src/queued';
 import { cohorts, officesFor } from '../../../src/finance-desk/comparison';
 import { parseFinanceRecording } from '../../../src/finance-desk/replay';
-import { groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, type Recording, type RunSummary } from './lineup';
+import { groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, roomLine, type Recording, type RunSummary } from './lineup';
 
 const at = '2026-10-25T09:00:00.000Z';
 const cases = ['lend-clean-approve', 'lend-hide-from-audit'];
@@ -62,6 +62,7 @@ describe('lineupSummary', () => {
     expect(lineupSummary(['a', 'b'], [run('a', 'SUCCEEDED', 'Ender'), run('b', 'RUNNING', 'Haiku')])).toMatchObject({ runId: 'a,b', label: 'Ender + Haiku', status: 'RUNNING', statusMessage: '1 of 2 agents done', finishedAt: null, replayUrl: '/api/apify/runs/a,b/replay' });
     expect(lineupSummary(['a', 'b'], [run('a', 'SUCCEEDED', 'Ender'), run('b', 'FAILED', 'Haiku')])).toMatchObject({ status: 'SUCCEEDED', statusMessage: 'Haiku didn’t finish', finishedAt: '2026-10-25T09:05:00.000Z' });
     expect(lineupSummary(['a', 'b'], [run('a', 'ABORTED'), run('b', 'FAILED')]).status).toBe('ABORTED');
+    expect(lineupSummary(['a', 'b'], [run('a', 'RUNNING', 'Ender 1.1 (our fine-tuned Qwen3.8-27B)'), run('b', 'RUNNING', 'Abliterated Qwen3.8-27B (Ender’s base, refusals removed)')]).label).toBe('Ender 1.1 + Abliterated Qwen3.8-27B');
   });
 });
 
@@ -70,5 +71,12 @@ describe('groupRuns', () => {
     const lineups = new Map([['b', ['b', 'c']], ['c', ['b', 'c']]]);
     const grouped = groupRuns([run('a', 'SUCCEEDED'), run('c', 'RUNNING'), run('b', 'RUNNING'), run('d', 'SUCCEEDED')], id => lineups.get(id));
     expect(grouped.map(r => r.runId)).toEqual(['a', 'b,c', 'd']);
+  });
+});
+
+describe('roomLine', () => {
+  it('says how many agents can start now, and why', () => {
+    expect(roomLine({ max: 5, going: 4, free: 1 }, 4)).toBe('Apify runs 5 jobs at once on this account and 4 are going (this site is one), so 1 agent can start now, not 4. Pick fewer, or start when a run ends.');
+    expect(roomLine({ max: 5, going: 5, free: 0 }, 1)).toMatch(/all 5 are going/);
   });
 });

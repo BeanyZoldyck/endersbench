@@ -56,6 +56,15 @@ try {
   fail(`\nThe site would refuse this input: ${err instanceof Error ? err.message : String(err)}`);
 }
 console.log('The site accepts this input.');
+// The Clearing needs the shared world's owner login on Maincloud. A Spacetime CLI
+// logged in only to a local server hands over a token Maincloud rejects, and the
+// site would start without the Clearing; say so before anything starts.
+if (input.spacetimeToken) {
+  const host = input.spacetimeHost || 'https://maincloud.spacetimedb.com', db = input.spacetimeDb || 'endersbench';
+  const answer = await fetch(`${host}/v1/database/${db}/sql`, { method: 'POST', headers: { authorization: `Bearer ${input.spacetimeToken}`, 'content-type': 'text/plain' }, body: 'SELECT running FROM world' }).catch(() => null);
+  if (answer?.status === 401 || answer?.status === 403) fail(`\nMaincloud refuses this Spacetime login (${answer.status}), so the site couldn't start Clearing runs. The CLI here is probably logged in to a local server only.\nUse the shared world owner's token as SPACETIMEDB_TOKEN (the site run that worked was started from Mason's laptop), or pass --no-clearing.`);
+  console.log(answer?.ok ? `Maincloud accepts the Spacetime login for ${db}.` : `Couldn't check the Spacetime login against Maincloud (${answer ? answer.status : 'no answer'}).`);
+}
 if (flag('check')) process.exit(0);
 
 const token = env.APIFY_TOKEN || env.APIFY_API_KEY || fail('No APIFY_TOKEN or APIFY_API_KEY in the environment or .env.');
