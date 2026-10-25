@@ -5,3 +5,5 @@ data/prepared/
 __pycache__/
 *.pyc
 results/
+
+data/alignment-finance/
