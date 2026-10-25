@@ -1,6 +1,6 @@
 import type { Dispatch } from 'react';
 import { BENCHMARK_MODELS, MAX_BENCHMARK_AGENTS, rosterSize, type StudioAction, type StudioState } from '../model';
-import { benchmarkBlocker, rosterEntries, rosterLabel, type BenchmarkConfig } from '../benchmark-client';
+import { benchmarkBlocker, rosterEntries, rosterLabel, type BenchmarkConfig, type BenchmarkJob } from '../benchmark-client';
 import { ModelBuddy } from './ModelBuddy';
 import '../benchmark-lobby.css';
 
@@ -10,12 +10,15 @@ type LobbyProps = {
   config: BenchmarkConfig | null;
   error: string;
   starting: boolean;
+  activeJob?: BenchmarkJob | null;
+  checkingRun?: boolean;
   onStart: () => void;
   onRetry: () => void;
   onDetails: () => void;
 };
 
-export function BenchmarkLobby({ state, dispatch, config, error, starting, onStart, onRetry, onDetails }: LobbyProps) {
+export function BenchmarkLobby({ state, dispatch, config, error, starting, activeJob: candidateJob, checkingRun = false, onStart, onRetry, onDetails }: LobbyProps) {
+  const activeJob = candidateJob?.status === 'running' || candidateJob?.status === 'starting' ? candidateJob : null;
   const total = rosterSize(state.draftRoster);
   const entries = rosterEntries(state.draftRoster);
   const scenario = config?.scenarios.find(option => option.id === state.draftScenario);
@@ -64,7 +67,7 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, onSta
         </article>
       </section>
     </div>
-    <div className="benchmark-start"><div><strong>{rosterLabel(entries)} · {scenario?.name ?? 'Choose a scenario'}</strong><p className="small muted" id="launch-requirements">{blocker ?? 'Ready for fresh decisions and scores.'}</p></div><button className="button gold" disabled={!!blocker || starting} aria-describedby="launch-requirements" onClick={onStart}>{starting ? 'Starting benchmark…' : 'Start benchmark'}</button></div>
+    <div className="benchmark-start"><div><strong>{rosterLabel(entries)} · {scenario?.name ?? 'Choose a scenario'}</strong><p className="small muted" id="launch-requirements">{activeJob ? activeJob.status === 'starting' ? 'Preparing your benchmark…' : 'Your benchmark is still running. Continue to return to it.' : blocker ?? 'Ready for fresh decisions and scores.'}</p></div><button className="button gold" disabled={checkingRun || (activeJob ? activeJob.status === 'starting' : !!blocker || starting)} aria-describedby="launch-requirements" onClick={onStart}>{checkingRun ? 'Checking benchmark…' : activeJob ? 'Continue benchmark' : starting ? 'Starting benchmark…' : 'Start benchmark'}</button></div>
     {error && <div role="alert" className="setup-error"><span>{error}</span><button className="text-link" disabled={starting} onClick={onRetry}>Retry connection</button></div>}
     {starting && <p role="status">Preparing a new world for {rosterLabel(entries)}…</p>}
   </main>;

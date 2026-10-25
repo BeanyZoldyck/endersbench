@@ -1,32 +1,20 @@
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { BenchmarkResumeList } from './ui-ux/ActiveBenchmarks';
-import type { BenchmarkJob } from './benchmark-client';
+import { activeBenchmark } from './ui-ux/ActiveBenchmarks';
+import { benchmarkViewerHref, type BenchmarkJob } from './benchmark-client';
 const job: BenchmarkJob = { id: 'resume-test', dbName: 'endersbench-run-resume-test', scenario: 'clearing-charter', status: 'running', model: 'ChatGPT', modelId: 'example', host: 'localhost' };
-const render = (jobs: BenchmarkJob[]) => renderToStaticMarkup(createElement(BenchmarkResumeList, { jobs, error: '' }));
-describe('returning to a benchmark', () => {
-  it.each(['clearing-charter', 'ledger'])('resumes the same %s run and database', scenario => {
-    const html = render([{ ...job, scenario }]);
-    expect(html).toContain('Resume benchmark');
-    expect(html).toContain('benchmark=resume-test');
-    expect(html).toContain('db=endersbench-run-resume-test');
-    expect(html).toContain(scenario === 'ledger' ? '/finance.html?' : '/?legacy=1');
+describe('continue benchmark action', () => {
+  it.each(['clearing-charter', 'ledger'])('continues the existing %s database', scenario => {
+    const active = activeBenchmark([{ ...job, scenario }]);
+    expect(benchmarkViewerHref(active!)).toContain('benchmark=resume-test');
+    expect(benchmarkViewerHref(active!)).toContain('db=endersbench-run-resume-test');
   });
-  it('keeps preparing runs visible without opening an unready viewer', () => {
-    const html = render([{ ...job, status: 'starting' }]);
-    expect(html).toContain('Preparing the simulation');
-    expect(html).not.toContain('Resume benchmark');
+  it('keeps a preparing run active', () => {
+    expect(activeBenchmark([{ ...job, status: 'starting' }])?.status).toBe('starting');
   });
-  it('changes the action to completed results when the runner finishes', () => {
-    const html = render([{ ...job, status: 'completed' }]);
-    expect(html).toContain('View completed benchmark');
-    expect(html).toContain('studio=outcome');
-    expect(html).not.toContain('Resume benchmark');
+  it('returns to start after completion or failure', () => {
+    expect(activeBenchmark([{ ...job, status: 'completed' }, { ...job, status: 'failed' }])).toBeNull();
   });
-  it('sends failed runs to history instead of promising a resumable simulation', () => {
-    const html = render([{ ...job, status: 'failed' }]);
-    expect(html).toContain('studio=compare');
-    expect(html).not.toContain('Resume benchmark');
+  it('finds an active run even if a newer run is finished', () => {
+    expect(activeBenchmark([{ ...job, status: 'completed' }, job])).toEqual(job);
   });
 });

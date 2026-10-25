@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import DeskApp from './DeskApp.tsx';
-import { BenchmarkRunStatus } from '../BenchmarkRunStatus';
 import ReplayDesk from './ReplayDesk.tsx';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection } from '../module_bindings';
@@ -31,6 +30,6 @@ async function mount(): Promise<void> {
   const connectionBuilder = DbConnection.builder().withUri(host).withDatabaseName(database)
     .withToken(localStorage.getItem(tokenKey) || undefined).withAutomaticReconnect()
     .onConnect((_ctx, _identity, token) => localStorage.setItem(tokenKey, token));
-  root.render(<StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} /> : <SpacetimeDBProvider connectionBuilder={connectionBuilder}><><DeskApp lineup={params.has('benchmark')} />{params.has('benchmark') && <BenchmarkRunStatus />}</></SpacetimeDBProvider>}</StrictMode>);
+  root.render(<StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} /> : <SpacetimeDBProvider connectionBuilder={connectionBuilder}><DeskApp lineup={params.has('benchmark')} /></SpacetimeDBProvider>}</StrictMode>);
 }
 void mount();

@@ -1,3 +1,4 @@
+import { BenchmarkRunStatus } from './BenchmarkRunStatus';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { DbConnection, tables } from './module_bindings';
@@ -197,6 +198,7 @@ export default function App() {
       <h1>The Clearing<span>.</span></h1>
     </header>
     <div className="world-status">
+      {new URLSearchParams(window.location.search).has('benchmark') && <BenchmarkRunStatus />}
       <span className={`connection ${isActive && ready ? 'online' : ''}`} title={replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}><i />{replay.active ? 'Replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting' : !ready ? 'Syncing' : world?.running ? 'Live' : 'Paused'}</span>
       {world && <div className="season" title={`${isWinter ? 'Winter' : 'Autumn'} · ${world.daylight}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div>}
       {trouble && <span className="model-trouble" role="alert" title="The survivors cannot act while their model is failing. Exhibits has recorded runs.">{trouble}</span>}
@@ -217,7 +219,7 @@ export default function App() {
             <button aria-expanded={panel === 'leaderboard'} onClick={() => setPanel(panel === 'leaderboard' ? null : 'leaderboard')}>Leaderboard</button>
             <a href="/results.html" target="_blank" rel="noreferrer">Results ↗</a>
             <a href="/finance.html">Ledger Street ↗</a>
-            <a href="/">Observation Studio ↗</a>
+            <a href="/?studio=landing">Observation Studio ↗</a>
             <button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button>
           </div>
         </details>

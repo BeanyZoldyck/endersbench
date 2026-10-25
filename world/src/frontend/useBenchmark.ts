@@ -12,7 +12,7 @@ export function useBenchmark(enabled: boolean) {
   const [refresh, setRefresh] = useState(0);
   const retry = useCallback(() => setRefresh(value => value + 1), []);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) { launching.current = false; setStarting(false); return; }
     let cancelled = false;
     setError('');
     void benchmarkRequest<BenchmarkConfig>('/api/benchmarks/config').then(value => {
@@ -33,7 +33,7 @@ export function useBenchmark(enabled: boolean) {
         if (cancelled) return;
         setJob(next);
         setError(next.status === 'failed' ? next.error || 'Benchmark failed. No completed result was produced.' : '');
-        if (!activeId && (next.status === 'running' || next.status === 'completed')) {
+        if (!activeId && enabled && launching.current && (next.status === 'running' || next.status === 'completed')) {
           window.location.assign(benchmarkViewerHref(next));
           return;
         }
@@ -49,7 +49,7 @@ export function useBenchmark(enabled: boolean) {
     };
     void poll();
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [id, activeId]);
+  }, [id, activeId, enabled]);
   const start = async (roster: BenchmarkRoster, scenario: string) => {
     if (launching.current) return;
     const blocker = benchmarkBlocker(config, roster, scenario);
