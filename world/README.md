@@ -133,12 +133,20 @@ scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,a
 
 - Providers: `bitdeer`, `openai`, `anthropic`, `openrouter`, `ender` (`ENDER_BASE_URL`, e.g. a Runpod
   vLLM endpoint). `codex`, `fake` and `ollama` stay with the harness; `beginRun` refuses them.
+  Tested live from the database: DeepSeek on Bitdeer, GPT-6 Luna, Claude Haiku 5.5. Not yet live:
+  `ender` and `openrouter`. OpenAI and Bitdeer models are asked with reasoning off
+  (`reasoning_effort: "none"`), as `PROVIDERS` records.
 - Keys live only in the database's environment (`BITDEER_API_KEY`, `OPENAI_API_KEY`,
   `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `ENDER_BASE_URL`, `ENDER_API_KEY`), never in a table.
   `spacetime env list` prints their values: don't run it where anyone can see.
-- A harness left connected skips database-brained requests. The run info records `brains: database`.
+- A harness left connected skips database-brained requests, and a harness started against a
+  database-brained world leaves its run alone (`HARNESS_TAKEOVER=1` replaces it with the harness's
+  roster). The run info records `brains: database`. Only the scheduler can run `think`.
 - `db-run.sh` records the run and writes the report like `scripts/experiment.sh`; pass `maincloud` as
   the sixth argument for the shared world (load its keys with `scripts/load-model-keys.sh <db> maincloud`).
+- Nothing else stops a database run, so `db-run.sh` pauses the world when the run ends, on Ctrl-C, and
+  early when every model keeps failing (it prints their last errors). To stop one by hand:
+  `spacetime call <db> set_running false --server local`.
 
 ## Contract for anyone plugging in a model
 

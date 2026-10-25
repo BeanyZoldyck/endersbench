@@ -5,6 +5,7 @@
 
 import { t } from 'spacetimedb/server';
 import { TimeDuration } from 'spacetimedb';
+import type schema from '../schema';
 import { thinkJob } from '../schema';
 import { settleThought } from '../decisions';
 import { buildModelCall, decisionFromResponse, type ModelCall, type Tool } from './protocol';
@@ -12,15 +13,20 @@ import { buildModelCall, decisionFromResponse, type ModelCall, type Tool } from 
 // Under REQUEST_TIMEOUT_MS (30 s), so think fails a request before brainTick expires it.
 const HTTP_TIMEOUT_MS = 25_000;
 
-export function defineThink(spacetimedb: any) {
-  const think = spacetimedb.procedure({ onSchedule: thinkJob }, { job: thinkJob.rowType }, t.unit(), (ctx: any, { job }: { job: { requestId: bigint } }) => {
-    const startedUs: bigint = ctx.timestamp.microsSinceUnixEpoch;
-    const latency = (tx: any) => Math.max(0, Number((tx.timestamp.microsSinceUnixEpoch - startedUs) / 1000n));
-    const settle = (result: Parameters<typeof settleThought>[2]) => ctx.withTx((tx: any) => settleThought(tx, job.requestId, result, latency(tx)));
+export function defineThink(spacetimedb: typeof schema) {
+  const think = spacetimedb.procedure({ onSchedule: thinkJob }, { job: thinkJob.rowType }, t.unit(), (ctx, { job }) => {
+    // Scheduled work runs as the database itself. A client calling think
+    // directly could otherwise make the database spend on a provider.
+    if (!ctx.sender.equals(ctx.databaseIdentity)) return {};
 
-    let call: ModelCall | null = null;
+    const startedUs = ctx.timestamp.microsSinceUnixEpoch;
+    const settle = (result: Parameters<typeof settleThought>[2]) =>
+      ctx.withTx(tx => settleThought(tx, job.requestId, result, Math.max(0, Number((tx.timestamp.microsSinceUnixEpoch - startedUs) / 1000n))));
+    const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+    let call: ModelCall | null;
     try {
-      call = ctx.withTx((tx: any): ModelCall | null => {
+      call = ctx.withTx((tx): ModelCall | null => {
         const req = tx.db.decisionRequest.id.find(job.requestId);
         if (!req || req.status !== 'pending') return null;
         const agentName = tx.db.agent.id.find(req.agentId)?.name ?? `agent ${req.agentId}`;
@@ -30,7 +36,7 @@ export function defineThink(spacetimedb: any) {
         return buildModelCall(req.modelId, { agentName, observation: JSON.parse(req.observation), tools, system }, name => ctx.env.get(name) ?? undefined);
       });
     } catch (err) {
-      settle({ error: err instanceof Error ? err.message : String(err) });
+      settle({ error: message(err) });
       return {};
     }
     if (!call) return {};
@@ -44,7 +50,7 @@ export function defineThink(spacetimedb: any) {
       });
       settle({ decision: decisionFromResponse(call.api, call.url, res.status, res.text()) });
     } catch (err) {
-      settle({ error: err instanceof Error ? err.message : String(err) });
+      settle({ error: message(err) });
     }
     return {};
   });

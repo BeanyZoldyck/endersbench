@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { DbConnection, tables } from '../src/module_bindings/index.js';
 import { brainFor, type Brain, type Tool } from './brains.js';
 import { promptVersion, systemPrompt } from './prompt.js';
+import { isDatabaseRun } from './takeover.js';
 
 const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = process.env.SPACETIMEDB_DB_NAME ?? 'endersbench';
@@ -113,6 +114,12 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
       console.error('This world belongs to another harness. Delete the token file only if you mean to take it over.', err);
       process.exit(1);
     }
+    // A database-brained world (beginRun) asks its own models: leave its run as it is.
+    await applied;
+    if (isDatabaseRun(conn.db.meta.key.find('run')?.value) && process.env.HARNESS_TAKEOVER !== '1') {
+      console.log('This world is database-brained (beginRun): its module asks the models itself. Leaving its run alone and answering nothing; HARNESS_TAKEOVER=1 replaces it with this roster.');
+      return;
+    }
     for (const r of roster) {
       await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
@@ -131,6 +138,10 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
     console.log(`Roster: ${roster.map(r => `${r.name} (${r.modelId})`).join(', ')} · prompt: ${PROMPT_VARIANT}`);
   })();
 }
+
+// Resolves once the subscription has delivered meta, agents and pending requests.
+let markApplied = () => {};
+const applied = new Promise<void>(resolve => (markApplied = resolve));
 
 const conn = DbConnection.builder()
   .withUri(HOST)
@@ -157,6 +168,7 @@ conn.db.decisionRequest.onInsert((_ctx, req) => route(req));
 conn
   .subscriptionBuilder()
   .onApplied(() => {
+    markApplied();
     // Answer anything left pending from before a restart.
     for (const req of conn.db.decisionRequest.iter()) {
       route(req);
