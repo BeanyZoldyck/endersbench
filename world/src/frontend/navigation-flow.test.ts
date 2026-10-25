@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { benchmarkViewerHref, launchBenchmark, rosterEntries, type BenchmarkJob } from './benchmark-client';
-import { initialStudioState, recordedStudioHref, requiresRecordedSource, transitionStudio } from './model';
+import { initialStudioState, recordedStudioHref, requiresRecordedSource, transitionStudio, type StudioState } from './model';
 
 const job: BenchmarkJob = {
   id: 'fresh-mixed-run', status: 'running', model: 'ChatGPT', modelId: 'configured-chatgpt',
@@ -11,7 +11,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('setup and benchmark navigation flow', () => {
   it('retains a mixed lineup and scenario through scenario details and Back', () => {
-    let state = initialStudioState('?studio=follow&replay=/demo/clearing-reward-v2.json.gz&t=12');
+    let state: StudioState = { ...initialStudioState('?studio=follow&replay=/demo/clearing-reward-v2.json.gz&t=12'), draftRoster: { 'GPT-6 Luna': 4 } };
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
@@ -29,7 +29,7 @@ describe('setup and benchmark navigation flow', () => {
     const responseJob = { ...job, status: 'starting' as const, scenario: 'ledger' };
     const request = vi.fn().mockResolvedValue(new Response(JSON.stringify(responseJob), { status: 202 }));
     vi.stubGlobal('fetch', request);
-    let state = initialStudioState('?studio=monitor&replay=/demo/clearing-reward-v2.json.gz&t=73');
+    let state: StudioState = { ...initialStudioState('?studio=monitor&replay=/demo/clearing-reward-v2.json.gz&t=73'), draftRoster: { 'GPT-6 Luna': 4 } };
     state = transitionStudio(state, { type: 'select-draft-model', model: 'Claude 5.5' });
     state = transitionStudio(state, { type: 'select-draft-scenario', scenario: 'ledger' });
     state = transitionStudio(state, { type: 'navigate', screen: 'setup' });

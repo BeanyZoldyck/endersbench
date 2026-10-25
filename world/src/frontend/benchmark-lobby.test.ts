@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { benchmarkBlocker, rosterEntries, rosterLabel, type BenchmarkConfig } from './benchmark-client';
-import { initialStudioState, rosterSize, transitionStudio, type BenchmarkRoster, type StudioModel } from './model';
+import { initialStudioState, rosterSize, transitionStudio, type BenchmarkRoster, type StudioModel, type StudioState } from './model';
 
 const connected: BenchmarkConfig = {
   ready: true,
@@ -8,15 +8,18 @@ const connected: BenchmarkConfig = {
   scenarios: [{ id: 'clearing-charter', name: 'The Clearing', description: 'Share supplies.' }, { id: 'ledger', name: 'Ledger', description: 'Review permitted financial evidence.', available: false, reason: 'Ledger is not connected.' }],
 };
 const empty: BenchmarkRoster = {};
+// The setup page starts with no agents; most tests begin from a full lineup.
+const lunaLineup = (): StudioState => ({ ...initialStudioState(''), draftRoster: { 'GPT-6 Luna': 4 } });
+
 
 describe('benchmark lobby lineup', () => {
-  it('defaults to four GPT-6 Luna agents and the existing supported scenario', () => {
+  it('starts with no agents selected and the existing supported scenario', () => {
     const state = initialStudioState('');
-    expect(state.draftRoster).toEqual({ ...empty, 'GPT-6 Luna': 4 });
+    expect(state.draftRoster).toEqual(empty);
     expect(state.draftScenario).toBe('clearing-charter');
   });
   it('adds to a full lineup by taking a seat from the largest other group, never past four', () => {
-    const full = initialStudioState('');
+    const full = lunaLineup();
     const swapped = transitionStudio(full, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
     expect(swapped.draftRoster).toEqual({ 'GPT-6 Luna': 3, 'Claude 5.5': 1 });
     const mixed = transitionStudio(transitionStudio(swapped, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 }), { type: 'adjust-draft-count', model: 'Ender', delta: 1 });
@@ -27,7 +30,7 @@ describe('benchmark lobby lineup', () => {
     expect(transitionStudio(full, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: 1 })).toBe(full);
   });
   it('enforces a shared maximum and zero floor across repeated additions and removals', () => {
-    let state = initialStudioState('');
+    let state = lunaLineup();
     for (let index = 0; index < 10; index++) state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     expect(rosterSize(state.draftRoster)).toBe(0);
     for (const model of ['Claude 5.5', 'GLM 5.3', 'Ender', 'GPT-6 Luna'] as const) state = transitionStudio(state, { type: 'adjust-draft-count', model, delta: 1 });
@@ -41,7 +44,7 @@ describe('benchmark lobby lineup', () => {
     expect(benchmarkBlocker(connected, { ...empty, 'GPT-6 Luna': count }, 'clearing-charter')).toBeNull();
   });
   it('preserves lineup and scenario when navigating away and back', () => {
-    let state = initialStudioState('');
+    let state = lunaLineup();
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
     state = transitionStudio(state, { type: 'select-draft-scenario', scenario: 'ledger' });
@@ -59,7 +62,7 @@ describe('benchmark lobby lineup', () => {
   });
   it('allows adding unavailable models while blocking launch with an actionable connection message', () => {
     const config = { ...connected, models: connected.models.map(model => model.id === 'Claude 5.5' ? { ...model, available: false, reason: 'Claude 5.5 connection missing.' } : model) };
-    let state = initialStudioState('');
+    let state = lunaLineup();
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
     expect(state.draftRoster['Claude 5.5']).toBe(1);

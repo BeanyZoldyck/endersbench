@@ -12,7 +12,9 @@ const config: BenchmarkConfig = {
 };
 type LobbyProps = ComponentProps<typeof BenchmarkLobby>;
 
-function render(state: StudioState = initialStudioState(''), currentConfig: BenchmarkConfig | null = config, overrides: Partial<LobbyProps> = {}): string {
+// The setup page starts with no agents; most tests begin from a full lineup.
+const lunaLineup = (): StudioState => ({ ...initialStudioState(''), draftRoster: { 'GPT-6 Luna': 4 } });
+function render(state: StudioState = lunaLineup(), currentConfig: BenchmarkConfig | null = config, overrides: Partial<LobbyProps> = {}): string {
   return renderToStaticMarkup(createElement(BenchmarkLobby, {
     state, dispatch: vi.fn(), config: currentConfig, error: '', starting: false,
     onStart: vi.fn(), onRetry: vi.fn(), onDetails: vi.fn(), ...overrides,
@@ -27,12 +29,12 @@ function scenarioRadio(markup: string, id: string): string {
 
 describe('benchmark lobby rendered controls', () => {
   it('prevents a new launch until existing runs have been checked', () => {
-    const markup = render(initialStudioState(''), config, { checkingRun: true });
+    const markup = render(lunaLineup(), config, { checkingRun: true });
     expect(markup).toMatch(/<button class="button gold" disabled=""[^>]*>Checking benchmark…<\/button>/);
   });
   it('keeps adding possible at four agents for connected models that can take a seat', () => {
     const withEnder = { ...config, models: [...config.models, { id: 'Ender' as const, modelId: 'ender:ender', available: true }] };
-    const markup = render(initialStudioState(''), withEnder);
+    const markup = render(lunaLineup(), withEnder);
     expect(markup).toContain('4/4 selected');
     expect(button(markup, 'Add one Ender agent')).not.toContain('disabled');
     // All four seats are already GPT-6 Luna, so there is no seat to take for it.
@@ -47,7 +49,7 @@ describe('benchmark lobby rendered controls', () => {
     for (const filler of ['Build a lineup', 'Four agents maximum', 'Scenario illustration', 'Ethics and task performance', 'Ready for fresh decisions', 'One fresh world']) expect(markup).not.toContain(filler);
   });
   it('disables adding a disconnected model while explaining its connection requirement', () => {
-    const state = initialStudioState('');
+    const state = lunaLineup();
     state.draftRoster['GPT-6 Luna'] = 2;
     const markup = render(state);
     expect(button(markup, 'Add one Claude 5.5 agent')).toContain('disabled');
@@ -66,7 +68,7 @@ describe('benchmark lobby rendered controls', () => {
     expect(markup).not.toContain('Lending Desk');
   });
   it('shows a selected unavailable scenario truthfully without a Clearing illustration', () => {
-    const state = { ...initialStudioState(''), draftScenario: 'ledger' };
+    const state = { ...lunaLineup(), draftScenario: 'ledger' };
     const markup = render(state);
     expect(markup).toContain('Review financial evidence.');
     expect(markup).toContain('Ledger adapter unavailable.');
@@ -74,7 +76,7 @@ describe('benchmark lobby rendered controls', () => {
     expect(markup).toMatch(/<button class="button gold" disabled=""/);
   });
   it('keeps lineup controls usable while runner configuration is unavailable', () => {
-    const markup = render(initialStudioState(''), null);
+    const markup = render(lunaLineup(), null);
     expect(markup).toContain('Waiting for benchmark runner');
     expect(markup).toContain('Checking connection');
     expect(button(markup, 'Remove one GPT-6 Luna agent')).not.toContain('disabled');
@@ -112,7 +114,7 @@ describe('benchmark lobby Start and Continue actions', () => {
   });
 
   it('locks lineup edits, scenario changes, retries and launch while creating a fresh world', () => {
-    const markup = render(initialStudioState(''), config, { starting: true, error: 'Reconnect pending.' });
+    const markup = render(lunaLineup(), config, { starting: true, error: 'Reconnect pending.' });
     expect(launchButton(markup)).toContain('Starting benchmark…');
     expect(launchButton(markup)).toContain('disabled');
     expect(markup).toContain('Preparing a new world for 4 GPT-6 Luna…');
@@ -122,10 +124,10 @@ describe('benchmark lobby Start and Continue actions', () => {
   });
 
   it.each([
-    ['runner configuration is unavailable', null, initialStudioState('')],
-    ['the draft scenario is unavailable', config, { ...initialStudioState(''), draftScenario: 'ledger' }],
-    ['the draft lineup is empty', config, { ...initialStudioState(''), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 0, 'GPT-6 Luna': 0 } }],
-    ['the draft model is disconnected', config, { ...initialStudioState(''), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 1, 'GPT-6 Luna': 0 } }],
+    ['runner configuration is unavailable', null, lunaLineup()],
+    ['the draft scenario is unavailable', config, { ...lunaLineup(), draftScenario: 'ledger' }],
+    ['the draft lineup is empty', config, { ...lunaLineup(), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 0, 'GPT-6 Luna': 0 } }],
+    ['the draft model is disconnected', config, { ...lunaLineup(), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 1, 'GPT-6 Luna': 0 } }],
   ] as const)('keeps a running benchmark resumable when %s', (_reason, currentConfig, state) => {
     const markup = render(state, currentConfig, { activeJob: job });
     expect(launchButton(markup)).toContain('Continue benchmark');
@@ -134,7 +136,7 @@ describe('benchmark lobby Start and Continue actions', () => {
   });
 
   it('shows a disabled Continue action while an existing benchmark is starting', () => {
-    const markup = render(initialStudioState(''), null, { activeJob: { ...job, status: 'starting' } });
+    const markup = render(lunaLineup(), null, { activeJob: { ...job, status: 'starting' } });
     expect(launchButton(markup)).toContain('Continue benchmark');
     expect(launchButton(markup)).toContain('disabled');
     expect(markup).toContain('Preparing your benchmark…');
@@ -142,7 +144,7 @@ describe('benchmark lobby Start and Continue actions', () => {
   });
 
   it.each(['completed', 'failed'] as const)('offers a fresh Start action after a %s job', status => {
-    const markup = render(initialStudioState(''), config, { activeJob: { ...job, status } });
+    const markup = render(lunaLineup(), config, { activeJob: { ...job, status } });
     expect(launchButton(markup)).toContain('Start benchmark');
     expect(launchButton(markup)).not.toContain('disabled');
     expect(markup).not.toContain('Your benchmark is still running.');
@@ -152,7 +154,7 @@ describe('benchmark lobby Start and Continue actions', () => {
     const onStart = vi.fn();
     const dispatch = vi.fn();
     const tree = BenchmarkLobby({
-      state: initialStudioState(''), dispatch, config, error: '', starting: false, activeJob: job,
+      state: lunaLineup(), dispatch, config, error: '', starting: false, activeJob: job,
       onStart, onRetry: vi.fn(), onDetails: vi.fn(),
     });
     const action = findPrimaryAction(tree);

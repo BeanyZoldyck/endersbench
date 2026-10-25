@@ -199,7 +199,7 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
   const scene = (follow = false) => <SceneFrame source={source} selected={selected} camera={follow ? 'follow' : camera} spotlitId={state.selectedAgentId ? undefined : spotlitId ?? undefined} setCamera={setCamera} onSelect={id => selectAgent(id)} />;
 
   return <div className="studio" data-studio-screen={state.screen}>
-    <FrostedCursor />
+    <FrostedCursor smoke={state.screen === 'landing'} />
     <header className="studio-header">
       <button className="brand-link" onClick={() => nav('landing')}>Ender’s Bench</button>
       <nav aria-label="Main navigation">

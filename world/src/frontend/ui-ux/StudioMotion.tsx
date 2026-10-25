@@ -2,9 +2,13 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { StudioScreen } from '../model';
 import '../studio-motion.css';
 
-/** Pointer position stays outside React so tracking never rerenders the studio. */
-export function FrostedCursor() {
+/** Pointer position stays outside React so tracking never rerenders the studio.
+ *  The smoke trail follows it only where smoke is on (the landing page); the
+ *  cursor itself shows everywhere. */
+export function FrostedCursor({ smoke = true }: { smoke?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  const smokeOn = useRef(smoke);
+  useEffect(() => { smokeOn.current = smoke; }, [smoke]);
   useEffect(() => {
     const cursor = ref.current;
     const studio = cursor?.closest<HTMLElement>('.studio');
@@ -44,6 +48,7 @@ export function FrostedCursor() {
       lastTrailTime = 0;
     };
     const drawTrail = (time: number) => {
+      if (!smokeOn.current) return;
       if (!lastTrailTime || time - lastTrailTime > 120) {
         lastTrailTime = time;
         lastTrailX = x;

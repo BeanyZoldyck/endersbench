@@ -80,7 +80,7 @@ export function initialStudioState(search: string): StudioState {
   const screen = known.includes(route as StudioScreen) ? route as StudioScreen : params.has('replay') || params.has('live') ? 'monitor' : 'landing';
   const replayName = params.get('replay')?.match(/\/demo\/([a-z0-9-]+)\.json(?:\.gz)?$/)?.[1];
   return {
-    screen, previous: [], draftModel: 'GPT-6 Luna', draftRoster: { 'GPT-6 Luna': 4 }, draftScenario: 'clearing-charter', draftMode: 'swarm', briefingScenario: 'clearing',
+    screen, previous: [], draftModel: 'GPT-6 Luna', draftRoster: {}, draftScenario: 'clearing-charter', draftMode: 'swarm', briefingScenario: 'clearing',
     runId: params.get('run') || replayName || 'clearing-charter-v8-admission', selectedAgentId: null,
     eventIndex: 0, replayTimeMs: 0, restoreNonce: 0, playing: false,
     historyModel: isModelName(params.get('historyModel')) ? params.get('historyModel') as StudioModel : 'all', contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',

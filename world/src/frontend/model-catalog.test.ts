@@ -33,7 +33,7 @@ describe('exact benchmark model catalog', () => {
   });
   it.each(variants)('selects and presents %s without losing its variant', (name, id) => {
     const selected = transitionStudio(initialStudioState(''), { type: 'select-draft-model', model: name });
-    expect(selected.draftRoster).toEqual({ [name]: 4 });
+    expect(selected.draftRoster).toEqual({ [name]: 1 });
     expect(selected.draftModel).toBe(name);
     expect(exactModelName(id)).toBe(name);
     expect(modelDisplayName(id)).toBe(name);
