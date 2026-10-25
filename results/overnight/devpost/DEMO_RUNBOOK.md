@@ -13,6 +13,34 @@ The public site runs as an Apify Actor (`masomidev/enders-bench-site`, run `OWcd
 
 If the site run stops, a new run gets a new address: `apify runs ls masomidev/enders-bench-site --desc`, then `apify runs info <run id> --json` for its `containerUrl`.
 
+## Going live on Apify (checked 10:15)
+
+**Readiness**
+
+| System | State |
+| --- | --- |
+| Apify site (`masomidev/enders-bench-site`) | Running until Tue 01:11, ready; The Clearing and Ledger Street both offered; run password required (`RUN_PASSWORD` in the repo's key file); live CRS on; 4 of 5 Apify run slots free |
+| Maincloud `endersbench` | Paused after the last run, free for a new Clearing |
+| Ender endpoint (Runpod, serves v1.3) | Idle |
+| Retep / abliterated endpoint (Runpod) | **Busy with the local abliterated lane** |
+| Bitdeer | **Busy with the local Bitdeer lane** (the key's rate limit fits one busy world) |
+| Anthropic, OpenAI | Fine |
+| Local viewers 5181, 5301–5304 | Up |
+
+**Before starting anything on Apify:** stop the local Bitdeer lane (otherwise a live run with DeepSeek, GLM or Qwen can hit Bitdeer's rate limit) and keep Retep out of live runs while the local abliterated lane runs (or stop that lane too).
+
+**Timeline**
+1. **T–8 min: start The Clearing** from https://1erbqujfjhx0.runs.apify.net/?studio=setup with **Claude 5.5, GPT-6 Luna, Ender, DeepSeek V4.1 Flash** (four providers, four hosts). Enter the run password. If Ender is in, the site wakes its worker first (shows *starting* for a minute or two). The run resets the shared Maincloud world and stops itself within 20 minutes. Watch it on http://localhost:5304/ (verified) or the site's own viewer https://1erbqujfjhx0.runs.apify.net/?legacy=1 (open it in your browser first: it rendered blank in my headless check).
+2. **T–0, during the pitch: start Ledger Street,** the 7-case quick tour with **DeepSeek, Qwen, Ender, Claude 5.5**. Each agent is its own Apify run with live CRS; it takes about 3–4 minutes, and the site follows it into the office. https://1erbqujfjhx0.runs.apify.net/finance.html always opens the newest Apify lineup live.
+3. **Between pitches:** the strongest saved recording, https://1erbqujfjhx0.runs.apify.net/finance.html?replay=/api/benchmarks/ef00e46c-d03b-e77d-f40a-70d011b95086/replay, and Run history https://1erbqujfjhx0.runs.apify.net/?studio=compare.
+
+**Avoid**
+- Grok in The Clearing (the database can't call xAI; the site will refuse). Grok is fine in Ledger Street.
+- Starting a second Clearing while one runs (409), more than 4 Clearings an hour, or more than 10 site runs an hour: don't burn them in rehearsal.
+- Restarting the Apify site run: a new run gets a new address and every link here breaks.
+- Saying "Ender 1.1": the site's label is stale; the endpoint serves v1.3. Say "Ender".
+- In the Ledger tour, Ender may still contact the Chapter 13 debtor under house rules (v1.3 did in our test). The v1.3 win is in the 70-case run without rules.
+
 ## Tabs to open on the big monitor (local: the overnight data)
 
 | # | What | Link |
