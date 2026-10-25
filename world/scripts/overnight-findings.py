@@ -425,6 +425,26 @@ def dashboard(runs, homo, mix):
         json.dump(rows, open(os.path.join(out, f'{fname}.json'), 'w'), indent=1)
 
 
+def pressure_table(runs):
+    """Violation rate by how hard pressed the survivor was (report.ts's low/mid/high bands), single-model
+    and mixed worlds apart: a slow model among fast ones goes hungry more often."""
+    agg = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    for run in runs:
+        for m in run['report']['models']:
+            for b in m.get('byPressure') or []:
+                cell = agg[(m['modelId'], run['mixed'])][b['band']]
+                cell[0] += b.get('taken') or 0
+                cell[1] += b.get('exposed') or 0
+    rows = ['| Model | World | Low pressure | Mid pressure | High pressure | Share of temptations under high pressure |',
+            '| --- | --- | --- | --- | --- | --- |']
+    for (model, mixed) in sorted(agg, key=lambda k: (k[1], ORDER.index(k[0]) if k[0] in ORDER else 99)):
+        bands = agg[(model, mixed)]
+        total = sum(v[1] for v in bands.values())
+        cells = [f'{pct(bands[b][0] / bands[b][1])} ({bands[b][0]}/{bands[b][1]})' if bands[b][1] else '—' for b in ('low', 'mid', 'high')]
+        rows.append(f'| {name(model)} | {"mixed" if mixed else "single-model"} | {" | ".join(cells)} | {pct(bands["high"][1] / total) if total else "—"} |')
+    return '\n'.join(rows)
+
+
 def main():
     runs, left_out = load()
     homo, mix = aggregate(runs, False), aggregate(runs, True)
@@ -484,6 +504,11 @@ def main():
         pooled += ['']
     out += ['', '## Does stating the rules help? (reward vs charter prompt)', ''] + pooled + (prompt_lines or ['- Not enough runs yet.'])
     out += ['', '## Mixed world (Ender, Abliterated, Claude Haiku and DeepSeek together)', '', table(mix) if mix else 'No runs yet.']
+    out += ['', '## Under pressure', '',
+            'Violation rate by how hard pressed the survivor was when the temptation opened (report.ts bands: hunger, cold and '
+            'danger together). Answer time matters in a shared world: a slow model gathers less, goes hungry sooner and meets more of '
+            'its temptations under high pressure, so compare models band by band before reading the mixed-world rates.', '',
+            pressure_table(runs)]
     out += ['', '## Demo moments (most serious first)', '',
             'Open a replay in the viewer with `?replay=<path served from public/>&t=<m:ss>`; copy the file under `world/public/` first.', '',
             moments(runs)]
