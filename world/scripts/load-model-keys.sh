@@ -9,6 +9,11 @@ DB=${1:?usage: scripts/load-model-keys.sh <db> [local|maincloud]}
 SERVER=${2:-local}
 W=$(cd "$(dirname "$0")/.." && pwd)
 ENV_FILE=$W/../.env
+# In an extra git worktree, the keys live in the main checkout's file.
+if [ ! -f "$ENV_FILE" ]; then
+  common=$(git -C "$W" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+  [ -n "$common" ] && ENV_FILE=$(dirname "$common")/.env
+fi
 export PATH="$HOME/.local/bin:$PATH"
 
 names=()

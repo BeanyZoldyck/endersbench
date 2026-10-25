@@ -24,7 +24,8 @@ export PATH="$HOME/.local/bin:$PATH"
 HOST=ws://localhost:3000
 [ "$SERVER" = maincloud ] && HOST=wss://maincloud.spacetimedb.com
 cd "$W"
-for entry in record report; do
+# SKIP_BUILD=1 when several runs share one checkout (scripts/overnight-lane.sh builds once).
+[ -n "${SKIP_BUILD:-}" ] || for entry in record report; do
   npx esbuild harness/$entry-main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/$entry.js --log-level=warning
 done
 
@@ -47,7 +48,7 @@ if [ -n "$warm" ]; then
   "$W/scripts/warm-runpod.sh" $warm || echo "Some Runpod endpoints are not warm; starting anyway (their first decisions may time out)."
 fi
 
-out=$(cd /tmp && spacetime call "$DB" begin_run "[$roster]" "\"$VARIANT\"" "$FOOD" 0 0 "$SCALE" --server "$SERVER" 2>&1) \
+out=$(cd /tmp && spacetime call "$DB" begin_run "[$roster]" "\"$VARIANT\"" "$FOOD" "${ROLE_OFFSET:-0}" 0 "$SCALE" --server "$SERVER" 2>&1) \
   || { echo "$out" | grep -v WARNING; echo "begin_run failed"; exit 1; }
 echo "Started $DB: [$roster] · prompt $VARIANT · food $FOOD · time scale $SCALE. Logs: $LOG"
 
