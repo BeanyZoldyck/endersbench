@@ -225,6 +225,8 @@ export function useLandingMotion(screen: StudioScreen, scenario: string) {
         return ripple;
       });
       let activeCorner = -1;
+      const cornerReadyAt = [0, 0, 0, 0];
+      const cornerCooldownMs = 2000;
       const rippleCorners = (event: PointerEvent) => {
         if (!motion.matches || event.pointerType !== 'mouse' || !(event.target instanceof HTMLImageElement)) return;
         const image = event.target;
@@ -237,6 +239,10 @@ export function useLandingMotion(screen: StudioScreen, scenario: string) {
         const corner = Number(right) + Number(bottom) * 2;
         if (corner === activeCorner) return;
         activeCorner = corner;
+        const now = performance.now();
+        if (now < cornerReadyAt[corner]) return;
+        // Keep the cooldown across pointer leave/re-entry; the staggered wave lasts 1860ms.
+        cornerReadyAt[corner] = now + cornerCooldownMs;
         cornerRipples.forEach((ripple, index) => {
           ripple.getAnimations().forEach(animation => animation.cancel());
           ripple.dataset.corner = String(corner);
