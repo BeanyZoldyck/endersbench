@@ -23,6 +23,8 @@ export function siteInputFromEnv(env: Record<string, string | undefined>, models
     openaiApiKey: value('OPENAI_API_KEY'),
     openrouterApiKey: value('OPENROUTER_API_KEY'),
     bitdeerApiKey: value('BITDEER_API_KEY'),
+    // The harness reads FEATHERLESSAI_API_KEY; take the shorter name too.
+    featherlessApiKey: value('FEATHERLESS_API_KEY') ?? value('FEATHERLESSAI_API_KEY'),
     // The fine-tune: the harness calls it ender (ENDER_BASE_URL, ENDER_API_KEY).
     customBaseUrl: value('ENDER_BASE_URL'),
     customApiKey: value('ENDER_API_KEY') ?? value('RUNPOD_API_KEY'),
@@ -33,7 +35,7 @@ export function siteInputFromEnv(env: Record<string, string | undefined>, models
   return Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as SiteInput;
 }
 
-const REPORTED: (keyof SiteInput)[] = ['anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'bitdeerApiKey', 'customBaseUrl', 'customApiKey', 'crsUsername', 'crsPassword'];
+const REPORTED: (keyof SiteInput)[] = ['anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'bitdeerApiKey', 'featherlessApiKey', 'customBaseUrl', 'customApiKey', 'crsUsername', 'crsPassword'];
 
 // What the input holds, by field name only: safe to print.
 export function fieldReport(input: SiteInput): string {

@@ -7,5 +7,6 @@
   { "id": "qwen", "label": "Qwen3.8-27B, stock (Bitdeer)", "provider": "bitdeer", "model": "Qwen/Qwen3.8-27B" },
   { "id": "deepseek", "label": "DeepSeek-V4.1-Flash (Bitdeer)", "provider": "bitdeer", "model": "deepseek-ai/DeepSeek-V4.1-Flash" },
   { "id": "glm", "label": "GLM-5.3 (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3" },
-  { "id": "glm-flash", "label": "GLM-5.3-Flash (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3-Flash" }
+  { "id": "glm-flash", "label": "GLM-5.3-Flash (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3-Flash" },
+  { "id": "abliterated", "label": "Abliterated Qwen3-14B (Featherless)", "provider": "featherless", "model": "huihui-ai/Huihui-Qwen3-14B-abliterated-v2" }
 ]

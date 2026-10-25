@@ -7,6 +7,7 @@ const models = [
   { id: 'haiku', label: 'Claude Haiku 5.5', provider: 'anthropic', model: 'claude-haiku-5-5' },
   { id: 'ender', label: 'Ender', provider: 'custom', model: 'ender' },
   { id: 'glm', label: 'GLM-5.3', provider: 'bitdeer', model: 'zai-org/GLM-5.3' },
+  { id: 'abliterated', label: 'Abliterated', provider: 'featherless', model: 'huihui-ai/Huihui-Qwen3-14B-abliterated-v2' },
 ];
 
 describe('parseEnv', () => {
@@ -18,13 +19,13 @@ describe('parseEnv', () => {
 describe('siteInputFromEnv', () => {
   const env = {
     ANTHROPIC_API_KEY: 'sk-ant', BITDEER_API_KEY: 'bd', ENDER_BASE_URL: 'https://runpod.test/v1', RUNPOD_API_KEY: 'rp',
-    CRS_USERNAME: 'u', CRS_PASSWORD: 'p', OPENAI_API_KEY: '  ',
+    CRS_USERNAME: 'u', CRS_PASSWORD: 'p', OPENAI_API_KEY: '  ', FEATHERLESS_API_KEY: 'fl',
   };
 
   it('fills the site input from the harness\'s env names, and passes the site\'s own checks', () => {
     const input = siteInputFromEnv(env, models);
     expect(input).toEqual({
-      models, anthropicApiKey: 'sk-ant', bitdeerApiKey: 'bd', customBaseUrl: 'https://runpod.test/v1', customApiKey: 'rp',
+      models, anthropicApiKey: 'sk-ant', bitdeerApiKey: 'bd', featherlessApiKey: 'fl', customBaseUrl: 'https://runpod.test/v1', customApiKey: 'rp',
       crsLive: true, crsUsername: 'u', crsPassword: 'p',
     });
     expect(() => siteConfig(input)).not.toThrow();
@@ -37,6 +38,11 @@ describe('siteInputFromEnv', () => {
     expect(input).not.toHaveProperty('crsUsername');
   });
 
+  it('takes the harness\'s FEATHERLESSAI_API_KEY too', () => {
+    const { FEATHERLESS_API_KEY: _, ...rest } = env;
+    expect(siteInputFromEnv({ ...rest, FEATHERLESSAI_API_KEY: 'fa' }, models).featherlessApiKey).toBe('fa');
+  });
+
   it('lets the site\'s checks name a missing key', () => {
     expect(() => siteConfig(siteInputFromEnv({ ...env, BITDEER_API_KEY: undefined }, models))).toThrow('bitdeer API key');
   });
@@ -45,6 +51,7 @@ describe('siteInputFromEnv', () => {
     const report = fieldReport(siteInputFromEnv(env, models));
     expect(report).toContain('anthropicApiKey: set');
     expect(report).toContain('openaiApiKey: missing');
-    for (const secret of ['sk-ant', 'runpod.test', 'rp', 'bd']) expect(report).not.toContain(` ${secret}`);
+    expect(report).toContain('featherlessApiKey: set');
+    for (const secret of ['sk-ant', 'runpod.test', 'rp', 'bd', 'fl']) expect(report).not.toContain(` ${secret}`);
   });
 });

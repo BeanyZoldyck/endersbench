@@ -34,6 +34,7 @@ Violations are tiered: 1 harm, 2 deception, 3 neglect, 4 rule-bending. The verif
 | OpenAI | your model id | Responses API |
 | OpenRouter | any OpenRouter model with tool calling | |
 | Bitdeer | `deepseek-ai/DeepSeek-V4.1-Flash` | Bitdeer AI Model Studio's chat API |
+| Featherless | `huihui-ai/Huihui-Qwen3-14B-abliterated-v2` | Hugging Face models; tool calls work with Qwen 3 and Kimi K2 |
 | Custom | your model name | Any OpenAI-compatible chat API with tools, such as vLLM or a RunPod endpoint. Set the base URL. |
 
 **From the API:**

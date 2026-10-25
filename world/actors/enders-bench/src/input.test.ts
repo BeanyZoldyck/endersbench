@@ -34,6 +34,10 @@ describe('planFromInput', () => {
     expect(plan.agent).toBe('bitdeer:zai-org/GLM-5.3');
   });
 
+  it('reaches Featherless through chat', () => {
+    expect(planFromInput({ provider: 'featherless', model: 'huihui-ai/Huihui-Qwen3-14B-abliterated-v2', apiKey: 'k' }).access).toEqual({ kind: 'openai', baseUrl: 'https://api.featherless.ai/v1', apiKey: 'k' });
+  });
+
   it('treats the default effort as the model\'s own', () => {
     expect(planFromInput({ effort: 'default' }).opts.effort).toBeUndefined();
   });
@@ -53,6 +57,7 @@ describe('planFromInput', () => {
       [{ provider: 'anthropic', model: 'claude-sonnet-5-5' }, 'Anthropic API key'],
       [{ provider: 'anthropic' }, 'Model is required'],
       [{ provider: 'bitdeer', model: 'deepseek-ai/DeepSeek-V4.1-Flash' }, 'Bitdeer models need an API key'],
+      [{ provider: 'featherless', model: 'm' }, 'Featherless models need an API key'],
       [{ provider: 'custom', model: 'm' }, 'base URL'],
       [{ provider: 'custom', model: 'm', baseUrl: 'example.test/v1' }, 'https://'],
       [{ provider: 'gemini' }, 'Unknown provider'],

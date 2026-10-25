@@ -7,7 +7,7 @@
 //   npm run actors:site -- --replace               abort a site run that's already going first
 //
 // Reads ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, BITDEER_API_KEY,
-// ENDER_BASE_URL, ENDER_API_KEY (or RUNPOD_API_KEY), CRS_USERNAME, CRS_PASSWORD
+// FEATHERLESS_API_KEY (or FEATHERLESSAI_API_KEY), ENDER_BASE_URL, ENDER_API_KEY (or RUNPOD_API_KEY), CRS_USERNAME, CRS_PASSWORD
 // and APIFY_TOKEN (or APIFY_API_KEY); the environment wins over the file.
 // The models on offer are in models.json.
 import fs from 'node:fs';
