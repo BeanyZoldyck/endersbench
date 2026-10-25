@@ -6,7 +6,7 @@ export const MAP_RADIUS = 64;
 export const EDGE_MARGIN = 1.5; // agents stay this far inside the edge
 
 // Movement and reach.
-export const WALK_SPEED = 4.5; // tiles per game second: fast enough that outcomes are choices, not distances
+export const WALK_SPEED = 5; // tiles per game second: fast enough that outcomes are choices, not distances
 export const FOLLOW_DISTANCE = 2; // bodies are 1.6 apart at the closest
 export const REACH = 2; // take, store, give, gather
 export const MELEE = 2.1; // attack reach, centre to centre

@@ -13,6 +13,8 @@ import { addRecord } from './record';
 import { reachFor } from './actions';
 import { hitWolf } from './threats';
 import { TOOLS } from './tools';
+import { settleThought } from './decisions';
+import { systemPrompt } from './brain/prompt';
 
 const {
   init,
@@ -31,6 +33,7 @@ const {
   resetExperiment,
   setRunInfo,
   configureScenario,
+  beginRun,
 } = moduleExports;
 
 // Game times on the default day: the run starts mid-morning, night is 90-162 s.
@@ -2406,8 +2409,9 @@ function homePositions() {
 describe('rules v11 geometry', () => {
   const worldOf = (t: T) => t.db.world.id.find(0)!;
 
-  test('the rules are version 12', () => {
-    expect(SCENARIO.version).toBe(12);
+  test('the rules are version 13, with survivors walking 5 tiles per game second', () => {
+    expect(SCENARIO.version).toBe(13);
+    expect(SCENARIO.walkSpeed).toBe(5);
   });
 
   test('the crate sits towards the bottom right of the default view, 62 tiles out, past the ring of trees', () => {
@@ -4329,5 +4333,122 @@ describe('the river as a landmark', () => {
     const w = worldOf(t);
     expect(riverPath(w)).toBe(riverPath(w));
     expect(riverPath(w)).toBe(riverPath({ ...w }));
+  });
+});
+
+describe('database brains', () => {
+  function runInfo(t: T, extra: Record<string, unknown>) {
+    t.withReducerTx(harness, ctx => setRunInfo(ctx, { info: JSON.stringify({ promptVariant: 'reward', systemPrompt: 'SYS', roster: [], ...extra }) }));
+  }
+  function openRequest(t: T, name: string, modelId: string) {
+    t.withReducerTx(harness, ctx => spawnAgent(ctx, { name, modelId }));
+    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    return pendingFor(t, agentNamed(t, name).id)[0];
+  }
+
+  test('a database run routes a supported survivor\'s request to the database brain', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    expect(req.brain).toBe('database');
+    expect([...t.db.thinkJob.iter()].map((j: any) => j.requestId)).toEqual([req.id]);
+  });
+
+  test('a harness run leaves requests to the harness', () => {
+    const t = freshWorld();
+    runInfo(t, {});
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    expect(req.brain).toBe('harness');
+    expect(t.db.thinkJob.count()).toBe(0n);
+  });
+
+  test('a database run leaves a harness-only model to the harness', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'fake');
+    expect(req.brain).toBe('harness');
+    expect(t.db.thinkJob.count()).toBe(0n);
+  });
+
+  test('settleThought ignores a request that is no longer pending', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    t.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+    const before = agentNamed(t, 'Ada');
+    let settled = true;
+    t.withReducerTx(internal, ctx => {
+      settled = settleThought(ctx, req.id, { decision: { action: { name: 'idle', args: {} }, thought: 'rest' } }, 812);
+    });
+    expect(settled).toBe(false);
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('expired');
+    expect(agentNamed(t, 'Ada')).toEqual(before);
+  });
+
+  test('settleThought applies a decision and records its latency', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    let settled = false;
+    t.withReducerTx(internal, ctx => {
+      settled = settleThought(ctx, req.id, { decision: { action: { name: 'idle', args: {} }, thought: 'rest' } }, 812);
+    });
+    expect(settled).toBe(true);
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('done');
+    const ada = agentNamed(t, 'Ada');
+    expect(ada.thought).toBe('rest');
+    expect(ada.lastLatencyMs).toBe(812);
+    expect(ada.pendingRequestId).toBe(0n);
+  });
+
+  test('settleThought records a failure in model health', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    t.withReducerTx(internal, ctx => {
+      settleThought(ctx, req.id, { error: 'bitdeer models need BITDEER_API_KEY' }, 3);
+    });
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('failed');
+    expect(t.db.modelHealth.modelId.find('bitdeer:m')!.lastError).toBe('bitdeer models need BITDEER_API_KEY');
+  });
+});
+
+describe('beginRun', () => {
+  const roster = [{ name: 'Ivy', modelId: 'bitdeer:m' }, { name: 'Rook', modelId: 'bitdeer:m' }];
+  const args = { roster, promptVariant: 'reward', foodScale: 1, roleOffset: 0, rescueSeats: 0, timeScale: 0.5 };
+
+  test('beginRun replaces the roster and starts a database run at time zero', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    t.withReducerTx(stranger, ctx => joinAsHuman(ctx, { name: 'Mason' }));
+    run(t, 2000);
+    t.withReducerTx(publisher, ctx => beginRun(ctx, args));
+    expect([...t.db.agent.iter()].map((a: any) => `${a.kind}:${a.name}:${a.modelId}`).sort()).toEqual(['llm:Ivy:bitdeer:m', 'llm:Rook:bitdeer:m']);
+    const w = t.db.world.id.find(0)!;
+    expect(w.gameTimeMs).toBe(0);
+    expect(w.timeScale).toBe(0.5);
+    expect(w.running).toBe(true);
+    const info = JSON.parse(t.db.meta.key.find('run')!.value);
+    expect(info.brains).toBe('database');
+    expect(info.promptVariant).toBe('reward');
+    expect(info.systemPrompt).toBe(systemPrompt('reward'));
+    expect(info.roster).toEqual(roster);
+  });
+
+  test('beginRun refuses harness-only models', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(publisher, ctx => beginRun(ctx, { ...args, roster: [{ name: 'Ivy', modelId: 'codex:gpt-6-sol' }] }))).toThrow(/codex:gpt-6-sol/);
+  });
+
+  test('beginRun refuses an unknown prompt variant', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(publisher, ctx => beginRun(ctx, { ...args, promptVariant: 'nope' }))).toThrow(/unknown prompt variant/);
+  });
+
+  test('beginRun refuses a stranger', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(stranger, ctx => beginRun(ctx, args))).toThrow(/not authorised/);
   });
 });

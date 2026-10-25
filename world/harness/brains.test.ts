@@ -283,6 +283,16 @@ describe('openai-compatible brain', () => {
 
     await expect(brain.decide({ agentName: 'Ada', observation, tools, system: '' })).rejects.toThrow(/tool/);
   });
+
+  test('sends a provider’s extra request fields', async () => {
+    const { calls, fetchImpl } = recordingFetch({
+      choices: [{ message: { tool_calls: [{ function: { name: 'idle', arguments: '{"thought":"rest"}' } }] } }],
+    });
+    const brain = openAiCompatibleBrain({ baseUrl: 'http://x/v1', apiKey: '', model: 'm', extraBody: { reasoning_effort: 'none' }, fetchImpl });
+
+    await brain.decide({ agentName: 'Ada', observation, tools, system: '' });
+    expect(calls[0].body.reasoning_effort).toBe('none');
+  });
 });
 
 describe('anthropic brain', () => {

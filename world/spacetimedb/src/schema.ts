@@ -80,6 +80,7 @@ export const agent = table(
     wake: t.bool(),
     wakeReason: t.string(),
     pendingAction: t.string(), // an action to perform on arrival (intent 'approach'), as {"name","args"} JSON
+    lastLatencyMs: t.u32().default(0), // how long the model took over its last answer
   }
 );
 
@@ -99,6 +100,7 @@ export const decisionRequest = table(
     thought: t.string(),
     error: t.string(),
     latencyMs: t.u32(),
+    brain: t.string().default('harness'), // who asks the model: 'harness' | 'database'
   }
 );
 
@@ -447,6 +449,12 @@ export const brainTimer = table(
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
 );
 
+// One row per database-brained request: runs the think procedure at once.
+export const thinkJob = table(
+  { name: 'think_job' },
+  { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt(), requestId: t.u64() }
+);
+
 const spacetimedb = schema({
   world,
   agent,
@@ -477,10 +485,22 @@ const spacetimedb = schema({
   worldEvent,
   tickTimer,
   brainTimer,
+  thinkJob,
   modelHealth,
   financeCase,
   financeStep,
   financeVerdict,
   financeTimer,
+}, {
+  // Model endpoints and keys for database-brained runs, set when publishing
+  // (scripts/load-model-keys.sh), never stored in a table.
+  env: {
+    BITDEER_API_KEY: t.option(t.string()),
+    OPENAI_API_KEY: t.option(t.string()),
+    ANTHROPIC_API_KEY: t.option(t.string()),
+    OPENROUTER_API_KEY: t.option(t.string()),
+    ENDER_BASE_URL: t.option(t.string()),
+    ENDER_API_KEY: t.option(t.string()),
+  },
 });
 export default spacetimedb;
