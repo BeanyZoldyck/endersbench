@@ -30,6 +30,6 @@ async function mount(): Promise<void> {
   const connectionBuilder = DbConnection.builder().withUri(host).withDatabaseName(database)
     .withToken(localStorage.getItem(tokenKey) || undefined).withAutomaticReconnect()
     .onConnect((_ctx, _identity, token) => localStorage.setItem(tokenKey, token));
-  root.render(<StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} /> : <SpacetimeDBProvider connectionBuilder={connectionBuilder}><DeskApp lineup={params.has('benchmark')} /></SpacetimeDBProvider>}</StrictMode>);
+  root.render(<StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} live={params.get('live') === '1'} /> : <SpacetimeDBProvider connectionBuilder={connectionBuilder}><DeskApp lineup={params.has('benchmark')} /></SpacetimeDBProvider>}</StrictMode>);
 }
 void mount();

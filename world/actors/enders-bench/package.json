@@ -1,0 +1,11 @@
+{
+  "name": "enders-bench-actor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ender's Bench as an Apify Actor. Build with `npm run actors:build` in world/, then `apify push` here.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.133.0",
+    "apify": "^3.7.2"
+  }
+}

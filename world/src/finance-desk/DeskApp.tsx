@@ -5,6 +5,7 @@ import { tables } from '../module_bindings';
 import type { FinanceFrame, FinanceRecording } from './replay';
 import ReplayDesk from './ReplayDesk';
 import { RunControls } from './RunControls';
+import { ApifyRun } from './ApifyRun';
 import { CONDITION_NAMES, currentVersion, scenarioFor } from './conditions';
 import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
 import { OfficeScene } from './OfficeScene';
@@ -30,7 +31,7 @@ export default function DeskApp({ lineup = false }: { lineup?: boolean }) {
   if (recording) return <ReplayDesk lineup={lineup} snapshot={recording} onExit={() => setRecording(undefined)} />;
   return <DeskView lineup={lineup} cases={cases} steps={steps} verdicts={verdicts} isActive={isActive} ready={casesReady && stepsReady && verdictsReady} initialComparisonKey={returnTo} onReplay={snapshot => { setReturnTo(cohorts(snapshot.cases, lineup)[0]?.key ?? ''); setRecording(snapshot); }} />;
 }
-export function DeskView({ lineup = false, cases, steps, verdicts, isActive, ready, replay, onReplay, initialComparisonKey }: FinanceFrame & { lineup?: boolean; isActive: boolean; ready: boolean; initialComparisonKey?: string; onReplay?: (recording: FinanceRecording) => void; replay?: { controls: ReactNode; error: string; comparisonKey?: string; url?: string; onExit?: () => void; pause: () => void; onComparisonChange: (key: string) => void } }) {
+export function DeskView({ lineup = false, cases, steps, verdicts, isActive, ready, replay, onReplay, initialComparisonKey }: FinanceFrame & { lineup?: boolean; isActive: boolean; ready: boolean; initialComparisonKey?: string; onReplay?: (recording: FinanceRecording) => void; replay?: { controls: ReactNode; error: string; comparisonKey?: string; url?: string; onExit?: () => void; pause: () => void; onComparisonChange: (key: string) => void; live?: string } }) {
   const [selection, setSelection] = useState(initialComparisonKey ?? '');
   const [selectedOffice, setSelectedOffice] = useState(0);
   const [ledgerOpen, setLedgerOpen] = useState(false);
@@ -54,8 +55,8 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
   const reportMismatches = insights.filter(i => i?.report?.honest === false).length;
   const crs = useMemo(() => crsStatus(offices.flatMap(o => o.steps)), [offices]);
   const online = !replay && isActive && ready;
-  const status = replay ? 'Replay' : !isActive ? cases.length ? 'Reconnecting' : 'Connecting' : !ready ? 'Syncing' : 'Live';
-  const statusDetail = replay ? scripts && !models ? 'Scripted replay · paced actions · no model calls' : 'Recorded SpacetimeDB case data · paced playback'
+  const status = replay ? replay.live ?? 'Replay' : !isActive ? cases.length ? 'Reconnecting' : 'Connecting' : !ready ? 'Syncing' : 'Live';
+  const statusDetail = replay ? replay.live ? 'An Apify Actor run in progress · the recording reloads as each case finishes' : scripts && !models ? 'Scripted replay · paced actions · no model calls' : 'Recorded SpacetimeDB case data · paced playback'
     : !isActive ? cases.length ? 'Reconnecting · showing the last synced state' : 'Connecting to SpacetimeDB'
     : !ready ? 'Syncing the offices' : scripts && models ? 'Live model activity · scripted references also shown' : scripts ? 'Live scripted reference run · no model calls' : 'Live · state and audit trail in SpacetimeDB';
   // A popover closes when you click anywhere else, or pick something inside a menu.
@@ -91,6 +92,7 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
           <button aria-pressed={mode === 'benchmark'} onClick={() => view('benchmark')}>Results</button>
         </nav>
         {!replay && onReplay && <details className="finance-pop run-pop"><summary>Run</summary><RunControls data={{ cases, steps, verdicts }} comparisonKey={group?.key} connected={isActive && ready} onSelect={setSelection} onReplay={onReplay} /></details>}
+        {replay && <ApifyRun replayUrl={replay.url} />}
         <details className="finance-pop more-menu">
           <summary aria-label="More">⋯</summary>
           <div className="more-items" onClick={e => (e.currentTarget.parentElement as HTMLDetailsElement).open = false}>
