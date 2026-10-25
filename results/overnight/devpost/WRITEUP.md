@@ -16,9 +16,9 @@ We record the evidence behind each result: the instructions the model received, 
 
 ## What we found
 
-From 126 overnight runs of The Clearing (8 models, every decision made inside SpacetimeDB) and 231 Ledger Street cases on live CRS data:
+From 131 overnight runs of The Clearing (8 models, every decision made inside SpacetimeDB) and 231 Ledger Street cases on live CRS data:
 
-- **Stating the rules halves rule-breaking.** Across all 8 models, adding the camp's charter to the prompt cut the share of temptations taken from 6.0% to 2.9%. A run-level permutation test gives p = 0.00005. Ledger Street shows the same pattern: without the house rules, GPT-6 Luna fell from 6 of 7 demo cases to 3, Qwen3.8-27B from 7 to 4, and DeepSeek from 7 to 3. Only Claude Haiku held, at 6.
+- **Stating the rules halves rule-breaking.** Across all 8 models, adding the camp's charter to the prompt cut the share of temptations taken from 6.0% to 2.7%, and 7 of the 8 broke the rules less with it. A run-level permutation test gives p = 0.00005. Ledger Street shows the same pattern: without the house rules, GPT-6 Luna fell from 6 of 7 demo cases to 3, Qwen3.8-27B from 7 to 4, and DeepSeek from 7 to 3. Only Claude Haiku held, at 6.
 - **Models say one thing and do another, on the record.** Claude Haiku thought “Not mine, avoid.” and took the berries. DeepSeek called three grabs its “fair share,” noted it was already over, stored the rations in its own chest, and took more. GPT-6 Luna offered to share berries it didn't have. Every quote is checked against the decision log and can be replayed.
 - **Some failures are universal.** Without house rules, Haiku, Luna, Qwen, and DeepSeek all failed the same 11 finance cases. All four approved a loan despite a hidden court judgment.
 - **Removing refusals didn't make a model steal more; it made it die more.** The abliterated Qwen3.8-27B took fewer temptations than its base (1% against 4% under the charter, Fisher p = 0.01), but 20 of its 100 survivors died, against 3 of 48 for the base.
@@ -42,7 +42,7 @@ SpacetimeDB isn't a storage layer for Ender's Bench. It's the game server, the r
 
 - **The game server.** More than 30 tables hold the world. Movement, hunger, cold, fires, wolves, weather, and the rescue plane run as reducers on a 20 Hz scheduled tick. Every action (take, give, build, attack, help) is a reducer that commits the world change and the policy-detector record in one transaction, so each violation is tied to the exact action that caused it.
 - **The agent runtime: database brains.** A scheduled reducer opens a durable decision request for each survivor that's due to think. A scheduled procedure, `think`, sends the survivor's observation to its model with `ctx.http.fetch` and commits the answer through the same action path. The providers it calls are Bitdeer, Anthropic, OpenAI, and our Runpod endpoints. Requests time out, retry, and are withdrawn when sudden danger makes them stale, and a `model_health` table keeps provider failures apart from behavior. Provider keys live in the database's environment variables, and a `beginRun` reducer starts a run with its roster, prompt, food level, and time scale. There is no harness, queue, or external worker.
-- **Proven at scale.** Overnight we ran 126 runs in 9 worlds side by side on one machine: **53,270 model calls made from inside SpacetimeDB.** The breakdown was 15,151 to Bitdeer, 15,216 to Anthropic, 20,137 to Runpod, and 2,766 to OpenAI. The game clock held 97% of its set speed with every world calling models at once, the same as a single world; our first test of the design showed parallel HTTP calls from procedures don't stall the 20 Hz tick, locally or on Maincloud.
+- **Proven at scale.** Overnight we ran 131 runs in 9 worlds side by side on one machine: **55,461 model calls made from inside SpacetimeDB.** The breakdown was 15,977 to Bitdeer, 16,223 to Anthropic, 20,495 to Runpod, and 2,766 to OpenAI. The game clock held 97% of its set speed with every world calling models at once, the same as a single world; our first test of the design showed parallel HTTP calls from procedures don't stall the 20 Hz tick, locally or on Maincloud.
 - **The scorekeeper.** `run_history` and `run_result` tables keep every run permanently, through resets. A public view, `leaderboard`, aggregates finished runs by model, prompt, and rules version as they close. Ledger Street runs in the same database: its cases, verdicts, and every desk step, each with its CRS RequestID, are tables driven by their own scheduled reducer.
 - **The broadcast.** Our React Three Fiber viewer is a live subscription, and so is the recorder that produces the replays behind our demo exhibits. Visitors can join as survivors through `joinAsHuman`, which binds a survivor to their identity, and play alongside the models in the same world.
 - **Hosted on Maincloud.** The public viewer runs against the hosted database, adding about 0.02 s per decision, and new module versions publish over it with the data kept. The tick, the brain procedure, and the reset accept only the database's own identity (`ctx.databaseIdentity`), so spectators can watch and join but can't tick, reset, or impersonate a model.
@@ -59,7 +59,7 @@ Ledger Street, our finance benchmark, is built on the CRS credit sandbox. In liv
 
 ### Bitdeer AI Model Studio: open-weight contestants and a precision control
 
-- **Three open-weight models through Model Studio's serverless, OpenAI-compatible API:** DeepSeek-V4.1-Flash, GLM-5.3, and Qwen3.8-27B. They were called straight from SpacetimeDB, 15,151 calls overnight at 1.4 s each on average, and also ran on Ledger Street.
+- **Three open-weight models through Model Studio's serverless, OpenAI-compatible API:** DeepSeek-V4.1-Flash, GLM-5.3, and Qwen3.8-27B. They were called straight from SpacetimeDB, 15,977 calls overnight at 1.4 s each on average, and also ran on Ledger Street.
 - **Tuned per model.** DeepSeek runs with reasoning off. GLM-5.3 refuses that setting and failed 16 of 33 tool calls at its default reasoning; with `reasoning_effort: low` and a 4,096-token cap it called a tool 6 of 6 times in 1.3 s.
 - **A control we couldn't have run ourselves.** Bitdeer's Qwen3.8-27B is Ender's base model at full precision. On Ledger Street it passes 47 of 70 cases, while the 4-bit copy we serve Ender on passes 40. That's how we learned that quantization, not just fine-tuning, shapes Ender's results.
 - **Rate limits.** We found the limit fits one busy world at a time, so we rotate the Bitdeer models inside one world instead of giving each its own.
@@ -68,11 +68,11 @@ Ledger Street, our finance benchmark, is built on the CRS credit sandbox. In liv
 
 - **Two serverless vLLM endpoints on 48 GB GPUs.** One serves Ender: Qwen3.8-27B in 4-bit with our LoRA adapter, under the model name `ender`. A new version is deployed by replacing the adapter on the network volume, and this morning v1.1 gave way to v1.3. The other serves an abliterated Qwen3.8-27B with its refusals removed. Both share the same base and serving stack, so differences between them come from the fine-tune or the abliteration.
 - **Fast enough for a live world.** Enabling CUDA graphs and FlashBoot cut Ender's warm answer time from 7–11 s to 3–4 s, with about a 14 s cold start; a warm-up script wakes both endpoints before each run.
-- **Scale.** 20,137 survival decisions overnight, plus 231 Ledger Street cases this morning.
+- **Scale.** 20,495 survival decisions overnight, plus 231 Ledger Street cases this morning.
 
 ### Anthropic: Claude Haiku 5.5 as a reference model
 
-- **Claude Haiku 5.5 through the Messages API, called from inside SpacetimeDB:** 15,216 calls overnight at 1.1 s each on average, the fastest of our models.
+- **Claude Haiku 5.5 through the Messages API, called from inside SpacetimeDB:** 16,223 calls overnight at 1.2 s each on average, the fastest of our models.
 - **The strongest Ledger Street result without rules:** 50 of 70 cases passed with zero harmful decisions.
 - **Our clearest say–do gap.** A starving Haiku agent thought “Take berries from Wren's chest? Not mine, avoid.” and then took the berries; it's the moment on our thumbnail.
 - Much of the harness, the database model calls, and the overnight data pipeline was built with Claude Code.
@@ -115,7 +115,7 @@ For fine-tuning, the challenge was defining what improvement would mean. Lower t
 
 We built a working live environment where AI decisions produce visible consequences and leave inspectable evidence. Users can follow an agent from its observation and explanation to its action and outcome, instead of relying on a single summary score.
 
-We ran it at scale overnight: 126 runs across 8 models, with every decision made from inside the database. The clearest result: stating the camp's rules in the prompt cut the share of temptations models took from 6.0% to 2.9%. We tested this with a run-level permutation test (p = 0.00005), which does not assume the decisions inside a run are independent.
+We ran it at scale overnight: 131 runs across 8 models, with every decision made from inside the database. The clearest result: stating the camp's rules in the prompt cut the share of temptations models took from 6.0% to 2.7%. We tested this with a run-level permutation test (p = 0.00005), which does not assume the decisions inside a run are independent.
 
 The recordings capture the gap between explanation and action directly. One agent explained that it had already exceeded its fair share and should stop taking supplies, then took four more rations. Another wrote “Not mine, avoid.” as it took another survivor's berries. The record shows the mismatch without requiring us to speculate about the model's internal reasoning.
 
