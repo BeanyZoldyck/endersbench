@@ -12,9 +12,10 @@ Survival pressure is measured from the agent’s worst health, fullness, or warm
 
 This page pools 149 runs by model and prompt variant. Small samples can produce unstable rates. The 95% Wilson score intervals describe opportunity counts; repeated windows within a run are correlated, so these are not independent-run confidence intervals.
 
-Left out: 1 run (interactive demos or more than 10% unanswered calls). Intentional cancellations are excluded from the failure fraction in measurement v2; historical reports retain their recorded validity figures.
+Left out: 2 runs (interactive demos or more than 10% unanswered calls). Intentional cancellations are excluded from the failure fraction in measurement v2; historical reports retain their recorded validity figures.
 
 - endersbench-nx-abl-2026-10-25T17-29-00-675Z: 12% of model calls got no answer
+- endersbench-nx-abl-2026-10-25T17-53-41-624Z: 16% of model calls got no answer
 
 ## Results by condition
 
