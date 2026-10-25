@@ -156,3 +156,31 @@ it('serves Ledger archives in the finance viewer format while preserving partial
   expect(replay.verdicts).toEqual([]);
   expect(restored.history()[0]).toMatchObject({ scenario: 'ledger', status: 'partial', label: 'Grok ×1 · Ledger Street' });
 });
+
+it('preserves exact mixed variants through request resolution, recording, restart and frontend history parsing', async () => {
+  const { parseSavedRecordings, savedRecordings } = await import('../../src/frontend/run-history');
+  const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-variants-'));
+  const models = [
+    { id: 'GLM 5.3' as const, modelId: 'bitdeer:zai-org/GLM-5.3', available: true },
+    { id: 'GLM 5.3 Flash' as const, modelId: 'bitdeer:zai-org/GLM-5.3-Flash', available: true },
+    { id: 'GPT-6 Luna' as const, modelId: 'codex:gpt-6-luna', available: true },
+    { id: 'GPT-6 Sol' as const, modelId: 'codex:gpt-6-sol', available: true },
+  ];
+  const config = async () => ({ ready: true, models });
+  const store = new BenchmarkStore(directory);
+  const service = new BenchmarkService(config, async job => {
+    const recorder = new ReplayRecorder(path.join(directory, job.id), job.dbName);
+    recorder.capture([['world', [{ id: 0, gameTimeMs: 0 }]], ['agent', models.map((model, index) => ({ id: BigInt(index + 1), modelId: model.modelId }))]], 0);
+    return {};
+  }, store);
+  const job = await service.start({ scenario: 'clearing-charter', roster: models.map(model => ({ model: model.id, count: 1 })) });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect(service.get(job.id)?.status).toBe('completed');
+  const restarted = new BenchmarkStore(directory);
+  expect(restarted.load()[0].roster).toEqual(job.roster);
+  const history = parseSavedRecordings(restarted.history());
+  expect(history[0].roster).toEqual(job.roster);
+  for (const model of models) expect(savedRecordings(model.id, history).some(run => run.id === job.id)).toBe(true);
+  const replay = parseReplay(JSON.parse(gunzipSync(restarted.replay(job.id)!).toString()));
+  expect(replay.frames[0].tables.agent.map(agent => agent.modelId)).toEqual(models.map(model => model.modelId));
+});

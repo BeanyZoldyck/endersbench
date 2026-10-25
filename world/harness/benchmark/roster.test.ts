@@ -49,3 +49,24 @@ describe('selected survivor roster', () => {
     expect(rosterHasFinished('rescued', agents.slice(1), assignments)).toBe(false);
   });
 });
+
+describe('exact variant routing', () => {
+  it('allows sibling variants in the same run and rejects decisions from the other sibling', () => {
+    const roster = [
+      { model: 'GLM 5.3' as const, modelId: 'bitdeer:zai-org/GLM-5.3', count: 1 },
+      { model: 'GLM 5.3 Flash' as const, modelId: 'bitdeer:zai-org/GLM-5.3-Flash', count: 1 },
+      { model: 'GPT-6 Luna' as const, modelId: 'codex:gpt-6-luna', count: 1 },
+      { model: 'GPT-6 Sol' as const, modelId: 'codex:gpt-6-sol', count: 1 },
+    ];
+    expect(isRosterSelection(roster.map(({ model, count }) => ({ model, count })))).toBe(true);
+    const agents = expandRoster(roster);
+    expect(new Set(agents.map(agent => agent.modelId)).size).toBe(4);
+    const assignments = new Map(agents.map((agent, index) => [BigInt(index + 1), agent]));
+    for (let index = 0; index < agents.length; index++) {
+      const agentId = BigInt(index + 1);
+      const agent = { ...agents[index], kind: 'llm' };
+      expect(assignmentForDecision(assignments, { agentId, modelId: agent.modelId }, agent).model).toBe(roster[index].model);
+      expect(() => assignmentForDecision(assignments, { agentId, modelId: agents[(index + 1) % agents.length].modelId }, agent)).toThrow();
+    }
+  });
+});

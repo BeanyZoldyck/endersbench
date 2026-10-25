@@ -102,3 +102,22 @@ it('keeps legacy launches as four identical survivors and blocks unavailable sce
   await expect(unavailable.start({ roster: [{ model: 'ChatGPT', count: 1 }], scenario: 'not-a-map' })).rejects.toMatchObject({ statusCode: 400 });
   await tick();
 });
+
+it('resolves four exact sibling variants from the request without accepting client-side ID overrides', async () => {
+  const models = [
+    { id: 'GLM 5.3' as const, modelId: 'bitdeer:zai-org/GLM-5.3', available: true },
+    { id: 'GLM 5.3 Flash' as const, modelId: 'bitdeer:zai-org/GLM-5.3-Flash', available: true },
+    { id: 'GPT-6 Luna' as const, modelId: 'codex:gpt-6-luna', available: true },
+    { id: 'GPT-6 Sol' as const, modelId: 'codex:gpt-6-sol', available: true },
+  ];
+  const invoked: BenchmarkJob[] = [];
+  const service = new BenchmarkService(async () => ({ ready: true, models }), async job => { invoked.push(job); return {}; });
+  await expect(service.start({ scenario: 'clearing-charter', roster: [{ model: 'GPT-6 Sol', count: 1, modelId: 'codex:gpt-6-luna' }] })).rejects.toMatchObject({ statusCode: 400 });
+  const roster = models.map(model => ({ model: model.id, count: 1 }));
+  const job = await service.start({ scenario: 'clearing-charter', roster });
+  expect(job.roster).toEqual(models.map(model => ({ model: model.id, modelId: model.modelId, count: 1 })));
+  expect(invoked[0]).toBe(job);
+  await tick();
+  const unavailable = new BenchmarkService(async () => ({ ready: true, models: models.map(model => model.id === 'GPT-6 Sol' ? { ...model, available: false } : model) }), async () => ({}));
+  await expect(unavailable.start({ scenario: 'ledger', roster: [{ model: 'GPT-6 Sol', count: 1 }] })).rejects.toMatchObject({ statusCode: 422 });
+});

@@ -12,16 +12,16 @@ afterEach(() => vi.unstubAllGlobals());
 describe('setup and benchmark navigation flow', () => {
   it('retains a mixed lineup and scenario through scenario details and Back', () => {
     let state = initialStudioState('?studio=follow&replay=/demo/clearing-reward-v2.json.gz&t=12');
-    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'ChatGPT', delta: -1 });
-    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'ChatGPT', delta: -1 });
-    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude', delta: 1 });
+    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
+    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
+    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
     state = transitionStudio(state, { type: 'select-draft-scenario', scenario: 'ledger' });
     state = transitionStudio(state, { type: 'navigate', screen: 'setup', timeMs: 12_000 });
     state = transitionStudio(state, { type: 'navigate', screen: 'briefing' });
     state = transitionStudio(state, { type: 'back' });
     expect(state).toMatchObject({
       screen: 'setup', draftMode: 'swarm', draftScenario: 'ledger',
-      draftRoster: { Ender: 0, Grok: 0, Claude: 1, ChatGPT: 2 }, playing: false,
+      draftRoster: { 'Claude 5.5': 1, 'GPT-6 Luna': 2 }, playing: false,
     });
   });
 
@@ -30,12 +30,12 @@ describe('setup and benchmark navigation flow', () => {
     const request = vi.fn().mockResolvedValue(new Response(JSON.stringify(responseJob), { status: 202 }));
     vi.stubGlobal('fetch', request);
     let state = initialStudioState('?studio=monitor&replay=/demo/clearing-reward-v2.json.gz&t=73');
-    state = transitionStudio(state, { type: 'select-draft-model', model: 'Claude' });
+    state = transitionStudio(state, { type: 'select-draft-model', model: 'Claude 5.5' });
     state = transitionStudio(state, { type: 'select-draft-scenario', scenario: 'ledger' });
     state = transitionStudio(state, { type: 'navigate', screen: 'setup' });
     const launched = await launchBenchmark(rosterEntries(state.draftRoster), state.draftScenario);
     const [, init] = request.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({ roster: [{ model: 'Claude', count: 4 }], scenario: 'ledger' });
+    expect(JSON.parse(String(init.body))).toEqual({ roster: [{ model: 'Claude 5.5', count: 4 }], scenario: 'ledger' });
     expect(launched).toEqual(responseJob);
     const destination = new URL(benchmarkViewerHref({ ...launched, status: 'running' }), 'http://localhost');
     expect(destination.pathname).toBe('/finance.html');

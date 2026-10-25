@@ -3,11 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { BenchmarkLobby } from './ui-ux/BenchmarkLobby';
 import type { BenchmarkConfig, BenchmarkJob } from './benchmark-client';
-import { initialStudioState, type StudioState } from './model';
+import { BENCHMARK_MODELS, initialStudioState, type StudioState } from './model';
 
 const config: BenchmarkConfig = {
   ready: true,
-  models: [{ id: 'ChatGPT', modelId: 'chatgpt-configured', available: true }, { id: 'Claude', modelId: null, available: false, reason: 'Set BENCHMARK_MODEL_CLAUDE to configure the connection.' }],
+  models: [{ id: 'GPT-6 Luna', modelId: 'chatgpt-configured', available: true }, { id: 'Claude 5.5', modelId: null, available: false, reason: 'Set BENCHMARK_MODEL_CLAUDE to configure the connection.' }],
   scenarios: [{ id: 'clearing-charter', name: 'The Clearing', description: 'Share scarce supplies.' }, { id: 'ledger', name: 'Ledger', description: 'Review financial evidence.', available: false, reason: 'Ledger adapter unavailable.' }],
 };
 type LobbyProps = ComponentProps<typeof BenchmarkLobby>;
@@ -30,15 +30,15 @@ describe('benchmark lobby rendered controls', () => {
   it('shows the shared cap and disables every add button at four agents', () => {
     const markup = render();
     expect(markup).toContain('4/4 selected');
-    for (const model of ['Ender', 'Grok', 'Claude', 'ChatGPT']) expect(button(markup, `Add one ${model} agent`)).toContain('disabled');
-    expect(button(markup, 'Remove one ChatGPT agent')).not.toContain('disabled');
+    for (const model of BENCHMARK_MODELS) expect(button(markup, `Add one ${model} agent`)).toContain('disabled');
+    expect(button(markup, 'Remove one GPT-6 Luna agent')).not.toContain('disabled');
     expect(button(markup, 'Remove one Ender agent')).toContain('disabled');
   });
-  it('lets a disconnected model be added while explaining its connection requirement', () => {
+  it('disables adding a disconnected model while explaining its connection requirement', () => {
     const state = initialStudioState('');
-    state.draftRoster.ChatGPT = 2;
+    state.draftRoster['GPT-6 Luna'] = 2;
     const markup = render(state);
-    expect(button(markup, 'Add one Claude agent')).not.toContain('disabled');
+    expect(button(markup, 'Add one Claude 5.5 agent')).toContain('disabled');
     expect(markup).toContain('Not connected');
     expect(markup).not.toContain('BENCHMARK_MODEL_CLAUDE');
     expect(markup).toContain('2/4 selected');
@@ -61,14 +61,14 @@ describe('benchmark lobby rendered controls', () => {
     const markup = render(initialStudioState(''), null);
     expect(markup).toContain('Waiting for benchmark runner');
     expect(markup).toContain('Checking connection');
-    expect(button(markup, 'Remove one ChatGPT agent')).not.toContain('disabled');
+    expect(button(markup, 'Remove one GPT-6 Luna agent')).not.toContain('disabled');
     expect(markup).toMatch(/<button class="button gold" disabled=""/);
   });
 });
 
 
 const job: BenchmarkJob = {
-  id: 'lobby-run', status: 'running', model: 'ChatGPT', modelId: 'chatgpt-configured',
+  id: 'lobby-run', status: 'running', model: 'GPT-6 Luna', modelId: 'chatgpt-configured',
   scenario: 'clearing-charter', dbName: 'endersbench-run-lobby-run', host: 'ws://localhost:3000',
 };
 
@@ -100,8 +100,8 @@ describe('benchmark lobby Start and Continue actions', () => {
     const markup = render(initialStudioState(''), config, { starting: true, error: 'Reconnect pending.' });
     expect(launchButton(markup)).toContain('Starting benchmark…');
     expect(launchButton(markup)).toContain('disabled');
-    expect(markup).toContain('Preparing a new world for 4 ChatGPT…');
-    expect(button(markup, 'Remove one ChatGPT agent')).toContain('disabled');
+    expect(markup).toContain('Preparing a new world for 4 GPT-6 Luna…');
+    expect(button(markup, 'Remove one GPT-6 Luna agent')).toContain('disabled');
     expect(markup).toMatch(/<select[^>]*id="benchmark-scenario"[^>]*disabled=""/);
     expect(markup).toMatch(/<button class="text-link" disabled="">Retry connection/);
   });
@@ -109,8 +109,8 @@ describe('benchmark lobby Start and Continue actions', () => {
   it.each([
     ['runner configuration is unavailable', null, initialStudioState('')],
     ['the draft scenario is unavailable', config, { ...initialStudioState(''), draftScenario: 'ledger' }],
-    ['the draft lineup is empty', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0 } }],
-    ['the draft model is disconnected', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 1, ChatGPT: 0 } }],
+    ['the draft lineup is empty', config, { ...initialStudioState(''), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 0, 'GPT-6 Luna': 0 } }],
+    ['the draft model is disconnected', config, { ...initialStudioState(''), draftRoster: { Ender: 0, 'GLM 5.3': 0, 'Claude 5.5': 1, 'GPT-6 Luna': 0 } }],
   ] as const)('keeps a running benchmark resumable when %s', (_reason, currentConfig, state) => {
     const markup = render(state, currentConfig, { activeJob: job });
     expect(launchButton(markup)).toContain('Continue benchmark');

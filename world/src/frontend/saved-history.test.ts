@@ -89,14 +89,14 @@ describe('saved replay destinations and outcomes', () => {
   it('survives a fresh deep link and returns to the archive without changing draft model selection', () => {
     const href = recordedStudioHref('monitor', id, 0);
     let state = initialStudioState(new URL(href, 'http://localhost').search);
-    expect(state).toMatchObject({ runId: id, screen: 'monitor', draftModel: 'ChatGPT' });
+    expect(state).toMatchObject({ runId: id, screen: 'monitor', draftModel: 'GPT-6 Luna' });
     expect(recordedStartMs(state, href.split('?')[1], local.durationMs)).toBe(0);
     state = transitionStudio(state, { type: 'navigate', screen: 'compare' });
     state = transitionStudio(state, { type: 'history-model', model: 'Claude' });
     state = transitionStudio(state, { type: 'select-run', runId: id });
     state = transitionStudio(state, { type: 'navigate', screen: 'monitor', timeMs: 0 });
     state = transitionStudio(state, { type: 'back', fallback: 'compare' });
-    expect(state).toMatchObject({ screen: 'compare', historyModel: 'Claude', draftModel: 'ChatGPT' });
+    expect(state).toMatchObject({ screen: 'compare', historyModel: 'Claude', draftModel: 'GPT-6 Luna' });
     expect(initialStudioState(`?studio=compare&historyModel=Claude`).historyModel).toBe('Claude');
   });
   it('cannot call partial or metadata-unavailable UUID captures complete even after a rescued frame', () => {

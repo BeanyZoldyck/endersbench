@@ -1,13 +1,19 @@
+import { MODEL_CATALOG, exactModelName } from '../../shared/models';
 import type { Agent } from '../module_bindings/types';
 import type { RecordedTables } from '../useReplay';
 
 export function modelDisplayName(modelId: string): string {
+  const exact = exactModelName(modelId);
+  if (exact) return exact;
   const id = modelId.trim().replace(/^[^:]+:/, '');
   if (!id) return 'Unknown model';
   return id.split('-').map(part => /^(gpt|ai)$/i.test(part) ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
 export function modelAvatarPath(modelId: string): string | null {
+  const exact = exactModelName(modelId);
+  const known = MODEL_CATALOG.find(model => model.name === exact);
+  if (known) return `/studio/avatars/${known.avatar}.png`;
   const id = modelId.toLowerCase();
   const model = id.includes('grok') ? 'grok' : id.includes('claude') ? 'claude' : id.includes('gpt') || id.includes('openai') || id === 'chatgpt' ? 'chatgpt' : id.includes('ender') ? 'ender' : null;
   return model ? `/studio/avatars/${model}.png` : null;

@@ -1,3 +1,4 @@
+import { exactModelName } from '../../shared/models';
 import type { StudioModel } from './model';
 
 export const RUNS = [
@@ -11,5 +12,5 @@ export const RUNS = [
 ] as const;
 
 export function benchmarkRuns(model: StudioModel) {
-  return RUNS.filter(run => run.model === model);
+  return RUNS.filter(run => run.model === model || exactModelName(run.modelId) === model);
 }

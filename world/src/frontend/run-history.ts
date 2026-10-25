@@ -1,6 +1,7 @@
 import { RUNS } from './catalog';
 import metadata from './recording-metadata.json';
-import { BENCHMARK_MODELS, type StudioModel } from './model';
+import type { StudioModel } from './model';
+import { exactModelName, isModelName } from '../../shared/models';
 import { rosterLabel, type BenchmarkRosterEntry } from './benchmark-client';
 
 export type SavedRosterEntry = BenchmarkRosterEntry & { modelId: string };
@@ -34,7 +35,7 @@ export function parseSavedRecordings(value: unknown): SavedRecording[] {
     if (!entry || typeof entry !== 'object') throw new Error('Invalid saved recording.');
     const row = entry as Record<string, unknown>;
     if (typeof row.id !== 'string' || !isSavedRunId(row.id)
-      || !['Ender', 'Grok', 'Claude', 'ChatGPT'].includes(String(row.model))
+      || !isModelName(row.model)
       || typeof row.modelId !== 'string' || !row.modelId.trim() || row.modelId.length > 200
       || (row.scenario !== 'clearing-charter' && row.scenario !== 'ledger')
       || typeof row.label !== 'string' || !row.label.trim() || row.label.length > 300
@@ -62,7 +63,7 @@ function parseSavedRoster(value: unknown): SavedRosterEntry[] | undefined {
   const roster = value.map((entry: unknown) => {
     if (!entry || typeof entry !== 'object') throw new Error('Invalid saved roster.');
     const row = entry as Record<string, unknown>;
-    if (!BENCHMARK_MODELS.includes(row.model as StudioModel) || typeof row.modelId !== 'string' || !row.modelId.trim() || row.modelId.length > 200
+    if (!isModelName(row.model) || typeof row.modelId !== 'string' || !row.modelId.trim() || row.modelId.length > 200
       || typeof row.count !== 'number' || !Number.isInteger(row.count) || row.count < 1 || row.count > 4 || seen.has(row.model as StudioModel)) throw new Error('Invalid saved roster.');
     seen.add(row.model as StudioModel);
     total += row.count;
@@ -77,12 +78,13 @@ export function ledgerReplayHref(id: string): string {
   return `/finance.html?${new URLSearchParams({ replay: `/api/benchmarks/${id}/replay` })}`;
 }
 
-export function recordingModels(run: Pick<SavedRecording, 'model' | 'roster'>): StudioModel[] {
-  return run.roster?.map(entry => entry.model) ?? [run.model];
+export function recordingModels(run: Pick<SavedRecording, 'model' | 'modelId' | 'roster'>): StudioModel[] {
+  const entries = run.roster ?? [run];
+  return [...new Set(entries.flatMap(entry => [entry.model, exactModelName(entry.modelId)].filter((model): model is StudioModel => model !== null)))];
 }
 
 export function recordingIdentity(run: Pick<SavedRecording, 'model' | 'modelId' | 'roster'>): { label: string; modelIds: string } {
-  return run.roster ? { label: rosterLabel(run.roster), modelIds: run.roster.map(entry => entry.modelId).join(' + ') } : { label: run.model, modelIds: run.modelId };
+  return run.roster ? { label: rosterLabel(run.roster.map(entry => ({ ...entry, model: exactModelName(entry.modelId) ?? entry.model }))), modelIds: run.roster.map(entry => entry.modelId).join(' + ') } : { label: exactModelName(run.modelId) ?? run.model, modelIds: run.modelId };
 }
 
 export async function fetchSavedRecordings(signal?: AbortSignal): Promise<SavedRecording[]> {

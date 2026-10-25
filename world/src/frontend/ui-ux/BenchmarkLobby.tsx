@@ -23,9 +23,9 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, activ
   const entries = rosterEntries(state.draftRoster);
   const scenario = config?.scenarios.find(option => option.id === state.draftScenario);
   const illustration = scenario?.id.startsWith('clearing-')
-    ? { src: '/studio/clearing-mascots-concept.png', alt: 'The model buddies sharing berries around a table in The Clearing.' }
+    ? { src: '/studio/clearing-deepseek.png', alt: 'The model buddies sharing berries around a table in The Clearing.' }
     : scenario?.id === 'ledger'
-      ? { src: '/studio/lending-desk-simple.png', alt: 'The model buddies reviewing lending evidence at office desks on Ledger Street.' }
+      ? { src: '/studio/ledger-deepseek.png', alt: 'The model buddies reviewing lending evidence at office desks on Ledger Street.' }
       : null;
   const blocker = benchmarkBlocker(config, state.draftRoster, state.draftScenario);
   return <main className="studio-main setup-page compact-setup benchmark-lobby">
@@ -36,14 +36,14 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, activ
         <p className="small muted" id="lineup-help">Four agents maximum across all models. Remove an agent to make room for another model.</p>
         <div className="lineup-models" aria-describedby="lineup-help">{BENCHMARK_MODELS.map(model => {
           const connection = config?.models.find(option => option.id === model);
-          const count = state.draftRoster[model];
+          const count = state.draftRoster[model] ?? 0;
           return <div key={model} className={`lineup-model ${count > 0 ? 'selected' : ''}`}>
             <ModelBuddy modelId={model} large />
             <div className="lineup-model-name"><h3>{model}</h3><p className="small muted">{connection?.modelId || 'No model connected'}</p></div>
             <div className="lineup-stepper" role="group" aria-label={`${model} agent count`}>
               <button type="button" aria-label={`Remove one ${model} agent`} disabled={count === 0 || starting} onClick={() => dispatch({ type: 'adjust-draft-count', model, delta: -1 })}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" /></svg></button>
               <output aria-label={`${model} agents`}>{count}</output>
-              <button type="button" aria-label={`Add one ${model} agent`} disabled={total >= MAX_BENCHMARK_AGENTS || starting} onClick={() => dispatch({ type: 'adjust-draft-count', model, delta: 1 })}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
+              <button type="button" aria-label={`Add one ${model} agent`} disabled={!connection?.available || total >= MAX_BENCHMARK_AGENTS || starting} onClick={() => dispatch({ type: 'adjust-draft-count', model, delta: 1 })}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
             </div>
             <p className={`lineup-connection small ${connection?.available ? 'muted' : 'unavailable'}`}>{!config ? 'Checking connection' : connection?.available ? 'Ready' : 'Not connected'}</p>
           </div>;

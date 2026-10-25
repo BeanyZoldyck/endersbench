@@ -1,10 +1,11 @@
-import { BENCHMARK_MODELS, MAX_BENCHMARK_AGENTS, rosterSize, type BenchmarkRoster, type StudioModel } from './model';
+import { ALL_MODEL_NAMES, isModelName } from '../../shared/models';
+import { MAX_BENCHMARK_AGENTS, rosterSize, type BenchmarkRoster, type StudioModel } from './model';
 
 export type BenchmarkRosterEntry = { model: StudioModel; count: number };
 export type BenchmarkScenario = { id: string; name: string; description: string; available?: boolean; reason?: string };
 
 export function rosterEntries(roster: BenchmarkRoster): BenchmarkRosterEntry[] {
-  return BENCHMARK_MODELS.filter(model => roster[model] > 0).map(model => ({ model, count: roster[model] }));
+  return ALL_MODEL_NAMES.filter(model => (roster[model] ?? 0) > 0).map(model => ({ model, count: roster[model] ?? 0 }));
 }
 
 export function rosterLabel(roster: BenchmarkRosterEntry[]): string {
@@ -13,7 +14,7 @@ export function rosterLabel(roster: BenchmarkRosterEntry[]): string {
 
 export function benchmarkBlocker(config: BenchmarkConfig | null, roster: BenchmarkRoster, scenarioId: string): string | null {
   const total = rosterSize(roster);
-  if (BENCHMARK_MODELS.some(model => !Number.isInteger(roster[model]) || roster[model] < 0) || total > MAX_BENCHMARK_AGENTS) return 'Select up to four agents in total.';
+  if (Object.entries(roster).some(([model, count]) => !isModelName(model) || !Number.isInteger(count) || (count ?? 0) < 0) || total > MAX_BENCHMARK_AGENTS) return 'Select up to four agents in total.';
   if (total < 1) return 'Add at least one agent to start.';
   if (!config) return 'Connect to the benchmark runner to check availability.';
   if (!config.ready) return config.reason || 'The benchmark runner is not ready.';

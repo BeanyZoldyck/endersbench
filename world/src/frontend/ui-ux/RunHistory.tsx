@@ -1,10 +1,11 @@
+import { SELECTABLE_MODELS, LEGACY_MODELS } from '../../../shared/models';
 import { ledgerReplayHref, recordingIdentity, savedRecordings, type HistoryModel } from '../run-history';
 import type { useRecordingHistory } from '../useRecordingHistory';
 import { formatClock } from '../data';
 import { ModelBuddy } from './ModelBuddy';
 import '../run-history.css';
 
-const filters: HistoryModel[] = ['all', 'Ender', 'Grok', 'Claude', 'ChatGPT'];
+
 const recordedDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 export function RunHistory({ history, model, onFilter, onOpen }: {
@@ -13,6 +14,7 @@ export function RunHistory({ history, model, onFilter, onOpen }: {
   onFilter: (model: HistoryModel) => void;
   onOpen: (runId: string) => void;
 }) {
+  const filters: HistoryModel[] = ['all', ...SELECTABLE_MODELS, ...LEGACY_MODELS.filter(legacy => model === legacy || savedRecordings(legacy, history.recordings).length > 0)];
   const recordings = savedRecordings(model, history.recordings);
   return <main className="studio-main history-page">
     <div className="history-heading"><div><span className="eyebrow">THE ARCHIVE</span><h1>Run history</h1><p>Return to a recorded benchmark. Watch the replay, follow the agents, and inspect the evidence.</p></div><span className="history-total">{savedRecordings('all', history.recordings).length}<small>saved recordings</small></span></div>
