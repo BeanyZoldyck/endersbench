@@ -177,20 +177,27 @@ async function startClearing(lineup: LineupEntry[]): Promise<LobbyJob> {
   } catch (err) {
     throw new RequestError(err instanceof Error ? err.message : String(err));
   }
-  if (clearingJob?.status === 'running') throw new RequestError('A Clearing run is going. Watch it, or start one when it ends.', 409);
-  // begin_run resets the shared world, so never over someone's live episode.
-  const [world] = await spacetime.sql('SELECT running FROM world');
-  if (world?.running === true) throw new RequestError('The Clearing is live right now. Watch it, or start one when it ends.', 409);
+  if (clearingJob && clearingJob.status !== 'completed' && clearingJob.status !== 'failed') throw new RequestError('A Clearing run is going. Watch it, or start one when it ends.', 409);
   const limited = clearingLimiter.check();
   if (limited) throw new RequestError(limited, 429);
-  await spacetime.call('begin_run', [roster, 'charter', 1, 0, 0, cfg.clearingTimeScale]);
-  clearingLimiter.record();
+  // Held as starting before begin_run, so the minute's adoption check can't take it for a stranger's episode.
   const job: LobbyJob = {
-    id: `clearing-${Date.now().toString(36)}`, status: 'running', model: lineup[0].model, modelId: roster[0].model_id, scenario: CLEARING,
+    id: `clearing-${Date.now().toString(36)}`, status: 'starting', model: lineup[0].model, modelId: roster[0].model_id, scenario: CLEARING,
     roster: lineup.map(e => ({ ...e, modelId: offered(e.model)!.databaseId })), dbName: cfg.spacetime.database, host: cfg.spacetime.host, viewerHref: '/?legacy=1',
   };
-  jobs.set(job.id, job);
   clearingJob = job;
+  try {
+    // begin_run resets the shared world, so never over someone's live episode.
+    const [world] = await spacetime.sql('SELECT running FROM world');
+    if (world?.running === true) throw new RequestError('The Clearing is live right now. Watch it, or start one when it ends.', 409);
+    await spacetime.call('begin_run', [roster, 'charter', 1, 0, 0, cfg.clearingTimeScale]);
+  } catch (err) {
+    job.status = 'failed';
+    throw err;
+  }
+  clearingLimiter.record();
+  job.status = 'running';
+  jobs.set(job.id, job);
   log.info(`Clearing run ${job.id} on ${cfg.spacetime.database}: ${roster.map(r => `${r.name}=${r.model_id}`).join(', ')}`);
   void watchClearing(job);
   return job;
@@ -237,6 +244,28 @@ async function watchClearing(job: LobbyJob) {
   }
 }
 
+// No episode runs unwatched, whoever started it (scripts/db-run.sh, or this
+// site before a restart): a running world with no watcher is adopted and
+// paused by the same rules.
+async function adoptRunningWorld() {
+  if (!spacetime || !cfg.spacetime || clearingJob?.status === 'running' || clearingJob?.status === 'starting') return;
+  try {
+    const [world] = await spacetime.sql('SELECT running FROM world');
+    if (world?.running !== true) return;
+    const ids = (await spacetime.sql("SELECT model_id FROM agent WHERE kind = 'llm'")).map(r => String(r.model_id));
+    const job: LobbyJob = {
+      id: `clearing-${Date.now().toString(36)}`, status: 'running', model: ids[0] ?? '', modelId: ids[0] ?? '', scenario: CLEARING,
+      roster: [], dbName: cfg.spacetime.database, host: cfg.spacetime.host, viewerHref: '/?legacy=1',
+    };
+    jobs.set(job.id, job);
+    clearingJob = job;
+    log.info(`Watching a Clearing episode already running on ${cfg.spacetime.database} (${ids.join(', ')}) as ${job.id}.`);
+    void watchClearing(job);
+  } catch (err) {
+    log.warning(`checking the world: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
   const names = [...new Set(lineup.map(e => e.model))];
   if (names.length !== 1) throw new RequestError('On this site Ledger Street runs one model at a time. Pick a single model.');
@@ -261,6 +290,18 @@ async function lobbyJob(id: string) {
   return job;
 }
 
+// The setup page asks every few seconds whether a run is going, and offers to
+// continue it. The shared world is one: an episode started elsewhere
+// (scripts/db-run.sh) is offered too, so visitors watch it instead of waiting.
+async function lobbyJobs(): Promise<LobbyJob[]> {
+  const list = [...jobs.values()];
+  await Promise.all(list.filter(j => j.runId && j.status === 'running').map(j => lobbyJob(j.id)));
+  if (list.some(j => j.scenario === CLEARING && j.status === 'running')) return list;
+  // Started since the last minute's check: adopt it now, so it shows and is watched.
+  await cached('adopt', 4000, async () => { await adoptRunningWorld(); return true; });
+  return [...jobs.values()];
+}
+
 function lineupFrom(body: string): { lineup: LineupEntry[]; scenario: string } {
   const request = JSON.parse(body || '{}') as { roster?: unknown; scenario?: unknown };
   const roster = Array.isArray(request.roster) ? request.roster : [];
@@ -279,6 +320,7 @@ await serve({
       if (url.pathname === '/' && !url.search) return { redirect: '/?studio=landing' };
       if (url.pathname === '/finance.html' && !url.searchParams.has('replay')) return { redirect: await newestLedger() };
       if (url.pathname === '/api/benchmarks/config' && req.method === 'GET') return { json: lobbyConfig(cfg.lobby, { clearing: !!spacetime }) };
+      if (url.pathname === '/api/benchmarks' && req.method === 'GET') return { json: await lobbyJobs() };
       if (url.pathname === '/api/benchmarks' && req.method === 'POST') {
         // JSON from another site's page needs a CORS preflight, which this server never grants.
         if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) throw new RequestError('Expected application/json.', 415);
@@ -317,6 +359,9 @@ await serve({
     }
   },
 });
+
+await adoptRunningWorld();
+setInterval(() => void adoptRunningWorld(), 60_000);
 
 const where = process.env.ACTOR_WEB_SERVER_URL ?? `http://localhost:${port}`;
 log.info(`Ender's Bench site: ${where}/ · starts runs of ${benchName} · models: ${cfg.models.map(m => m.label).join(', ')}`);
