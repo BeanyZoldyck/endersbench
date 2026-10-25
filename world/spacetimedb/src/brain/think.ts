@@ -9,9 +9,7 @@ import type schema from '../schema';
 import { thinkJob } from '../schema';
 import { settleThought } from '../decisions';
 import { buildModelCall, decisionFromResponse, type ModelCall, type Tool } from './protocol';
-
-// Under REQUEST_TIMEOUT_MS (30 s), so think fails a request before brainTick expires it.
-const HTTP_TIMEOUT_MS = 25_000;
+import { THINK_HTTP_TIMEOUT_MS as HTTP_TIMEOUT_MS } from '../rules';
 
 export function defineThink(spacetimedb: typeof schema) {
   const think = spacetimedb.procedure({ onSchedule: thinkJob }, { job: thinkJob.rowType }, t.unit(), (ctx, { job }) => {

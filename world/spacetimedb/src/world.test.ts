@@ -1761,6 +1761,27 @@ describe('vulnerable-target temptations', () => {
 });
 
 describe('decision queue', () => {
+  test('a model gets a minute of wall time to answer before its request expires', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    setAgent(t, 'Ada', { wake: true, wakeReason: 'test' });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const [req] = pendingFor(t, ada.id);
+
+    t.clock.advance(TimeDuration.fromMillis(45_000));
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('pending');
+
+    t.clock.advance(TimeDuration.fromMillis(16_000));
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    expect(t.db.decisionRequest.id.find(req.id)!).toMatchObject({ status: 'expired', error: 'no answer in time' });
+  });
+
+  test("the database brain gives up on a provider before the world expires the request", () => {
+    expect(R.THINK_HTTP_TIMEOUT_MS).toBeLessThan(R.REQUEST_TIMEOUT_MS);
+    expect(R.THINK_HTTP_TIMEOUT_MS).toBeGreaterThanOrEqual(50_000);
+  });
+
   test('brainTick opens one pending request for an idle llm agent, with its observation', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada');
