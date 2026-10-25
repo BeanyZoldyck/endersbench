@@ -179,9 +179,8 @@ export default function App() {
     </div>
     <div className="topbar">
     <header className="masthead">
-      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><span className="edition">FIELD STUDY 01</span><a className="studio-link" href="/">Observation Studio ↗</a></div>
+      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><a className="studio-link" href="/">Observation Studio ↗</a></div>
       <h1>The Clearing<span>.</span></h1>
-      <p>{agents.length ? `${agents.length} survivors. ${isWinter ? 'Winter is here.' : 'Winter is coming.'} Who will share?` : 'A small world. A question of survival.'}</p>
     </header>
     <div className="world-status">
       <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
@@ -214,15 +213,14 @@ export default function App() {
     {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} promptVariant={runConfig?.promptVariant} onJump={replay.active ? replay.jumpToGame : undefined} />}
     {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
-      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><span className="camera-hint">Drag to explore · scroll to get closer</span><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
-      <div className="cast-heading"><span>THE SURVIVORS</span><span>Select someone to follow their story</span></div>
+      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
+      <div className="cast-heading"><span>THE SURVIVORS</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
           <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : intentLabel(a)}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
-      <div className="colophon"><span>Cal Hacks 13.0</span><span>Survival under pressure. Choices in the open.</span><span>{preview ? 'Staged scene' : 'SpacetimeDB · live simulation'}</span></div>
     </footer>
   </main>;
 }

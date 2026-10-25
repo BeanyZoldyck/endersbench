@@ -145,7 +145,8 @@ export function Critter({ agent, world, selected, said, addressedTo, radius: bod
     </group>
     {selected && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}><ringGeometry args={[radius * 1.15, radius * 1.24, 40]} /><meshBasicMaterial {...boundaryFog} color="#f0e4cc" transparent opacity={0.85} /></mesh>}
     {card && <Html position={[0, radius * 1.2, 0]} zIndexRange={[30, 20]}>
-      <div ref={cardBox} className="agent-card" style={{ '--agent-color': agent.color } as CSSProperties}><div className="agent-card-body">{card}</div></div>
+      {/* The wheel scrolls this card; it never reaches the camera controls behind it. */}
+      <div ref={cardBox} className="agent-card" style={{ '--agent-color': agent.color } as CSSProperties} onWheel={event => event.stopPropagation()}><div className="agent-card-body">{card}</div></div>
     </Html>}
     <Html position={[0, radius * 2.7 + 0.35, 0]} center zIndexRange={[12, 8]} style={{ pointerEvents: 'none' }}>
       <div className="tag-stack">
