@@ -45,10 +45,10 @@ describe('siteInputFromEnv', () => {
   });
 
   it('passes the run password on, reported by name only', () => {
-    const input = siteInputFromEnv({ ...env, RUN_PASSWORD: 'quiet-harbor-27' }, models);
-    expect(input.runPassword).toBe('quiet-harbor-27');
+    const input = siteInputFromEnv({ ...env, RUN_PASSWORD: 'example-run-password' }, models);
+    expect(input.runPassword).toBe('example-run-password');
     expect(fieldReport(input)).toContain('runPassword: set');
-    expect(fieldReport(input)).not.toContain('quiet-harbor');
+    expect(fieldReport(input)).not.toContain('example-run-password');
   });
 
   it('takes the harness\'s FEATHERLESSAI_API_KEY too', () => {
