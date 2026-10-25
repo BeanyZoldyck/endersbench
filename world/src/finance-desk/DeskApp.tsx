@@ -1,3 +1,4 @@
+import { BenchmarkRunStatus } from '../BenchmarkRunStatus';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { tables } from '../module_bindings';
@@ -68,12 +69,13 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
   return <div className="finance-app">
     <header className="finance-top">
       <a className="dashboard-back" href="/?studio=landing">← Back to dashboard</a>
-      <a className="finance-brand" href="/" title="Observation Studio"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" /></svg><span>ENDER’S BENCH</span></a>
+      <a className="finance-brand" href="/?studio=landing" title="Observation Studio"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" /></svg><span>ENDER’S BENCH</span></a>
       <h1>Ledger Street<span>.</span></h1>
       <p className="finance-case" title={scenario ? `${SEAT_NAMES[scenario.seat]} · ${summary?.headline}\nThe job: ${policyBrief(scenario, group.row.variant, group.row.benchmarkVersion).task}` : undefined}>
         {scenario ? <><b>{String(scenario.brief.caseId)}</b><span>{summary?.headline}</span></> : <span>No case yet</span>}
       </p>
       <div className="finance-status">
+        {new URLSearchParams(window.location.search).has('benchmark') && <BenchmarkRunStatus />}
         <span className={`finance-connection ${online ? 'online' : ''} ${replay ? 'replay' : ''}`} role="status" title={statusDetail}><i />{status}</span>
         {scripts && <span className="finance-chip" title="Scripted reference agents · no model calls">Scripted</span>}
         {crs.live > 0 && <span className="finance-chip crs-live" title={`CRS answers in these offices came from the CRS sandbox during the run, sent as each test identity's exact request. RequestIDs and latency are in the case ledger.${crs.fellBack ? ` ${crs.fellBack} call(s) failed and used the saved Oct 24 response.` : ''}`}><i />CRS live · {crs.live} call{crs.live > 1 ? 's' : ''}{crs.fellBack ? ` · ${crs.fellBack} from snapshot` : ''}</span>}
@@ -98,7 +100,7 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
             {replay && <a href="/finance.html" onClick={e => { if (replay.onExit) { e.preventDefault(); replay.onExit(); } }}>Back to live</a>}
             <hr />
             <a href="/?legacy=1">The Clearing ↗</a>
-            <a href="/">Observation Studio ↗</a>
+            <a href="/?studio=landing">Observation Studio ↗</a>
           </div>
         </details>
       </div>

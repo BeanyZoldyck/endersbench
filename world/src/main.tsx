@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import { BenchmarkRunStatus } from './BenchmarkRunStatus';
 import Studio from './frontend/ui-ux/Studio.tsx';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection } from './module_bindings/index.ts';
@@ -29,7 +28,7 @@ const connectionBuilder = DbConnection.builder()
   .onConnectError((_ctx, err) => console.error('Error connecting to SpacetimeDB:', err));
 
 if (!studio) document.title = 'The Clearing — Ender’s Bench';
-const viewer = studio ? <Studio /> : <><App />{params.has('benchmark') && <BenchmarkRunStatus />}</>;
+const viewer = studio ? <Studio /> : <App />;
 const root = createRoot(document.getElementById('root')!);
 async function mount(): Promise<void> {
   if (params.has('benchmark')) {
