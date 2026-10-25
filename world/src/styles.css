@@ -584,3 +584,39 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
   .app .scene-tools { display:grid; grid-template-columns:auto auto; justify-content:end; justify-items:end; gap:6px 8px; }
   .app .scene-tools .event-caption { grid-column:1 / -1; max-width:260px; }
 }
+
+/* ── The record, sleek: one stats line, the pressure strip, then only what happened ── */
+.app .moments-rail { padding:16px 16px 18px; }
+.app .moments-rail h2 { font-size:1.3rem; margin:2px 0 8px; }
+.app .rail-stats { display:flex; flex-wrap:wrap; gap:4px 14px; margin:0 0 12px; padding:0 0 10px; font-size:.75rem; }
+.app .rail-stats b { font-size:.95rem; margin-right:3px; }
+.app .pressure-strip { margin:0 0 10px; padding:0 0 10px; border-bottom:1px solid var(--line); }
+.app .pressure-strip figcaption { font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--muted); margin-bottom:6px; cursor:help; }
+.app .pressure-strip svg { display:block; width:100%; height:auto; overflow:visible; }
+.app .strip-row { font:600 7.5px Manrope, system-ui, sans-serif; fill:var(--muted); letter-spacing:.02em; }
+.app .strip-take { fill:var(--bad); stroke:var(--surface); stroke-width:1.5; }
+.app .strip-pass { fill:#8a8a86; fill-opacity:.6; }
+.app .strip-take:hover, .app .strip-pass:hover { stroke:var(--ink); stroke-width:1.5; fill-opacity:1; }
+.app .strip-axis { stroke:#3a3a3a; stroke-width:1; }
+.app .strip-tick { font:500 7px Manrope, system-ui, sans-serif; fill:var(--muted); }
+.app .moment { padding:9px 0 10px 10px; margin:0; border-bottom:1px solid var(--line); }
+.app .moment-head { gap:8px; }
+.app .moment-meta { font-size:.66rem; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.app .moment-meta time { font-size:inherit; }
+.app .moment p { font-size:.82rem; margin:5px 0 2px; }
+.app .moment blockquote { font-size:.78rem; margin:4px 0 0; font-style:italic; }
+.app .moment.resisted { opacity:.75; }
+.app .rail-empty { font-size:.78rem; }
+.app .rail-passes { all:unset; box-sizing:border-box; cursor:pointer; display:block; width:100%; margin-top:10px; padding:8px 0; text-align:center; font-size:.72rem; color:var(--muted); border:1px dashed #3a3a3a; border-radius:4px; }
+.app .rail-passes:hover, .app .rail-passes:focus-visible { color:var(--gold); border-color:var(--gold); }
+
+/* The camera toggle sits on the stage, top left, like a map control. */
+.app .stage-tools { position:absolute; top:12px; left:12px; z-index:30; }
+.app .stage-tools .camera-toggle { background:#1b1b1be0; backdrop-filter:blur(4px); }
+/* The dock's corner: the caption above the glow key, which stays open. */
+.app .scene-tools, .app .scene-tools { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.app .scene-tools .event-caption { order:0; max-width:300px; }
+@media (max-width:1499px) { .app .scene-tools { display:flex; } .app .scene-tools .event-caption { max-width:280px; } }
+.app .strip-row { font-size:9.5px; }
+.app .strip-tick { font-size:8.5px; }
+.app .glow-legend button { white-space:nowrap; }

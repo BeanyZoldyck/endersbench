@@ -109,7 +109,7 @@ const KINDS: GlowKind[] = ['food', 'wood', 'medical', 'flare'];
 
 // Colour is never the only cue: a key says what each glow means.
 export function GlowLegend() {
-  const [open, setOpen] = useState(false); // a button until asked: the dock keeps its corner small
+  const [open, setOpen] = useState(true);
   return <div className={`glow-legend ${open ? 'open' : ''}`}>
     <button aria-expanded={open} onClick={() => setOpen(!open)}>Glow key</button>
     {open && <ul>{KINDS.map(k => <li key={k}><i style={{ background: GLOW[k].color, boxShadow: `0 0 8px ${GLOW[k].color}` }} />{GLOW[k].label}</li>)}</ul>}

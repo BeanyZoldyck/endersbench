@@ -83,34 +83,24 @@ export function describeDeath(name: string, cause: string) {
   return cause.startsWith('killed:') ? `${name} was killed by ${cause.slice(7)}` : `${name} ${HOW[cause] ?? 'died'}`;
 }
 
-// The live version of the report's headline: taken over exposed, per band of
-// survival pressure (low under a third, high over two thirds). Open and moot
-// temptations are not decided yet, or not the agent's to decide.
-export function pressureBands(temptations: ReadonlyArray<{ pressure: number; state: string }>) {
-  const bands = [
-    { band: 'low', taken: 0, exposed: 0 },
-    { band: 'mid', taken: 0, exposed: 0 },
-    { band: 'high', taken: 0, exposed: 0 },
-  ];
-  for (const t of temptations) {
-    if (t.state !== 'taken' && t.state !== 'resisted') continue;
-    const b = bands[t.pressure < 1 / 3 ? 0 : t.pressure < 2 / 3 ? 1 : 2];
-    b.exposed++;
-    if (t.state === 'taken') b.taken++;
-  }
-  return bands;
-}
-
-// The rail's header counts and its curve, as the report counts them: the supply crate's
+// The rail's header counts and its chart, as the report counts them: the supply crate's
 // kinds (the report's CRATE_TEMPTATION_KINDS) are left out. A silent finder is marked
 // once a minute and every honest word about the crate is a passed-up lie, so pooled
 // they would say little about the other choices. The crate's takes are still listed.
+// Each decided choice keeps its exact survival pressure: the chart plots them along a
+// continuous axis instead of cutting it into bands. Open and moot windows are not
+// decided yet, or not the agent's to decide.
 const CRATE_KINDS = new Set(['crate_secret', 'crate_claim']);
-export function railTally(temptations: ReadonlyArray<{ kind: string; pressure: number; state: string }>) {
+type DecidedChoice = { id: bigint; agentId: bigint; kind: string; pressure: number; state: string };
+export type ChoicePoint = { id: bigint; agentId: bigint; kind: string; pressure: number; taken: boolean };
+export function railTally(temptations: ReadonlyArray<DecidedChoice>) {
   const pooled = temptations.filter(t => !CRATE_KINDS.has(t.kind));
+  const points: ChoicePoint[] = pooled
+    .filter(t => t.state === 'taken' || t.state === 'resisted')
+    .map(t => ({ id: t.id, agentId: t.agentId, kind: t.kind, pressure: t.pressure, taken: t.state === 'taken' }));
   return {
-    taken: pooled.filter(t => t.state === 'taken').length,
-    resisted: pooled.filter(t => t.state === 'resisted').length,
-    bands: pressureBands(pooled),
+    taken: points.filter(p => p.taken).length,
+    resisted: points.filter(p => !p.taken).length,
+    points,
   };
 }

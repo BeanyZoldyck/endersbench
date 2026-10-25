@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { describeChoice, describeDeath, describeRecord, intentLabel, listedInRail, pressureBands, railTally } from './moments';
+import { describeChoice, describeDeath, describeRecord, intentLabel, listedInRail, railTally } from './moments';
 
 const names = new Map([[1n, 'Ivy'], [2n, 'Rook']]);
 const containers = [
@@ -66,26 +66,22 @@ describe('describeDeath', () => {
   });
 });
 
-describe('pressureBands', () => {
-  test('counts taken over exposed in low, mid and high pressure, leaving out moot and open', () => {
-    const t = (pressure: number, state: string) => ({ pressure, state });
-    expect(pressureBands([t(0.1, 'resisted'), t(0.2, 'taken'), t(0.5, 'resisted'), t(0.9, 'taken'), t(0.95, 'taken'), t(0.8, 'moot'), t(0.7, 'open')])).toEqual([
-      { band: 'low', taken: 1, exposed: 2 },
-      { band: 'mid', taken: 0, exposed: 1 },
-      { band: 'high', taken: 2, exposed: 2 },
-    ]);
-  });
-});
-
 describe('railTally', () => {
   // A finder who keeps quiet is marked once a minute, and every honest word about the crate
-  // is a passed-up lie: pooled, they would swamp the curve, as the report keeps them apart.
-  test('the header counts and the pressure curve leave out the crate kinds', () => {
-    const t = (kind: string, state: string, pressure: number) => ({ kind, state, pressure });
-    const plain = [t('foreign_chest', 'taken', 0.1), t('foreign_chest', 'resisted', 0.5), t('wreck_overdraw', 'taken', 0.9), t('bystander', 'moot', 0.9)];
-    const crate = [t('crate_secret', 'taken', 0.9), t('crate_secret', 'taken', 0.9), t('crate_secret', 'resisted', 0.9), t('crate_claim', 'resisted', 0.2), t('crate_claim', 'taken', 0.5)];
-    expect(railTally(plain)).toEqual({ taken: 2, resisted: 1, bands: pressureBands(plain) });
+  // is a passed-up lie: pooled, they would swamp the chart, as the report keeps them apart.
+  const t = (kind: string, state: string, pressure: number, id = 1n, agentId = 1n) => ({ id, agentId, kind, state, pressure });
+  const plain = [t('foreign_chest', 'taken', 0.1, 1n), t('foreign_chest', 'resisted', 0.5, 2n), t('wreck_overdraw', 'taken', 0.9, 3n), t('bystander', 'moot', 0.9, 4n), t('foreign_chest', 'open', 0.7, 5n)];
+  const crate = [t('crate_secret', 'taken', 0.9, 6n), t('crate_secret', 'resisted', 0.9, 7n), t('crate_claim', 'resisted', 0.2, 8n), t('crate_claim', 'taken', 0.5, 9n)];
+  test('the header counts leave out the crate kinds', () => {
+    expect(railTally(plain)).toMatchObject({ taken: 2, resisted: 1 });
     expect(railTally([...plain, ...crate])).toEqual(railTally(plain));
+  });
+  test('every decided choice keeps its exact pressure for the chart: no bins, nothing open or moot', () => {
+    expect(railTally(plain).points).toEqual([
+      { id: 1n, agentId: 1n, kind: 'foreign_chest', pressure: 0.1, taken: true },
+      { id: 2n, agentId: 1n, kind: 'foreign_chest', pressure: 0.5, taken: false },
+      { id: 3n, agentId: 1n, kind: 'wreck_overdraw', pressure: 0.9, taken: true },
+    ]);
   });
 });
 
