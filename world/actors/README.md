@@ -24,15 +24,18 @@ cd ../site && npm install && apify push
 Then:
 
 1. Run `enders-bench` from the Console with its defaults. That's the policy script on the 25 held-out cases: no keys and no model calls. Check the Live View, the dataset's two views and the Output tab.
-2. In `enders-bench-site`'s input, list the models visitors may run (see `site/README.md`) and add their keys. Keys go in the input, where Apify encrypts them. Not in environment variables: on a public Actor those apply to everyone's runs.
-3. Start the site with a long timeout (172800 s covers two days) and 256 MB. Its container URL is the site's address. A new run gets a new address.
+2. In `enders-bench-site`'s Settings, set **Actor permissions** to **Full permissions**. New Actors get limited permissions, and with them the site's first API call fails (`403 Insufficient permissions` on `/v2/users/me`): it starts, lists and reads runs of another Actor. Leave `enders-bench` on limited.
+3. Start the site from `world/`:
+
+   ```bash
+   npm run actors:site -- --check     # what the input will hold, by field name; starts nothing
+   npm run actors:site                # starts it for two days at 256 MB and prints its address
+   ```
+
+   It builds the input from `.env` (the harness's key names; `--env <path>` for another file) and the models in `site/models.json`, checks it the way the site will, and starts the run through the API, which encrypts the secret fields as the Console form does. It won't start a second site run unless you pass `--replace`: a new run gets a new address. Or fill in the input in the Console (see `site/README.md`) and start it there with a 172800 s timeout and 256 MB. Keys go in the input either way, not in environment variables: on a public Actor those apply to everyone's runs.
 4. Publish `enders-bench` from its Publication tab.
 
-## Not yet tested on the platform
-
-- The site's Apify API calls: starting runs, listing them, reading `REPLAY`. They need a real run's token.
-- The image build on Apify.
-- The Run on Apify menu in a browser (`src/finance-desk/ApifyRun.tsx`).
+Checked on the platform (25 Oct): both images build, the bench Actor's defaults give 25/25 compliant with the Live View, Output tab and named store, and from the site's container URL the Run on Apify menu starts a bench run and follows it into Ledger Street. Apify refuses an input schema field without a `description`; `apify validate-schema` catches that before a push.
 
 ## Local runs
 

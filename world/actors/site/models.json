@@ -1,0 +1,11 @@
+[
+  { "id": "script", "label": "Policy reference script (no model)", "provider": "script" },
+  { "id": "haiku", "label": "Claude Haiku 5.5", "provider": "anthropic", "model": "claude-haiku-5-5" },
+  { "id": "opus", "label": "Claude Opus 5.5", "provider": "anthropic", "model": "claude-opus-5-5" },
+  { "id": "luna", "label": "GPT-6 Luna", "provider": "openai", "model": "gpt-6-luna" },
+  { "id": "ender", "label": "Ender (our fine-tuned Qwen3.8-27B)", "provider": "custom", "model": "ender" },
+  { "id": "qwen", "label": "Qwen3.8-27B, stock (Bitdeer)", "provider": "bitdeer", "model": "Qwen/Qwen3.8-27B" },
+  { "id": "deepseek", "label": "DeepSeek-V4.1-Flash (Bitdeer)", "provider": "bitdeer", "model": "deepseek-ai/DeepSeek-V4.1-Flash" },
+  { "id": "glm", "label": "GLM-5.3 (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3" },
+  { "id": "glm-flash", "label": "GLM-5.3-Flash (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3-Flash" }
+]

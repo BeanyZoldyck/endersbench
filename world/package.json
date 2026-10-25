@@ -32,7 +32,8 @@
     "finance:score-labels": "esbuild harness/finance/score-labels.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-score-labels.js --log-level=warning && node dist-harness/finance-score-labels.js",
     "benchmark:build": "esbuild harness/benchmark/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/benchmark-server.js && esbuild harness/benchmark/worker.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/benchmark-worker.js",
     "benchmark:server": "npm run benchmark:build && node --env-file-if-exists=.env.benchmark dist-harness/benchmark-server.js",
-    "actors:build": "node actors/build.mjs"
+    "actors:build": "node actors/build.mjs",
+    "actors:site": "esbuild actors/site/start.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/site-start.js --log-level=warning && node dist-harness/site-start.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

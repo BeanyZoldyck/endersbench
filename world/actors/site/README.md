@@ -20,7 +20,8 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
 ## Set it up
 
 1. Push the `enders-bench` Actor, then this one, with `apify push`.
-2. In this Actor's input, list the models to offer and add their keys. Example:
+2. In this Actor's Settings, set **Actor permissions** to **Full permissions**, so its run token can start and read `enders-bench` runs.
+3. `npm run actors:site` in `world/` starts it with the models in `models.json` and the keys from `.env` (see `../README.md`). Or, in this Actor's input, list the models to offer and add their keys. Example:
 
    ```json
    [
@@ -31,7 +32,7 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
    ]
    ```
 
-3. Start it with a timeout that covers the event, for example 172800 seconds (two days), and 256 MB of memory.
-4. Open the run's **Live View**, or its container URL, and share that.
+4. Start it with a timeout that covers the event, for example 172800 seconds (two days), and 256 MB of memory.
+5. Open the run's **Live View**, or its container URL, and share that.
 
 If the run stops, start it again; the new run has a new address.
