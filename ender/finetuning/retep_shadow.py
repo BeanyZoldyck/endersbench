@@ -21,6 +21,52 @@ class NegativeGradientShadow:
         self.optimizer = None
         self.steps = 0
         self.first_gradient_negation_verified = False
+        self.warm_start_source = None
+        self.prior_optimizer_steps = 0
+        self.pending_optimizer_state = None
+        self.optimizer_state_resumed = False
+
+    def resume(self, model, adapter, expected_step):
+        import torch
+        self.warm_start(model, adapter)
+        manifest = json.loads((Path(adapter)/"retep-manifest.json").read_text())
+        if manifest["optimizer_steps"] != expected_step:
+            raise ValueError("Primary/sister resume steps differ")
+        self.pending_optimizer_state = torch.load(Path(adapter)/"shadow_optimizer.pt", map_location="cpu", weights_only=True)
+        self.steps = expected_step
+        self.prior_optimizer_steps -= expected_step
+        self.first_gradient_negation_verified = True
+        self.optimizer_state_resumed = True
+
+    def warm_start(self, model, adapter):
+        """Restore sister weights only; explicitly start a fresh optimizer for both sisters."""
+        import torch
+        from peft import get_peft_model_state_dict
+        from safetensors import safe_open
+        if self.steps or self.optimizer is not None:
+            raise ValueError("Warm start must precede all optimizer updates")
+        adapter = Path(adapter)
+        manifest = json.loads((adapter / "retep-manifest.json").read_text())
+        if manifest.get("name") != "retep" or not manifest.get("first_gradient_negation_verified"):
+            raise ValueError("Expected a verified previously trained sister")
+        saved_config = json.loads((adapter / "adapter_config.json").read_text())
+        current = model.peft_config["default"]
+        if saved_config["r"] != current.r or saved_config["lora_alpha"] != current.lora_alpha:
+            raise ValueError("Sister rank/scaling differs from primary")
+        aliases = get_peft_model_state_dict(model, state_dict=self.shadow)
+        if {id(value) for value in aliases.values()} != {id(value) for value in self.shadow.values()}:
+            raise ValueError("PEFT export did not preserve a one-to-one shadow parameter mapping")
+        with safe_open(adapter / "adapter_model.safetensors", framework="pt", device="cpu") as weights:
+            if set(weights.keys()) != set(aliases):
+                raise ValueError("Saved sister parameter keys differ")
+            with torch.no_grad():
+                for key, parameter in aliases.items():
+                    value = weights.get_tensor(key)
+                    if value.shape != parameter.shape or not torch.isfinite(value).all():
+                        raise ValueError(f"Invalid saved sister parameter: {key}")
+                    parameter.copy_(value.to(device=parameter.device, dtype=parameter.dtype))
+        self.warm_start_source = str(adapter)
+        self.prior_optimizer_steps = manifest.get("total_lineage_steps", manifest["optimizer_steps"])
 
     def step(self, primary_optimizer):
         import torch
@@ -38,6 +84,9 @@ class NegativeGradientShadow:
             if sum(len(group["params"]) for group in groups) != len(self.shadow):
                 raise ValueError("Optimizer does not cover each shadow parameter")
             self.optimizer = torch.optim.AdamW(groups)
+            if self.pending_optimizer_state is not None:
+                self.optimizer.load_state_dict(self.pending_optimizer_state)
+                self.pending_optimizer_state = None
         for target_group, source_group in zip(self.optimizer.param_groups, source_groups):
             target_group["lr"] = source_group["lr"]
         any_gradient = False
@@ -80,6 +129,9 @@ class NegativeGradientShadow:
             torch.save(self.optimizer.state_dict(), output / "shadow_optimizer.pt")
         report = {"name": "retep", "method": "AdamW on negated clipped PRIMARY gradients",
                   "optimizer_steps": self.steps, "parameters": sum(p.numel() for p in self.shadow.values()),
+                  "total_lineage_steps": self.prior_optimizer_steps + self.steps,
+                  "warm_start_source": self.warm_start_source,
+                  "optimizer_state_resumed": self.optimizer_state_resumed,
                   "first_gradient_negation_verified": self.first_gradient_negation_verified,
                   "additional_base_models": 0, "additional_forward_backward_passes": 0,
                   "independently_evaluated_sister_gradients": False,
@@ -89,12 +141,12 @@ class NegativeGradientShadow:
         return report
 
 
-def retep_callback():
+def retep_callback(initial_adapter=None, resume_checkpoint=None):
     from transformers import TrainerCallback
 
     class RetepCallback(TrainerCallback):
         def on_train_begin(self, args, state, control, **kwargs):
-            if getattr(args, "resume_from_checkpoint", None):
+            if getattr(args, "resume_from_checkpoint", None) and resume_checkpoint is None:
                 raise ValueError("Shadow resume is not implemented; use a fresh run")
             if str(args.optim) not in ("OptimizerNames.ADAMW_TORCH", "adamw_torch",
                                        "OptimizerNames.ADAMW_TORCH_FUSED", "adamw_torch_fused"):
@@ -102,13 +154,26 @@ def retep_callback():
             self.model = kwargs["model"]
             self.sister = NegativeGradientShadow((name, param) for name, param in self.model.named_parameters()
                                                  if param.requires_grad)
-            print("[retep] Initialized identical sister LoRA; negative-primary-gradient experiment.", flush=True)
+            if resume_checkpoint is not None:
+                self.sister.resume(self.model, initial_adapter or Path(resume_checkpoint)/"retep", state.global_step)
+                print(f"[retep] Resuming weights and AdamW at step {state.global_step}", flush=True)
+            elif initial_adapter is not None:
+                self.sister.warm_start(self.model, initial_adapter)
+                print(f"[retep] Continued saved sister weights from {initial_adapter}; fresh AdamW state; "
+                      f"{self.sister.prior_optimizer_steps} inherited updates.", flush=True)
+            else:
+                print("[retep] Initialized identical sister LoRA; negative-primary-gradient experiment.", flush=True)
 
         def on_pre_optimizer_step(self, args, state, control, **kwargs):
             self.sister.step(kwargs["optimizer"])
 
         def on_save(self, args, state, control, **kwargs):
             self.sister.save(self.model, Path(args.output_dir) / f"checkpoint-{state.global_step}" / "retep")
+            import os
+            import subprocess
+            signal = os.environ.get("ENDER_FIRST_CHECKPOINT_SIGNAL")
+            if signal and state.global_step == 1 and os.environ.get("TMUX"):
+                subprocess.run(["tmux", "wait-for", "-S", signal], check=True)
 
         def on_train_end(self, args, state, control, **kwargs):
             if self.sister.steps != state.global_step:

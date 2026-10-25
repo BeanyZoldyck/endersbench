@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 
 
-def validate(run):
+def validate(run, adapter_dir=None):
     import torch
     from safetensors import safe_open
-    adapter = run / "adapter"
+    adapter = Path(adapter_dir) if adapter_dir is not None else run / "adapter"
     with safe_open(adapter / "adapter_model.safetensors", framework="pt", device="cpu") as weights:
         keys = [key for key in weights.keys() if "lora_B" in key]
         tensors = {key: weights.get_tensor(key) for key in keys}
