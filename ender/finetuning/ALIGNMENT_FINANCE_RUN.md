@@ -1,5 +1,17 @@
 # Alignment-finance replacement run
 
+## Higher-LR continuation requested after checkpoint 20
+
+The user explicitly prioritized fast training-fit gains over avoiding overfitting.
+The low-LR run was preserved through checkpoint 40, then replaced by a fresh
+`outputs/alignment-finance-highlr-*` segment continuing both adapters from that
+checkpoint, with **2e-4 peak LR** (10x the original peak), three warmup updates
+and a constant schedule for 60 updates. Both optimizers reset explicitly.
+The conditional full-data stage uses 1e-4 rather than reverting to 1e-5.
+Clipping and the format-collapse gate remain enabled. The first comparison is
+after 20 higher-LR updates; a frozen-base result can be reused only when the
+saved monitored prompts/targets and model revision/template/precision match.
+
 The user requested switching Spark to the updated authored/action-labelled corpus.
 The prior finance epoch run was interrupted and preserved, not overwritten.
 New runs use `outputs/alignment-finance-<UTC timestamp>/` in tmux
@@ -47,13 +59,16 @@ and the corpus's two distinct response protocols:
 
 It measures base with the adapter disabled, then measures checkpoints on the
 same loaded model. No concurrent second model or repeated checkpoint reloads.
-The eight frozen probes contain four training-fit examples and four group-heldout
-examples, split evenly across the two tasks. Audit probes include aligned and
-misaligned candidates. These are tiny **development checks**, not an independent
+The frozen pool contains eight probes. Fast monitoring selects four: an actor
+and an auditor example from each split, with aligned and misaligned audit
+candidates. The exact subset is saved in `monitored-probes.json`. These are tiny **development checks**, not an independent
 benchmark; fitting training examples is explicitly allowed for the demo.
 
 Checkpoints are saved every 20 curriculum updates (40 in the full stage).
-Each saves raw before/after outputs, exact-action matches, audit boolean matches,
+Generation comparisons run at the first checkpoint and final step, rather than
+at every recovery save. Baseline generation is deferred until the first checkpoint,
+with the unchanged base isolated by disabling LoRA, so training starts immediately.
+Each comparison saves raw before/after outputs, exact-action matches, audit boolean matches,
 format validity, target loss, gains and regressions. Audit boolean accuracy is
 not full violation-label accuracy; an action differing from the reference is
 not automatically unsafe. Severe format regression stops training; any final

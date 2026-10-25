@@ -40,23 +40,52 @@ def monitor_callback(config, probe_path):
     import torch
     from audit_sft_data import encode_example
     from llamafactory.data.template import get_template_and_fix_tokenizer
-    from llamafactory.hparams import get_train_args
-    from llamafactory.model import load_tokenizer
+    from llamafactory.hparams import DataArguments
+    from transformers import AutoTokenizer
+    from dataclasses import fields
     from run_sft_demo import write_json
 
     class Monitor(TrainerCallback):
         def on_train_begin(self, args, state, control, **kwargs):
             self.model = kwargs["model"]
-            self.tokenizer = load_tokenizer(get_train_args(config)[0])["tokenizer"]
-            self.template = get_template_and_fix_tokenizer(self.tokenizer, get_train_args(config)[1])
-            self.rows = json.loads(Path(probe_path).read_text())
+            # Never call get_train_args inside a live Trainer: constructing its
+            # TrainingArguments resets Accelerate's global singleton state.
+            self.tokenizer = AutoTokenizer.from_pretrained(config["model_name_or_path"],
+                revision=config["model_revision"], local_files_only=True, trust_remote_code=False)
+            data_keys = {field.name for field in fields(DataArguments) if field.init}
+            data_args = DataArguments(**{key: value for key, value in config.items() if key in data_keys})
+            self.template = get_template_and_fix_tokenizer(self.tokenizer, data_args)
+            pool = json.loads(Path(probe_path).read_text())
+            # Fast monitoring: actor + auditor from both splits, with one
+            # aligned and one misaligned audit candidate. Preserve full pool.
+            self.rows = [pool[i] for i in (0, 3, 4, 6)] if len(pool) == 8 else pool
             self.root = Path(args.output_dir).parent
+            write_json(self.root/"monitored-probes.json", self.rows)
             self.baseline = None
             print("[alignment-finance] Starting training immediately; frozen-base comparison runs at the first saved checkpoint on this same model.", flush=True)
 
         def ensure_baseline(self):
             if self.baseline is None:
-                self.baseline = self.check(0, base=True)
+                import os
+                reference = os.environ.get("ENDER_ALIGNMENT_FINANCE_BASELINE")
+                initial = config.get("adapter_name_or_path")
+                if not reference and isinstance(initial, str) and Path(initial).name.startswith("checkpoint-"):
+                    candidate = Path(initial).parent.parent/"base-evaluation.json"
+                    if candidate.is_file():
+                        reference = str(candidate)
+                if reference:
+                    path = Path(reference)
+                    if json.loads((path.parent/"monitored-probes.json").read_text()) != self.rows:
+                        raise ValueError("Cannot reuse baseline with differing prompts/targets")
+                    old_config = __import__("yaml").safe_load((path.parent/"train.yaml").read_text())
+                    if any(old_config.get(k) != config.get(k) for k in ("model_name_or_path", "model_revision", "template", "enable_thinking", "quantization_bit")):
+                        raise ValueError("Cannot reuse baseline with differing model/template/precision")
+                    self.baseline = json.loads(path.read_text())
+                    if not self.baseline["base"]:
+                        raise ValueError("Reference is not a frozen-base evaluation")
+                    print(f"[alignment-finance] Reusing identical frozen-base comparison: {path}", flush=True)
+                else:
+                    self.baseline = self.check(0, base=True)
                 write_json(self.root/"base-evaluation.json", self.baseline)
                 import subprocess
                 subprocess.run(["tmux", "wait-for", "-S", "alignment-finance-baseline-ready"], check=True)
@@ -91,7 +120,7 @@ def monitor_callback(config, probe_path):
                                 return parse_output(task, text) is not None
 
                         generated = model.generate(input_ids=ids[:, :len(prompt)], attention_mask=torch.ones_like(ids[:, :len(prompt)]),
-                            do_sample=False, max_new_tokens=256, use_cache=True,
+                            do_sample=False, max_new_tokens=128 if task == "act" else 256, use_cache=True,
                             pad_token_id=tokenizer.pad_token_id, stopping_criteria=StoppingCriteriaList([Complete()]))
                         text = tokenizer.decode(generated[0, len(prompt):], skip_special_tokens=False)
                         text = text.replace(tokenizer.eos_token or "<|im_end|>", "")
@@ -139,6 +168,10 @@ def monitor_callback(config, probe_path):
             return report
 
         def on_save(self, args, state, control, **kwargs):
+            # Recovery saves stay frequent; expensive generations run only at
+            # the first checkpoint and final step, not at every recovery save.
+            if self.baseline is not None and state.global_step != state.max_steps:
+                return control
             self.ensure_baseline()
             report = self.check(state.global_step)
             if state.global_step == 20:

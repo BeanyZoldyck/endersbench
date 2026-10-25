@@ -54,9 +54,13 @@ def main():
     parser.add_argument("--accept-unreviewed-experiment", action="store_true")
     parser.add_argument("--max-steps", type=int, default=100)
     parser.add_argument("--full-stage-steps", type=int, default=200)
+    parser.add_argument("--learning-rate", type=float, default=2e-5)
+    parser.add_argument("--initial-adapter", type=Path)
     args = parser.parse_args()
     if not os.environ.get("TMUX") or not args.accept_unreviewed_experiment:
         parser.error("Requires tmux and explicit acceptance of synthetic unreviewed experiment")
+    if not 0 < args.learning_rate <= 1e-3:
+        parser.error("Learning rate must be in (0, 1e-3]")
     configure_startup()
     import yaml
     from run_sft_demo import write_json, telemetry
@@ -74,24 +78,35 @@ def main():
     for key in ("adapter_name_or_path", "resume_from_checkpoint", "eval_steps", "eval_dataset", "tokenized_path"):
         config.pop(key, None)
     config.update(dataset_dir=str(run/"data"), dataset="curriculum", do_train=True, do_eval=False,
-                  eval_strategy="no", learning_rate=2e-5, lr_scheduler_type="cosine", warmup_steps=5,
+                  eval_strategy="no", learning_rate=args.learning_rate, lr_scheduler_type="constant_with_warmup" if args.initial_adapter else "cosine", warmup_steps=3 if args.initial_adapter else 5,
                   warmup_ratio=0., max_steps=args.max_steps, num_train_epochs=10.,
                   per_device_train_batch_size=1, gradient_accumulation_steps=2,
                   save_steps=20, save_strategy="steps", save_total_limit=None, save_only_model=False,
                   logging_steps=1, plot_loss=False, report_to="none", overwrite_cache=False,
                   train_on_prompt=False, mask_history=False, packing=False)
+    if args.initial_adapter:
+        for name in ("adapter_model.safetensors", "retep/adapter_model.safetensors", "retep/retep-manifest.json"):
+            if not (args.initial_adapter/name).is_file():
+                raise ValueError(f"Missing warm-start file: {name}")
+        config.update(adapter_name_or_path=str(args.initial_adapter.resolve()), create_new_adapter=False)
     (run/"train.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
     os.environ.update(ENDER_ALIGNMENT_FINANCE_PROBES=str(run/"data/probes.json"),
         ENDER_RESPONSE_ONLY_LOSS="1", ENDER_SPARK_GPU_LOADER="1", ENDER_CHECKPOINT_STRIDE="2",
         ENDER_INT8_COMPUTE="llm-int8", ENDER_PROFILE_STEP="0")
+    os.environ.pop("ENDER_ALIGNMENT_FINANCE_BASELINE", None)
+    if args.initial_adapter:
+        reference = args.initial_adapter.resolve().parent.parent/"base-evaluation.json"
+        if reference.is_file():
+            os.environ["ENDER_ALIGNMENT_FINANCE_BASELINE"] = str(reference)
     manifest = {"status": "preparing", "started_at": datetime.now(timezone.utc).isoformat(),
-                "purpose": "alignment-finance authored curriculum, clean-base LoRA",
+                "purpose": "alignment-finance authored curriculum, continued LoRA" if args.initial_adapter else "alignment-finance authored curriculum, clean-base LoRA",
                 "training_rows_full": len(train), "validation_rows": len(validation),
                 "curriculum_rows": len(curriculum), "probes": len(probes),
                 "reviewed": False, "experimental_unreviewed_authorized": True,
                 "dataset_hashes": {name: hashlib.sha256((root/name).read_bytes()).hexdigest()
                                    for name in ("manifest.json", "sft_act.jsonl", "sft_audit.jsonl", "pairs.jsonl")},
-                "starting_adapter": None, "learning_rate": 2e-5, "max_steps": args.max_steps,
+                "starting_adapter": str(args.initial_adapter) if args.initial_adapter else None,
+                "optimizer_state_resumed": False, "learning_rate": args.learning_rate, "max_steps": args.max_steps,
                 "note": "Train-fit probes intentionally overlap training; group-heldout probes are development checks, not independent alignment evidence",
                 "validated_adversary": False}
     write_json(run/"manifest.json", manifest)
@@ -125,8 +140,11 @@ def main():
         write_json(run/"manifest.json", manifest)
         print(json.dumps(manifest), flush=True)
         with telemetry(run):
-            subprocess.run([sys.executable, "-u", str(Path(__file__).with_name("run_sft_demo.py")),
-                            "--train-worker", str(run/"train.yaml"), "--memory-fraction", ".8", "--retep-shadow"], check=True)
+            command = [sys.executable, "-u", str(Path(__file__).with_name("run_sft_demo.py")),
+                       "--train-worker", str(run/"train.yaml"), "--memory-fraction", ".8", "--retep-shadow"]
+            if args.initial_adapter:
+                command += ["--retep-initial", str(args.initial_adapter.resolve()/"retep")]
+            subprocess.run(command, check=True)
         manifest["status"] = "quality_stopped" if (run/"quality-stop.json").exists() else "complete"
         write_json(run/"curriculum-manifest.json", manifest)
         if manifest["status"] == "complete" and args.full_stage_steps:
@@ -139,9 +157,9 @@ def main():
                 stage.mkdir()
                 next_config = {**config, "dataset": "train", "output_dir": str(stage/"adapter"),
                     "adapter_name_or_path": str(run/"adapter"), "create_new_adapter": False,
-                    "max_steps": args.full_stage_steps, "learning_rate": 1e-5, "save_steps": 40}
+                    "max_steps": args.full_stage_steps, "learning_rate": min(1e-4, args.learning_rate/2), "save_steps": 40}
                 (stage/"train.yaml").write_text(yaml.safe_dump(next_config, sort_keys=False))
-                manifest.update(status="training_full_stage", full_stage="All group-training act/audit rows, 1e-5 LR; fresh optimizers for both adapters")
+                manifest.update(status="training_full_stage", full_stage=f"All group-training act/audit rows, {next_config['learning_rate']} LR; fresh optimizers for both adapters")
                 write_json(run/"manifest.json", manifest)
                 with telemetry(stage):
                     subprocess.run([sys.executable, "-u", str(Path(__file__).with_name("run_sft_demo.py")),
