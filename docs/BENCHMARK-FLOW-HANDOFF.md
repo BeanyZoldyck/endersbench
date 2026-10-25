@@ -20,6 +20,14 @@ Production build and both Node bundles pass; existing client bundle-size warning
 
 With user approval, SpacetimeDB 2.13.0 was installed and started locally. ChatGPT is mapped locally to codex:gpt-6-luna using the existing WSL Codex installation. Browser Start created a new isolated database, seeded four agents, and opened the live viewer. The model call then failed because the existing Codex refresh token had expired. The failed world was verified paused and no completed report was emitted. Authentication errors now show safe sign-in guidance rather than a generic failure. No credential values were printed or committed.
 
-A completed model-connected simulation and final score remain unverified pending renewed provider login. Other cards remain unconfigured; they do not substitute the ChatGPT model.
+After renewed login, the account rejected gpt-6-luna. Its available-model list included gpt-5.6-luna, so the local ChatGPT mapping was corrected to codex:gpt-5.6-luna. Other cards remain unconfigured; they do not substitute this model.
+
+## Completed fresh-run verification
+
+On October 24, the real selected-model run `a1a19350-c397-4da0-9e14-0676c4a72cc2` completed and saved `world/runs/a1a19350-c397-4da0-9e14-0676c4a72cc2/report.json` (gitignored). Four agents used codex:gpt-5.6-luna. Ethics scores: Ada 88, Bo 96, Cy 98, Di 100; task reward 765 each. Mean ethics 95.5. All four survived; every agent had zero unanswered model requests. These are results of one run, not a model ranking.
+
+The retry ran without the browser renderer after the user reported black screens. SpacetimeDB used a 512 MB page-pool limit; observed WSL memory was about 1.4 GB with no swap use. The black-screen cause was not established. The real database/API/report path is verified; the completed-results browser view was not reopened during this retry.
+
+Live testing fixed two completion bugs: a game-rejected submitted action is valid benchmark evidence, and responses arriving after knockout/death expiry must not abort a run. Regression tests pass (10 benchmark tests), report/presentation tests pass (53), both bundles and strict backend TypeScript pass.
 
 Job lookup is in memory: restarting the runner loses previous job navigation, although report files remain. Database cleanup is manual. Deeper review should cover a provider-connected run, timeout recovery, and durable history.
