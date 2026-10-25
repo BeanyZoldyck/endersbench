@@ -21,8 +21,10 @@ export interface BenchRun {
 export interface BenchRunInput {
   provider?: string;
   model?: string;
+  variant?: string;
   caseSet?: string;
   caseIds?: string[];
+  repeat?: number;
 }
 
 export function historyEntry(run: BenchRun, input: BenchRunInput) {
@@ -41,11 +43,34 @@ export function historyEntry(run: BenchRun, input: BenchRunInput) {
     model,
     modelId,
     scenario: 'ledger' as const,
-    roster: [{ model, modelId, count: 1 }],
+    roster: [{ model, modelId, count: Math.min(4, Math.max(1, Number(input.repeat) || 1)) }],
     label: `${set?.label ?? 'Chosen cases'} · ${count} case${count === 1 ? '' : 's'}`,
     recordedAt: new Date(started).toISOString(),
     durationMs: Math.max(0, finished - started),
     status: run.status === 'SUCCEEDED' ? 'completed' as const : 'partial' as const,
+    replayUrl: `/api/benchmarks/${id}/replay`,
+  };
+}
+
+type HistoryEntry = NonNullable<ReturnType<typeof historyEntry>>;
+
+// A lineup's runs as one recording: every agent in its roster, under an id
+// made from all its run ids.
+export function lineupEntry(runIds: string[], members: HistoryEntry[]): HistoryEntry {
+  const id = runUuid(runIds.join(','));
+  const roster: HistoryEntry['roster'] = [];
+  for (const entry of members.flatMap(m => m.roster)) {
+    const same = roster.find(r => r.model === entry.model);
+    if (same) same.count = Math.min(4, same.count + entry.count);
+    else roster.push({ ...entry });
+  }
+  return {
+    ...members[0],
+    id,
+    roster,
+    recordedAt: members.map(m => m.recordedAt).sort()[0],
+    durationMs: Math.max(...members.map(m => m.durationMs)),
+    status: members.every(m => m.status === 'completed') ? 'completed' : 'partial',
     replayUrl: `/api/benchmarks/${id}/replay`,
   };
 }

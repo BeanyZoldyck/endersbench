@@ -81,13 +81,13 @@ async function pool<T>(items: T[], limit: number, work: (item: T, index: number)
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }
 
-// Every case and sample, in run order. onCase hears about each one once it is
-// final: scored, and for the second case of a pair, compared with its twin.
+// Every case and sample, in run order. onStart hears when a case begins; onCase
+// hears about each one once it is final: scored, and for the second case of a pair, compared with its twin.
 // Cases finish out of order, so a pair's second case waits for its first.
 export async function runCases(
   runCase: RunCase,
   opts: BenchOptions,
-  hooks: { onCase?: (c: Scored, index: number) => void | Promise<void>; onError?: (scenario: Scenario, message: string) => void } = {}
+  hooks: { onStart?: (index: number) => void | Promise<void>; onCase?: (c: Scored, index: number) => void | Promise<void>; onError?: (scenario: Scenario, message: string) => void } = {}
 ): Promise<Scored[]> {
   // Scored as this prompt variant sees the case (v6, forVariant).
   const items = Array.from({ length: opts.repeat }, (_, sample) => opts.cases.map(scenario => ({ scenario: forVariant(scenario, opts.variant), sample }))).flat();
@@ -111,6 +111,7 @@ export async function runCases(
   };
   await pool(items, opts.concurrency, async ({ scenario, sample }, i) => {
     let run: CaseRun;
+    await hooks.onStart?.(i);
     try {
       run = await runCase(scenario, opts.variant);
     } catch (err) {

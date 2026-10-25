@@ -4,7 +4,8 @@
 //   dataset          one row per case (compliant or not, violations, CRS calls)
 //   OUTPUT           the scorecard, as finance:bench prints it
 //   RUN              the full run in finance:bench's file format
-//   REPLAY           the Ledger Street recording, rewritten as each case finishes
+//   REPLAY           the Ledger Street recording: every case queued from the
+//                    start, rewritten as each case begins and finishes
 // While it runs, the container URL (the Live View tab) serves the viewer
 // playing that recording.
 import path from 'node:path';
@@ -35,8 +36,10 @@ const runId = env.actorRunId ?? 'local';
 const startedAt = new Date().toISOString();
 const total = plan.opts.cases.length * plan.opts.repeat;
 const source = `Apify run ${runId} · ${plan.agent} · CRS ${plan.opts.live ? 'live' : 'snapshot'}`;
-let finished: Scored[] = [];
-let recording = progressRecording(plan, [], source, startedAt, true, total);
+// Finished cases by their place in the run, and the ones under way.
+const byIndex = new Map<number, Scored>();
+const open = new Set<number>();
+let recording = progressRecording(plan, byIndex, open, source, startedAt, true);
 
 // The Live View: the viewer, reloading /replay.json until the run is done.
 const port = Number(process.env.ACTOR_WEB_SERVER_PORT ?? 0);
@@ -56,6 +59,8 @@ if (server) log.info(`Live View: ${process.env.ACTOR_WEB_SERVER_URL ?? `http://l
 
 log.info(`Ender's Bench · finance desk v${FINANCE_BENCHMARK_VERSION} · ${plan.agent} · policy ${plan.opts.variant} · ${plan.opts.cases.length} cases × ${plan.opts.repeat} · CRS ${plan.opts.live ? 'live sandbox' : 'Oct 24 snapshot'}`);
 await Actor.setStatusMessage(`Starting ${total} case runs for ${plan.agent}`);
+// Written now, so the site and the Live View show the offices staffed and the cases queued before any finishes.
+await Actor.setValue('REPLAY', recording);
 
 // One login before any case starts. A failed login ends the run and is never
 // retried: repeated failures disable the sandbox account.
@@ -74,24 +79,28 @@ if (plan.crs) {
 const access = plan.access?.kind === 'anthropic' ? anthropicAccess(plan.access.apiKey) : plan.access;
 const runCase = benchRunCase(plan.driver, plan.opts, access, live);
 
-const byIndex = new Map<number, Scored>();
 let compliant = 0;
 const scored = await runCases(runCase, plan.opts, {
   onError: (scenario, message) => log.warning(`${scenario.id}: ${message}`),
+  onStart: async index => {
+    open.add(index);
+    recording = progressRecording(plan, byIndex, open, source, startedAt, true);
+    await Actor.setValue('REPLAY', recording);
+  },
   onCase: async (c, index) => {
     byIndex.set(index, c);
-    finished = [...byIndex.keys()].sort((a, b) => a - b).map(i => byIndex.get(i)!);
+    open.delete(index);
     if (c.gate.pass) compliant++;
-    recording = progressRecording(plan, finished, source, startedAt, true, total);
+    recording = progressRecording(plan, byIndex, open, source, startedAt, true);
     await Actor.pushData(datasetRow(c, plan));
     await Actor.setValue('REPLAY', recording);
-    await Actor.setStatusMessage(`${finished.length}/${total} cases · ${compliant} compliant · last: ${c.scenario.id} ${c.gate.pass ? 'pass' : 'FAIL'}`);
+    await Actor.setStatusMessage(`${byIndex.size}/${total} cases · ${compliant} compliant · last: ${c.scenario.id} ${c.gate.pass ? 'pass' : 'FAIL'}`);
   },
 });
 
 const summary = summarize(scored, plan.opts.model, plan.opts.live);
 const record = savedRecord(plan.opts, [{ driver: plan.driver, summary, runs: scored }]);
-recording = progressRecording(plan, scored, source, startedAt, false, total);
+recording = progressRecording(plan, new Map(scored.map((c, i) => [i, c])), new Set(), source, startedAt, false);
 await Actor.setValue('RUN', record);
 await Actor.setValue('REPLAY', recording);
 await Actor.setValue('OUTPUT', {

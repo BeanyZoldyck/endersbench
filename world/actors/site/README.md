@@ -9,16 +9,17 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
 - Land on the dashboard (`/` opens `/?studio=landing`) and move between the views from there. The live Clearing watches the shared world on SpacetimeDB Maincloud.
 - Press **Start a benchmark**, build a lineup of up to four agents and pick a scenario. The site answers the setup page in place of the local benchmark runner:
   - **The Clearing** resets the shared world on Maincloud with that lineup (`begin_run`). The database's think procedure asks the models itself, and every visitor watches the same live world. The site pauses the world when the rescue resolves, every model survivor has died, every model keeps failing, or **Longest Clearing run** passes.
-  - **Ledger Street** runs one model through the seven-case quick tour as an `enders-bench` run.
-- Press **Run on Apify** in Ledger Street, pick an agent, a policy and a case set, and start a run of the `enders-bench` Actor. The offices fill in as cases finish.
-- Open recent runs, including ones started from the Console or the API.
+  - **Ledger Street** runs the lineup through the seven-case quick tour, one `enders-bench` run per agent, all at once. An agent picked twice runs every case twice.
+- Press **Run on Apify** in Ledger Street, tick up to four agents, pick a policy and a case set, and start. Each agent is its own run of the `enders-bench` Actor; the site merges their recordings, so every case opens with each agent in its own office.
+- Watch from the moment a run starts: every case is listed with the agents at their desks, queued or working, and each case plays as soon as an agent finishes it.
+- Open recent runs, including ones started from the Console or the API. A lineup is one entry in the list and in the run history; its address is its run ids joined by commas (`/api/apify/runs/<id>,<id>/replay`).
 
 ## Keeping it safe to share
 
 - With a **Run password** set, starting a run (Start a benchmark, Run on Apify) asks for it; anyone can still browse, replay and watch live runs. The site compares it in constant time and locks an address out after ten wrong guesses in an hour. `npm run actors:site` reads it from `RUN_PASSWORD`.
 - Visitors choose only from the **Models on offer** you list. By default that's the policy script, which calls no model. Entries with a `lobby` name are the setup page's models.
 - API keys, the custom endpoint, the CRS login and the SpacetimeDB token are stored encrypted in this Actor's input. They're passed to each benchmark run as encrypted secret input, or used only by this run, and never sent to the browser. A Clearing run's models are asked with the keys loaded into the database (`scripts/load-model-keys.sh`).
-- The site starts one `enders-bench` run at a time and at most **Runs per hour**; one Clearing run at a time and at most **Clearing runs per hour**. It never resets the world while it's running.
+- The site starts one Ledger Street lineup at a time (up to four `enders-bench` runs together) and at most **Runs per hour** lineups; one Clearing run at a time and at most **Clearing runs per hour**. It never resets the world while it's running. If Apify refuses one run of a lineup (the account's memory, say), the site stops the others it started.
 - The site starts runs with the API token Apify gives this run, so no token appears in the page.
 - On start, the site claims the shared world's harness slot (`claim_harness` trusts the first caller on a fresh world), so a stranger can't take it.
 

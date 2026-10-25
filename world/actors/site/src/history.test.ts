@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseSavedRecordings } from '../../../src/frontend/run-history';
-import { historyEntry, runUuid } from './history';
+import { historyEntry, lineupEntry, runUuid } from './history';
 
 const run = { id: 'Iq0NkJRlpDU7v1khb', status: 'SUCCEEDED', startedAt: new Date('2026-10-25T05:46:00Z'), finishedAt: new Date('2026-10-25T05:46:45Z') };
 
@@ -32,5 +32,16 @@ describe('historyEntry', () => {
     const failed = historyEntry({ ...run, status: 'ABORTED' }, { provider: 'custom', model: 'ender', caseSet: 'quick' })!;
     expect(failed.status).toBe('partial');
     expect(parseSavedRecordings([failed])).toHaveLength(1);
+  });
+});
+
+describe('lineupEntry', () => {
+  it('lists a lineup once, with every agent in its roster', () => {
+    const ender = historyEntry(run, { provider: 'custom', model: 'ender', caseSet: 'quick', repeat: 2 })!;
+    const haiku = historyEntry({ ...run, id: 'b', status: 'RUNNING', finishedAt: null }, { provider: 'anthropic', model: 'claude-haiku-5-5', caseSet: 'quick' })!;
+    const entry = lineupEntry([run.id, 'b'], [ender, haiku]);
+    expect(entry).toMatchObject({ id: runUuid(`${run.id},b`), model: 'Ender', status: 'partial', roster: [{ model: 'Ender', modelId: 'custom:ender', count: 2 }, { model: 'Claude', modelId: 'anthropic:claude-haiku-5-5', count: 1 }] });
+    expect(entry.replayUrl).toBe(`/api/benchmarks/${entry.id}/replay`);
+    expect(parseSavedRecordings([entry, ender])).toHaveLength(2);
   });
 });

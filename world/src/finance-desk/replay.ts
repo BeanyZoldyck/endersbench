@@ -39,6 +39,15 @@ export function parseFinanceRecording(json: unknown): FinanceRecording {
   return data;
 }
 
+// What the agents on a live run's case are doing before it has a record. A
+// case's record arrives when an agent finishes it; until then nothing plays.
+export function waitingLine(offices: { name: string; status: string }[]) {
+  const working = offices.filter(o => o.status === 'open').map(o => o.name);
+  if (working.length === 1) return `${working[0]} is working this case · it plays here once it’s done`;
+  if (working.length) return `${working.length === offices.length ? `All ${working.length} agents` : `${working.slice(0, -1).join(', ')} and ${working.at(-1)}`} are working this case · it plays here as soon as one is done`;
+  return offices.length ? 'Queued · the agents reach this case after the ones ahead of it' : 'Waiting for the run to start';
+}
+
 // Each action and the messages it unlocked stay together, in recorded order.
 // No wall-clock timestamps were stored, so this is explicitly paced playback.
 export function caseTimeline(steps: readonly FinanceStep[]) {

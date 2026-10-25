@@ -5,14 +5,14 @@
 // here; the browser sees only the names in publicConfig.
 //
 //   GET  /api/apify/config            what a visitor may run, plus recent runs
-//   POST /api/apify/runs              start a run: { model, variant, caseSet }
-//   GET  /api/apify/runs/:id          one run's status
-//   GET  /api/apify/runs/:id/replay   its Ledger Street recording so far
+//   POST /api/apify/runs              start a run: { models: [id, ...] (up to four), variant, caseSet }
+//   GET  /api/apify/runs/:ids         a run's status, or a lineup's (run ids joined by commas)
+//   GET  /api/apify/runs/:ids/replay  its Ledger Street recording so far, every agent side by side
 //
 // and, for the setup page's "Start a benchmark" (the local runner's routes):
 //
 //   GET  /api/benchmarks/config       the lobby models on offer and the two scenarios
-//   POST /api/benchmarks              { roster, scenario }: a Clearing run on Maincloud or a Ledger Street Actor run
+//   POST /api/benchmarks              { roster, scenario }: a Clearing run on Maincloud, or Ledger Street Actor runs (one per agent)
 //   GET  /api/benchmarks/:id          that run's status and where to watch it
 import type { IncomingMessage } from 'node:http';
 import path from 'node:path';
@@ -21,12 +21,15 @@ import { Actor, log } from 'apify';
 import type { SelectableModel } from '../../../shared/models';
 import { serve } from '../../shared/serve';
 import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, warmEndpoint, warmTargets, type LineupEntry, type WarmTarget } from './clearing';
-import { historyEntry, type BenchRunInput } from './history';
-import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
+import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/src/finance/prompt';
+import { CASE_SETS } from '../../enders-bench/src/input';
+import { queuedRecording } from '../../enders-bench/src/output';
+import { historyEntry, lineupEntry, type BenchRunInput } from './history';
+import { DONE, groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, type Recording } from './lineup';
+import { PasswordGuard, RequestError, RunLimiter, lineupInputs, publicConfig, siteConfig } from './runs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FALLBACK_REPLAY = '/replays/finance-v6-live-crs-script.json';
-const DONE = new Set(['SUCCEEDED', 'FAILED', 'TIMED-OUT', 'ABORTED']);
 
 await Actor.init();
 let cfg: ReturnType<typeof siteConfig>;
@@ -104,17 +107,43 @@ async function labelFor(runId: string, storeId: string) {
   return label;
 }
 
-// Run history: every enders-bench model run, newest first, as a Ledger Street recording.
-const historyRuns = new Map<string, string>(); // uuid -> Apify run id
+// Ledger Street lineups: the bench runs started together, one per agent. Kept
+// in this run's store too, so a site run Apify migrates still groups them.
+const lineups = new Map<string, string[]>(); // run id -> every run id in its lineup
+for (const ids of (await Actor.getValue<string[][]>('LINEUPS').catch(() => null)) ?? []) for (const id of ids) lineups.set(id, ids);
+async function rememberLineup(ids: string[]) {
+  for (const id of ids) lineups.set(id, ids);
+  await Actor.setValue('LINEUPS', [...new Set(lineups.values())]);
+}
+const lineupOf = (runId: string) => lineups.get(runId);
+
+// Run history: every enders-bench model run, newest first, as a Ledger Street
+// recording; a lineup's runs are one recording.
+const historyRuns = new Map<string, string>(); // uuid -> Apify run id, or a lineup's ids joined by commas
 async function runHistory() {
   return cached('history', 15_000, async () => {
     const list = await client.actor(bench!.id).runs().list({ desc: true, limit: 40 });
-    const entries = await Promise.all(list.items.filter(r => r.status !== 'READY').map(async r => {
-      const entry = historyEntry(r, await runInput(r.id, r.defaultKeyValueStoreId));
-      if (entry) historyRuns.set(entry.id, r.id);
-      return entry;
-    }));
-    return entries.filter(e => e !== null);
+    const entries = await Promise.all(list.items.filter(r => r.status !== 'READY').map(async r => ({ runId: r.id, entry: historyEntry(r, await runInput(r.id, r.defaultKeyValueStoreId)) })));
+    const out: NonNullable<ReturnType<typeof historyEntry>>[] = [];
+    const seen = new Set<string>();
+    for (const { runId, entry } of entries) {
+      const ids = lineupOf(runId);
+      if (!ids) {
+        if (entry) {
+          historyRuns.set(entry.id, runId);
+          out.push(entry);
+        }
+        continue;
+      }
+      if (seen.has(ids.join(','))) continue;
+      seen.add(ids.join(','));
+      const members = ids.flatMap(id => entries.find(e => e.runId === id)?.entry ?? []);
+      if (!members.length) continue;
+      const combined = lineupEntry(ids, members);
+      historyRuns.set(combined.id, ids.join(','));
+      out.push(combined);
+    }
+    return out;
   });
 }
 
@@ -129,32 +158,57 @@ async function runInfo(runId: string): Promise<RunInfo | null> {
       statusMessage: run.statusMessage ?? '',
       startedAt: new Date(run.startedAt).toISOString(),
       finishedAt: run.finishedAt ? new Date(run.finishedAt).toISOString() : null,
-      replayUrl: `/api/apify/runs/${run.id}/replay`,
+      replayUrl: replayPath([run.id]),
       storeId: run.defaultKeyValueStoreId,
     };
   });
 }
 
-async function recentRuns(): Promise<RunInfo[]> {
+type Shown = Omit<RunInfo, 'storeId'>;
+const visible = ({ storeId: _storeId, ...rest }: RunInfo): Shown => rest;
+
+// Newest first, a lineup as one entry.
+async function recentRuns(): Promise<Shown[]> {
   return cached('recent', 5000, async () => {
-    const list = await client.actor(bench!.id).runs().list({ desc: true, limit: 8 });
-    const infos = await Promise.all(list.items.map(r => runInfo(r.id)));
-    return infos.filter((r): r is RunInfo => r !== null);
+    const list = await client.actor(bench!.id).runs().list({ desc: true, limit: 12 });
+    const infos = (await Promise.all(list.items.map(r => runInfo(r.id)))).filter((r): r is RunInfo => r !== null);
+    return groupRuns(infos.map(visible), lineupOf).slice(0, 8);
   });
 }
 
-const visible = ({ storeId: _storeId, ...rest }: RunInfo) => rest;
+async function runsOf(ids: string[]): Promise<RunInfo[]> {
+  const infos = await Promise.all(ids.map(runInfo));
+  if (infos.some(i => i === null)) throw new RequestError('No such Ender’s Bench run.', 404);
+  return infos as RunInfo[];
+}
 
-async function replay(runId: string) {
-  const info = await runInfo(runId);
-  if (!info) throw new RequestError('No such Ender’s Bench run.', 404);
-  const record = await cached(`replay:${runId}`, 2000, async () => (await client.keyValueStore(info.storeId).getRecord('REPLAY'))?.value as Record<string, unknown> | undefined);
+async function statusOf(ids: string[]): Promise<Shown> {
+  const infos = (await runsOf(ids)).map(visible);
+  return ids.length === 1 ? infos[0] : lineupSummary(ids, infos);
+}
+
+// One run's recording so far. Before the run writes its own, the offices are
+// staffed from its input, every case queued, so the page never opens empty.
+async function runReplay(info: RunInfo): Promise<Recording> {
+  const record = await cached(`replay:${info.runId}`, 2000, async () => (await client.keyValueStore(info.storeId).getRecord('REPLAY'))?.value as Recording | undefined);
   const finished = DONE.has(info.status);
   if (!record) {
-    return { version: 1, source: `Apify run ${runId} · ${info.label} · ${finished ? info.status.toLowerCase() : 'starting'}`, recordedAt: info.startedAt, timing: 'paced', stepMs: 2200, cases: [], steps: [], verdicts: [], inProgress: !finished, progress: { done: 0, total: 0 } };
+    const source = `Apify run ${info.runId} · ${info.label} · ${finished ? info.status.toLowerCase() : 'starting'}`;
+    if (finished) return { version: 1, source, recordedAt: info.startedAt, timing: 'paced', stepMs: 2200, cases: [], steps: [], verdicts: [], inProgress: false, progress: { done: 0, total: 0 } };
+    const input = await runInput(info.runId, info.storeId);
+    const caseIds = input.caseSet === 'custom' ? input.caseIds ?? [] : CASE_SETS[input.caseSet ?? 'held-out']?.ids() ?? [];
+    const agent = !input.provider || input.provider === 'script' ? 'script:policy' : `${input.provider}:${input.model ?? ''}`;
+    const variant = input.variant && FINANCE_PROMPT_VARIANTS.includes(input.variant) ? input.variant : HEADLINE_VARIANT;
+    return queuedRecording({ agent, variant, caseIds: [...new Set(caseIds)], repeat: Number(input.repeat) || 1 }, source, info.startedAt) as Recording;
   }
   // A run that stopped mid-way leaves an in-progress recording; stop the viewer polling it.
   return finished ? { ...record, inProgress: false } : record;
+}
+
+async function replay(ids: string[]) {
+  const infos = await runsOf(ids);
+  const parts = await Promise.all(infos.map(runReplay));
+  return ids.length === 1 ? parts[0] : mergeRecordings(parts, `Apify lineup · ${infos.map(i => i.label).join(' + ')}`);
 }
 
 // Ledger Street without a recording opens the newest run, so Run on Apify is one click away.
@@ -163,19 +217,35 @@ async function newestLedger() {
   return newest ? `/finance.html?replay=${newest.replayUrl}&live=1` : `/finance.html?replay=${FALLBACK_REPLAY}`;
 }
 
-// One enders-bench run at a time and a few an hour, from Run on Apify or the setup page.
-async function startBenchRun(request: ReturnType<typeof benchInput>) {
+// One Ledger Street lineup at a time and a few an hour, from Run on Apify or the setup page.
+async function refuseWhileBusy() {
   cache.delete('recent');
   const active = (await recentRuns()).find(r => !DONE.has(r.status));
   if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
   const limited = limiter.check();
   if (limited) throw new RequestError(limited, 429);
-  const run = await client.actor(bench!.id).start(request.input, { memory: cfg.benchMemoryMbytes, timeout: cfg.benchTimeoutSecs });
+}
+
+// A bench run per agent, started together. If Apify refuses one (say the
+// account's memory is used up), the ones already started are stopped.
+async function startBenchRuns(requests: ReturnType<typeof lineupInputs>) {
+  await refuseWhileBusy();
+  const ids: string[] = [];
+  for (const request of requests) {
+    try {
+      const run = await client.actor(bench!.id).start(request.input, { memory: cfg.benchMemoryMbytes, timeout: cfg.benchTimeoutSecs });
+      ids.push(run.id);
+      labels.set(run.id, request.label);
+      log.info(`Started ${run.id}: ${request.label} · ${request.input.variant} · ${request.input.caseSet} × ${request.input.repeat}`);
+    } catch (err) {
+      await Promise.all(ids.map(id => client.run(id).abort().catch(() => undefined)));
+      throw new RequestError(`Apify wouldn’t start ${request.label}: ${err instanceof Error ? err.message : String(err)}`, 502);
+    }
+  }
   limiter.record();
-  labels.set(run.id, request.label);
+  if (ids.length > 1) await rememberLineup(ids);
   cache.delete('recent');
-  log.info(`Started ${run.id}: ${request.label} · ${request.input.variant} · ${request.input.caseSet}`);
-  return run.id;
+  return ids;
 }
 
 // A run started from the setup page, in the shape src/frontend/useBenchmark.ts polls.
@@ -191,7 +261,7 @@ interface LobbyJob {
   viewerHref: string;
   summary?: string;
   error?: string;
-  runId?: string;
+  runIds?: string[];
 }
 const jobs = new Map<string, LobbyJob>();
 const clearingLimiter = new RunLimiter(cfg.clearingRunsPerHour);
@@ -336,32 +406,28 @@ async function adoptRunningWorld() {
   }
 }
 
+// A lineup of up to four agents through the quick tour, a bench run each, all
+// in the offices at once. An agent picked twice runs every case twice.
 async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
-  const names = [...new Set(lineup.map(e => e.model))];
-  if (names.length !== 1) throw new RequestError('On this site Ledger Street runs one model at a time. Pick a single model.');
-  const model = offered(names[0]) ?? (() => { throw new RequestError(`${names[0]} is not offered on this site.`); })();
-  const request = benchInput(cfg, { model: model.siteId, caseSet: 'quick' });
-  const base = { model: names[0], modelId: model.databaseId, scenario: LEDGER, roster: lineup.map(e => ({ ...e, modelId: model.databaseId })), dbName: 'apify', host: 'apify' };
-  const watch = (runId: string) => `/finance.html?replay=/api/apify/runs/${runId}/replay&live=1`;
+  const picked = lineup.map(e => ({ ...e, offered: offered(e.model) ?? (() => { throw new RequestError(`${e.model} is not offered on this site.`); })() }));
+  const requests = lineupInputs(cfg, { models: picked.map(p => ({ model: p.offered.siteId, count: p.count })), caseSet: 'quick' });
+  const base = { model: picked[0].model, modelId: picked[0].offered.databaseId, scenario: LEDGER, roster: picked.map(p => ({ model: p.model, count: p.count, modelId: p.offered.databaseId })), dbName: 'apify', host: 'apify' };
+  const watch = (ids: string[]) => `/finance.html?replay=${replayPath(ids)}&live=1`;
   const targets = runpodTargets(lineup);
   if (!targets.length) {
-    const runId = await startBenchRun(request);
-    const job: LobbyJob = { id: runId, status: 'running', ...base, viewerHref: watch(runId), runId };
+    const ids = await startBenchRuns(requests);
+    const job: LobbyJob = { id: ids.length === 1 ? ids[0] : `ledger-${Date.now().toString(36)}`, status: 'running', ...base, viewerHref: watch(ids), runIds: ids };
     jobs.set(job.id, job);
     return job;
   }
   // Refuse now rather than after minutes of waking the worker.
-  cache.delete('recent');
-  const active = (await recentRuns()).find(r => !DONE.has(r.status));
-  if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
-  const limited = limiter.check();
-  if (limited) throw new RequestError(limited, 429);
+  await refuseWhileBusy();
   const job: LobbyJob = { id: `ledger-${Date.now().toString(36)}`, status: 'starting', ...base, viewerHref: '/?studio=setup' };
   jobs.set(job.id, job);
   void (async () => {
     await wakeRunpod(targets, job);
-    const runId = await startBenchRun(request);
-    Object.assign(job, { status: 'running', runId, viewerHref: watch(runId) });
+    const ids = await startBenchRuns(requests);
+    Object.assign(job, { status: 'running', runIds: ids, viewerHref: watch(ids) });
   })().catch(err => failJob(job, err));
   return job;
 }
@@ -369,10 +435,10 @@ async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
 async function lobbyJob(id: string) {
   const job = jobs.get(id);
   if (!job) throw new RequestError('Benchmark not found.', 404);
-  if (job.runId && job.status === 'running') {
-    const info = await runInfo(job.runId);
-    if (info?.status === 'SUCCEEDED') Object.assign(job, { status: 'completed', summary: info.statusMessage });
-    else if (info && DONE.has(info.status)) Object.assign(job, { status: 'failed', error: info.statusMessage || `The run ${info.status.toLowerCase()}.` });
+  if (job.runIds && job.status === 'running') {
+    const info = await statusOf(job.runIds);
+    if (info.status === 'SUCCEEDED') Object.assign(job, { status: 'completed', summary: info.statusMessage });
+    else if (DONE.has(info.status)) Object.assign(job, { status: 'failed', error: info.statusMessage || `The run ${info.status.toLowerCase()}.` });
   }
   return job;
 }
@@ -382,7 +448,7 @@ async function lobbyJob(id: string) {
 // (scripts/db-run.sh) is offered too, so visitors watch it instead of waiting.
 async function lobbyJobs(): Promise<LobbyJob[]> {
   const list = [...jobs.values()];
-  await Promise.all(list.filter(j => j.runId && j.status === 'running').map(j => lobbyJob(j.id)));
+  await Promise.all(list.filter(j => j.runIds && j.status === 'running').map(j => lobbyJob(j.id)));
   if (list.some(j => j.scenario === CLEARING && j.status === 'running')) return list;
   // Started since the last minute's check: adopt it now, so it shows and is watched.
   await cached('adopt', 4000, async () => { await adoptRunningWorld(); return true; });
@@ -421,30 +487,28 @@ await serve({
       const recording = url.pathname.match(/^\/api\/benchmarks\/([a-f0-9-]{36})\/replay$/);
       if (recording && req.method === 'GET') {
         // A link opened before this run listed the history: list it once to learn the id.
-        const runId = historyRuns.get(recording[1]) ?? (await runHistory(), historyRuns.get(recording[1]));
-        if (!runId) throw new RequestError('Recording not found.', 404);
-        return { json: await replay(runId) };
+        const runIds = historyRuns.get(recording[1]) ?? (await runHistory(), historyRuns.get(recording[1]));
+        if (!runIds) throw new RequestError('Recording not found.', 404);
+        return { json: await replay(runIds.split(',')) };
       }
       const lobby = url.pathname.match(/^\/api\/benchmarks\/([A-Za-z0-9-]+)$/);
       if (lobby && req.method === 'GET' && lobby[1] !== 'history') return { json: await lobbyJob(lobby[1]) };
       if (!url.pathname.startsWith('/api/apify/')) return url.pathname.startsWith('/api/') ? { status: 404, json: { error: 'Route not found.' } } : undefined;
       if (url.pathname === '/api/apify/config' && req.method === 'GET') {
         const recent = await recentRuns();
-        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent: recent.map(visible), passwordRequired: password.required } };
+        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent, passwordRequired: password.required } };
       }
       if (url.pathname === '/api/apify/runs' && req.method === 'POST') {
         // A custom header forces a preflight, so another site's page can't press Run for a visitor.
         if (req.headers['x-enders-bench'] !== '1') throw new RequestError('Use the Ender’s Bench viewer to start runs.', 403);
         password.check(header(req, 'x-run-password'), addressOf(req));
-        const runId = await startBenchRun(benchInput(cfg, JSON.parse(body || '{}')));
-        return { status: 201, json: { runId, replayUrl: `/api/apify/runs/${runId}/replay` } };
+        const ids = await startBenchRuns(lineupInputs(cfg, JSON.parse(body || '{}')));
+        return { status: 201, json: { runId: ids.join(','), replayUrl: replayPath(ids) } };
       }
-      const match = url.pathname.match(/^\/api\/apify\/runs\/([A-Za-z0-9]+)(\/replay)?$/);
+      const match = url.pathname.match(/^\/api\/apify\/runs\/([A-Za-z0-9,]+)(\/replay)?$/);
       if (match && req.method === 'GET') {
-        if (match[2]) return { json: await replay(match[1]) };
-        const info = await runInfo(match[1]);
-        if (!info) throw new RequestError('No such Ender’s Bench run.', 404);
-        return { json: visible(info) };
+        const ids = lineupIds(match[1]) ?? (() => { throw new RequestError('No such Ender’s Bench run.', 404); })();
+        return { json: match[2] ? await replay(ids) : await statusOf(ids) };
       }
       throw new RequestError('Not found', 404);
     } catch (err) {

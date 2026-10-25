@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
-import { financeDuration, financeFrameAt, parseFinanceRecording, caseTimeline, snapshotRun } from './replay';
+import { financeDuration, financeFrameAt, parseFinanceRecording, caseTimeline, snapshotRun, waitingLine } from './replay';
 import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
 import { cohorts, officesFor } from './comparison';
 const json = JSON.parse(readFileSync(new URL('../../public/replays/finance-reference.json', import.meta.url), 'utf8'));
@@ -58,4 +58,12 @@ test('the end matches stored evidence and verdicts, revealing a case score only 
 test('bad versions and orphaned evidence fail rather than inventing a replay', () => {
   expect(() => parseFinanceRecording({ ...json, version: 2 })).toThrow('Invalid finance replay');
   expect(() => parseFinanceRecording({ ...json, steps: [{ ...json.steps[0], caseId: { $big: '999999' } }] })).toThrow('Invalid replay evidence');
+});
+
+test('a live case says who is on it before its record exists', () => {
+  expect(waitingLine([{ name: 'Ender', status: 'open' }])).toBe('Ender is working this case · it plays here once it’s done');
+  expect(waitingLine([{ name: 'Ender', status: 'open' }, { name: 'DeepSeek', status: 'open' }])).toMatch(/^All 2 agents are working this case/);
+  expect(waitingLine([{ name: 'Ender', status: 'open' }, { name: 'DeepSeek', status: 'open' }, { name: 'GLM', status: 'queued' }])).toMatch(/^Ender and DeepSeek are working/);
+  expect(waitingLine([{ name: 'Ender', status: 'queued' }])).toMatch(/^Queued/);
+  expect(waitingLine([])).toBe('Waiting for the run to start');
 });

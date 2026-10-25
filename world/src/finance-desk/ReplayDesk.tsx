@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeskView } from './DeskApp';
-import { cohorts } from './comparison';
+import { cohorts, officesFor } from './comparison';
 import { currentVersion } from './conditions';
-import { financeDuration, financeFrameAt, financeMoments, nextReplayMoment, parseFinanceRecording, type FinanceRecording } from './replay';
+import { financeDuration, financeFrameAt, financeMoments, nextReplayMoment, parseFinanceRecording, waitingLine, type FinanceRecording } from './replay';
 import { Scrubber, groupMoments } from './Scrubber';
 
 const SPEEDS = [.5, 1, 2, 4];
@@ -54,7 +54,17 @@ export default function ReplayDesk({ url, snapshot, onExit, lineup = false, live
   }, [polling, url]);
   const liveLabel = progress?.inProgress ? `Apify run · ${progress.progress?.done ?? 0}/${progress.progress?.total || '…'} cases` : undefined;
   const groups = useMemo(() => recording ? cohorts(recording.cases, lineup || recording.lineup === true) : [], [recording, lineup]);
-  const comparisonKey = groups.find(g => g.key === selection)?.key ?? groups.find(g => g.row.benchmarkVersion === currentVersion && g.row.variant === 'house-rules')?.key ?? groups.find(g => g.models.size > 1)?.key ?? groups[0]?.key;
+  const running = progress?.inProgress === true;
+  // A live run lists every case from the start, most with no record yet: open on the first one an agent has finished.
+  const officesOf = useCallback((key: string) => recording ? officesFor(key, recording.cases, recording.steps, recording.verdicts).filter(o => o.row) : [], [recording]);
+  const recorded = useCallback((key: string) => officesOf(key).some(o => o.steps.length > 0 || o.verdict), [officesOf]);
+  const comparisonKey = groups.find(g => g.key === selection)?.key ?? (running ? groups.find(g => recorded(g.key))?.key : undefined)
+    ?? groups.find(g => g.row.benchmarkVersion === currentVersion && g.row.variant === 'house-rules')?.key ?? groups.find(g => g.models.size > 1)?.key ?? groups[0]?.key;
+  // Once the first record lands, stay on it from the start, rather than jumping as later cases finish.
+  useEffect(() => {
+    if (running && !selection && comparisonKey && recorded(comparisonKey)) { setSelection(comparisonKey); seek(0); setPlaying(true); }
+  }, [running, selection, comparisonKey, recorded, seek]);
+  const waiting = running && !!comparisonKey && !recorded(comparisonKey) ? officesOf(comparisonKey) : undefined;
   const moments = useMemo(() => recording && comparisonKey ? financeMoments(recording, comparisonKey) : [], [recording, comparisonKey]);
   const marks = useMemo(() => groupMoments(moments), [moments]);
   const duration = useMemo(() => recording ? financeDuration(recording, comparisonKey) : 0, [recording, comparisonKey]);
@@ -102,6 +112,7 @@ export default function ReplayDesk({ url, snapshot, onExit, lineup = false, live
   }, [recording, marks, duration, jump, toggle]);
   const controls = error ? <div className="scrubber scrubber-state" role="alert">Replay failed: {error}</div>
     : !recording ? <div className="scrubber scrubber-state" role="status">Loading the recording…</div>
+    : waiting ? <div className="scrubber scrubber-state" role="status">{waitingLine(waiting.map(o => ({ name: o.name, status: o.row!.status })))}</div>
     : <Scrubber time={time} duration={duration} groups={marks} playing={playing} speed={speed} loop={loop} stopAtFindings={pauseOnViolation}
         onSeek={jump} onPlay={toggle} onSpeed={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])} onLoop={() => setLoop(!loop)} onStopAtFindings={() => setPauseOnViolation(!pauseOnViolation)} />;
   return <DeskView lineup={lineup || recording?.lineup === true} {...data} isActive={false} ready={!!recording} replay={{ controls, error, comparisonKey, url, onExit, live: liveLabel, pause: () => setPlaying(false), onComparisonChange: key => { setSelection(key); restart(); } }} />;

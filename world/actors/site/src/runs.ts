@@ -5,6 +5,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/src/finance/prompt';
 import { CASE_SETS, PROVIDERS } from '../../enders-bench/src/input';
 import { lobbyModels } from './clearing';
+import { MAX_LINEUP } from './lineup';
 
 export interface SiteModel {
   id: string;
@@ -115,13 +116,16 @@ export function publicConfig(cfg: SiteConfig) {
 }
 
 // A visitor's request, checked against the allow-list, as the bench Actor's input.
+// repeat runs every case that many times: the same agent in more than one office.
 export function benchInput(cfg: SiteConfig, body: unknown) {
-  const request = (body && typeof body === 'object' ? body : {}) as { model?: unknown; variant?: unknown; caseSet?: unknown };
+  const request = (body && typeof body === 'object' ? body : {}) as { model?: unknown; variant?: unknown; caseSet?: unknown; repeat?: unknown };
   const model = cfg.models.find(m => m.id === text(request.model)) ?? (() => { throw new RequestError('Pick one of the listed models.'); })();
   const variant = text(request.variant) || HEADLINE_VARIANT;
   if (!FINANCE_PROMPT_VARIANTS.includes(variant)) throw new RequestError('Pick one of the listed policies.');
   const caseSet = text(request.caseSet) || cfg.caseSets[0];
   if (!cfg.caseSets.includes(caseSet)) throw new RequestError('Pick one of the listed case sets.');
+  const repeat = request.repeat === undefined ? 1 : Number(request.repeat);
+  if (!Number.isInteger(repeat) || repeat < 1 || repeat > MAX_LINEUP) throw new RequestError(`Pick up to ${MAX_LINEUP} agents.`);
   return {
     label: model.label,
     input: {
@@ -132,7 +136,7 @@ export function benchInput(cfg: SiteConfig, body: unknown) {
       ...(model.effort ? { effort: model.effort } : {}),
       variant,
       caseSet,
-      repeat: 1,
+      repeat,
       concurrency: 3,
       crsSource: cfg.crs ? 'live' : 'snapshot',
       ...(cfg.crs ? { crsUsername: cfg.crs.username, crsPassword: cfg.crs.password } : {}),
@@ -142,7 +146,21 @@ export function benchInput(cfg: SiteConfig, body: unknown) {
   };
 }
 
-// At most one run at a time and a few per hour, whoever presses the button.
+// Up to four agents in Ledger Street at once, each its own bench run with the
+// same policy and cases: { models: [id, ...] }, or { model: id } for one. An
+// entry { model, count } runs that agent count times over.
+export function lineupInputs(cfg: SiteConfig, body: unknown) {
+  const request = (body && typeof body === 'object' ? body : {}) as { models?: unknown; model?: unknown; variant?: unknown; caseSet?: unknown };
+  const picked = (Array.isArray(request.models) ? request.models : [request.model]).map(p =>
+    p && typeof p === 'object' ? { model: text((p as { model?: unknown }).model), count: Number((p as { count?: unknown }).count) } : { model: text(p), count: 1 });
+  if (!picked.length || picked.some(p => !p.model)) throw new RequestError('Pick at least one agent.');
+  if (new Set(picked.map(p => p.model)).size !== picked.length) throw new RequestError('Pick each agent once.');
+  const total = picked.reduce((n, p) => n + (Number.isInteger(p.count) && p.count > 0 ? p.count : Number.NaN), 0);
+  if (!Number.isInteger(total) || total > MAX_LINEUP) throw new RequestError(`Pick up to ${MAX_LINEUP} agents.`);
+  return picked.map(p => benchInput(cfg, { model: p.model, variant: request.variant, caseSet: request.caseSet, repeat: p.count }));
+}
+
+// A few runs per hour, whoever presses the button; a lineup counts as one.
 export class RunLimiter {
   private started: number[] = [];
   constructor(private perHour: number, private now = () => Date.now()) {}

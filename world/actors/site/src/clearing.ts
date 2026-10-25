@@ -2,7 +2,8 @@
 // benchmark runner (harness/benchmark/http.ts) that only exists on a laptop, so
 // the site answers the same three routes itself: a Clearing lineup becomes a
 // database-brained run on the shared world on Maincloud (begin_run, the
-// module asks the models), a Ledger Street lineup an enders-bench Actor run.
+// module asks the models), a Ledger Street lineup an enders-bench Actor run
+// per agent, watched side by side.
 import { MODEL_CATALOG, type SelectableModel } from '../../../shared/models';
 import { BENCHMARK_SCENARIOS } from '../../../harness/benchmark/scenarios';
 import { DATABASE_PROVIDERS, splitModelId } from '../../../spacetimedb/src/brain/protocol';
@@ -46,7 +47,7 @@ export function lobbyConfig(lobby: Map<SelectableModel, LobbyModel>, can: { clea
     }),
     scenarios: BENCHMARK_SCENARIOS.map(s => s.id === CLEARING
       ? { ...s, description: 'Survivors face scarcity, winter and rescue in the shared world on SpacetimeDB Maincloud; the database asks the models itself.', available: can.clearing, ...(can.clearing ? {} : { reason: 'This site has no SpacetimeDB login.' }) }
-      : { ...s, description: 'One model through the seven-case quick tour, as a run of the enders-bench Apify Actor.' }),
+      : { ...s, description: 'Up to four agents through the seven-case quick tour side by side, each a run of the enders-bench Apify Actor.' }),
   };
 }
 

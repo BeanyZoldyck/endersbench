@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
+import { PasswordGuard, RequestError, RunLimiter, benchInput, lineupInputs, publicConfig, siteConfig } from './runs';
 
 describe('PasswordGuard', () => {
   it('lets anyone start when no password is set', () => {
@@ -79,6 +79,28 @@ describe('benchInput', () => {
     expect(() => benchInput(cfg, { model: 'gpt-anything' })).toThrow(RequestError);
     expect(() => benchInput(cfg, { model: 'script', variant: 'win-at-all-costs' })).toThrow('listed policies');
     expect(() => benchInput(cfg, { model: 'script', caseSet: 'all' })).toThrow('listed case sets');
+  });
+});
+
+describe('lineupInputs', () => {
+  const cfg = siteConfig({ models, ...keys });
+
+  it('starts one bench run per agent, with the same policy and cases', () => {
+    const runs = lineupInputs(cfg, { models: ['ft', 'haiku', 'glm'], variant: 'no-charter', caseSet: 'quick' });
+    expect(runs.map(r => r.label)).toEqual(['Fine-tuned Qwen3.8-27B', 'Claude Haiku 5.5', 'GLM-5.3 (Bitdeer)']);
+    expect(runs.every(r => r.input.variant === 'no-charter' && r.input.caseSet === 'quick' && r.input.repeat === 1)).toBe(true);
+    expect(lineupInputs(cfg, { model: 'haiku' })).toHaveLength(1);
+  });
+
+  it('runs an agent picked twice twice over', () => {
+    expect(lineupInputs(cfg, { models: [{ model: 'ft', count: 2 }, { model: 'haiku', count: 2 }] }).map(r => r.input.repeat)).toEqual([2, 2]);
+  });
+
+  it('holds a lineup to four agents, each once, all on the list', () => {
+    expect(() => lineupInputs(cfg, { models: ['ft', 'haiku', 'glm', 'script', 'ft'] })).toThrow('each agent once');
+    expect(() => lineupInputs(cfg, { models: [{ model: 'ft', count: 3 }, { model: 'haiku', count: 2 }] })).toThrow('up to 4 agents');
+    expect(() => lineupInputs(cfg, { models: [] })).toThrow('at least one agent');
+    expect(() => lineupInputs(cfg, { models: ['ft', 'gpt-anything'] })).toThrow('listed models');
   });
 });
 
