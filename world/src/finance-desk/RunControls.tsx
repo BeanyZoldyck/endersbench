@@ -59,11 +59,11 @@ export function RunControls({ data, comparisonKey, connected, onSelect, onReplay
   };
   return <div className="finance-run-controls" role="group" aria-label="Live run controls">
     <span className="run-status" role="status">{sending || waiting ? 'Starting run…' : activeCase ? comparisonKeyFor(activeCase, data.cases) === comparisonKey ? 'Running · decisions arriving live' : 'Another case is running' : complete ? 'Run complete' : 'Ready for a case'}</span>
-    <label className="run-policy-label">New run policy <select aria-label="New run policy" disabled={disabled} value={variant} onChange={e => setVariant(e.target.value)}>{(worker?.variants ?? [HEADLINE_VARIANT]).map(id => <option key={id} value={id}>{CONDITION_NAMES[id] ?? id}</option>)}</select></label>
+    <label className="run-policy-label">Policy <select aria-label="New run policy" disabled={disabled} value={variant} onChange={e => setVariant(e.target.value)}>{(worker?.variants ?? [HEADLINE_VARIANT]).map(id => <option key={id} value={id}>{CONDITION_NAMES[id] ?? id}</option>)}</select></label>
     <button disabled={disabled || !selected || !worker?.cases.includes(selected.scenarioId)} onClick={() => selected && void start(selected.scenarioId)}>{selected && selected.benchmarkVersion !== currentVersion ? `Run with v${currentVersion}` : 'Run again'}</button>
     <button disabled={disabled || !nextId} title={nextId ? SCENARIO_BY_ID[nextId]?.title : ''} onClick={() => nextId && void start(nextId)}>Next case →</button>
     <button disabled={!complete} onClick={() => snapshot && onReplay(snapshot)}>Replay this run</button>
     {worker && <small>v{worker.version} · Live roster: {worker.models.map(m => m.slice(m.indexOf(':') + 1)).join(', ')}{worker.repeat > 1 ? ` · ${worker.repeat} independent runs per model` : ''}</small>}
-    {error && <span className="run-control-error" role="alert">{error} <button onClick={() => void refresh()}>Reconnect controls</button></span>}
+    {error && <span className="run-control-error" role="alert">{error} <button onClick={() => void refresh()}>Retry</button></span>}
   </div>;
 }

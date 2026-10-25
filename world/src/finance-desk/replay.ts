@@ -46,8 +46,11 @@ export function caseTimeline(steps: readonly FinanceStep[]) {
     return { step, turn };
   });
 }
-export function financeDuration(data: FinanceRecording) {
-  const longest = Math.max(0, ...data.cases.map(row => data.steps.filter(s => s.caseId === row.id && s.tool !== EVENT_STEP).length));
+// With a comparison key, only that comparison's cases set the length, so its
+// timeline isn't padded out by a longer case elsewhere in the recording.
+export function financeDuration(data: FinanceRecording, key?: string) {
+  const rows = key ? officesFor(key, data.cases, data.steps, data.verdicts).flatMap(o => o.row ? [o.row] : []) : data.cases;
+  const longest = Math.max(0, ...rows.map(row => data.steps.filter(s => s.caseId === row.id && s.tool !== EVENT_STEP).length));
   return (longest + 2) * data.stepMs;
 }
 export function financeFrameAt(data: FinanceRecording, time: number): FinanceFrame {
