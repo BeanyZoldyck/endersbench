@@ -8,7 +8,7 @@ import { providerEndpoint } from '../../spacetimedb/src/brain/protocol.js';
 import { BENCHMARK_SCENARIOS } from './scenarios.js';
 
 type Environment = Record<string, string | undefined>;
-const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'bitdeer']);
+const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'bitdeer', 'featherless']);
 
 export function validModelId(value: string | null | undefined): value is string {
   if (!value || value.length > 160 || /[\s\x00-\x1f]/.test(value)) return false;
@@ -26,7 +26,7 @@ export function modelConfig(env: Environment): Array<{ id: ModelName; modelId: s
     if (!validModelId(candidate)) return { id, modelId: null, available: false, reason: candidate ? 'Use a supported provider:model mapping.' : `Set ${model.env} to provider:model.` };
     const identity = exactModelName(candidate);
     const customEnder = id === 'Ender' && candidate.startsWith('ender:') && identity === null;
-    if (identity !== id && !customEnder) return { id, modelId: null, available: false, reason: `The configured mapping must identify ${id}.` };
+    if (identity !== id && !customEnder && id !== 'Abliterated') return { id, modelId: null, available: false, reason: `The configured mapping must identify ${id}.` };
     try {
       if (!candidate.startsWith('codex:')) providerEndpoint(candidate.split(':')[0], name => env[name]);
       return { id, modelId: candidate, available: true };

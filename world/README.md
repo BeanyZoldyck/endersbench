@@ -136,8 +136,15 @@ scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,a
   Tested live from the database: DeepSeek on Bitdeer, GPT-6 Luna, Claude Haiku 5.5. Not yet live:
   `ender` and `openrouter`. OpenAI and Bitdeer models are asked with reasoning off
   (`reasoning_effort: "none"`), as `PROVIDERS` records.
+- `featherless` serves Hugging Face models, including abliterated (refusal-removed) ones:
+  `featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2` is the lobby's **Abliterated** agent
+  (`BENCHMARK_MODEL_ABLITERATED`). Featherless returns a tool call only when the model chooses one,
+  and these Qwen3 models choose one only while thinking, so they keep thinking with 1,024 tokens.
+  Probed on real observations: a tool call 9 of 10 times, mostly 2-4 s, but up to 67 s, so expect
+  some calls to time out. Plans cap concurrent calls by size (a 14B costs 1 of Premium's 4 units).
 - Keys live only in the database's environment (`BITDEER_API_KEY`, `OPENAI_API_KEY`,
-  `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `ENDER_BASE_URL`, `ENDER_API_KEY`), never in a table.
+  `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `ENDER_BASE_URL`, `ENDER_API_KEY`,
+  `FEATHERLESSAI_API_KEY`), never in a table.
   `spacetime env list` prints their values: don't run it where anyone can see.
 - A harness left connected skips database-brained requests, and a harness started against a
   database-brained world leaves its run alone (`HARNESS_TAKEOVER=1` replaces it with the harness's

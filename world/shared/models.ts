@@ -9,6 +9,7 @@ export const MODEL_CATALOG = [
   { name: 'GPT-6 Luna', env: 'BENCHMARK_MODEL_GPT_6_LUNA', legacyEnv: 'BENCHMARK_MODEL_CHATGPT', aliases: ['gpt-6-luna'], avatar: 'chatgpt' },
   { name: 'GPT-6 Sol', env: 'BENCHMARK_MODEL_GPT_6_SOL', legacyEnv: 'BENCHMARK_MODEL_CHATGPT', aliases: ['gpt-6-sol'], avatar: 'chatgpt' },
   { name: 'Ender', env: 'BENCHMARK_MODEL_ENDER', legacyEnv: 'BENCHMARK_MODEL_ENDER', aliases: ['ender', 'ender1'], avatar: 'ender' },
+  { name: 'Abliterated', env: 'BENCHMARK_MODEL_ABLITERATED', legacyEnv: 'BENCHMARK_MODEL_ABLITERATED', aliases: ['abliterated'], avatar: 'abliterated' },
 ] as const;
 export type SelectableModel = typeof MODEL_CATALOG[number]['name'];
 export const SELECTABLE_MODELS: SelectableModel[] = MODEL_CATALOG.map(model => model.name);

@@ -13,9 +13,9 @@ export function modelDisplayName(modelId: string): string {
 export function modelAvatarPath(modelId: string): string | null {
   const exact = exactModelName(modelId);
   const known = MODEL_CATALOG.find(model => model.name === exact);
-  if (known) return `/studio/avatars/${known.avatar}.png`;
+  if (known?.avatar) return `/studio/avatars/${known.avatar}.png`;
   const id = modelId.toLowerCase();
-  const model = id.includes('grok') ? 'grok' : id.includes('claude') ? 'claude' : id.includes('gpt') || id.includes('openai') || id === 'chatgpt' ? 'chatgpt' : id.includes('ender') ? 'ender' : null;
+  const model = id.includes('abliterated') ? 'abliterated' : id.includes('grok') ? 'grok' : id.includes('claude') ? 'claude' : id.includes('gpt') || id.includes('openai') || id === 'chatgpt' ? 'chatgpt' : id.includes('ender') ? 'ender' : null;
   return model ? `/studio/avatars/${model}.png` : null;
 }
 

@@ -26,6 +26,7 @@ export const OPENAI_COMPATIBLE: Record<string, { baseUrl: () => string | undefin
   openai: { baseUrl: () => 'https://api.openai.com/v1', key: () => envValue('OPENAI_API_KEY'), needs: 'OPENAI_API_KEY', api: 'responses' },
   openrouter: { baseUrl: () => 'https://openrouter.ai/api/v1', key: () => envValue('OPENROUTER_API_KEY'), needs: 'OPENROUTER_API_KEY' },
   bitdeer: { baseUrl: () => 'https://api-inference.bitdeer.ai/v1', key: () => envValue('BITDEER_API_KEY'), needs: 'BITDEER_API_KEY' },
+  featherless: { baseUrl: () => 'https://api.featherless.ai/v1', key: () => envValue('FEATHERLESSAI_API_KEY'), needs: 'FEATHERLESSAI_API_KEY' },
   ender: { baseUrl: () => envValue('ENDER_BASE_URL'), key: () => envValue('ENDER_API_KEY') ?? '', needs: 'ENDER_BASE_URL' },
   ollama: { baseUrl: () => envValue('OLLAMA_BASE_URL') ?? 'http://localhost:11434/v1', key: () => '', needs: 'OLLAMA_BASE_URL' },
 };

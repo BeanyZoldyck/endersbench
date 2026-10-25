@@ -27,9 +27,9 @@ function recording(index: number, model: SavedRecording['model'], modelId: strin
 }
 
 describe('exact benchmark model catalog', () => {
-  it('has exactly the eight requested choices and no family-level substitutes', () => {
-    expect(BENCHMARK_MODELS).toEqual(variants.map(([name]) => name));
-    expect(new Set(MODEL_CATALOG.map(model => model.env)).size).toBe(8);
+  it('has the eight requested choices plus the existing Abliterated option', () => {
+    expect(BENCHMARK_MODELS).toEqual([...variants.map(([name]) => name), 'Abliterated']);
+    expect(new Set(MODEL_CATALOG.map(model => model.env)).size).toBe(9);
   });
   it.each(variants)('selects and presents %s without losing its variant', (name, id) => {
     const selected = transitionStudio(initialStudioState(''), { type: 'select-draft-model', model: name });
@@ -84,15 +84,21 @@ describe('exact benchmark model catalog', () => {
     expect(markup).toContain('No saved recordings for GPT-6 Sol.');
     expect(markup).not.toContain('Completed benchmark');
   });
-  it('renders exactly eight setup cards and disables unconnected variants independently', () => {
+  it('renders nine setup cards and disables unconnected variants independently', () => {
     const config = { ready: true, models: variants.map(([id, modelId]) => ({ id, modelId, available: id === 'GPT-6 Luna' })), scenarios: [{ id: 'clearing-charter', name: 'The Clearing', description: 'Observe.' }] };
     const state = { ...initialStudioState(''), draftRoster: { 'GPT-6 Luna': 1 } };
     const markup = renderToStaticMarkup(createElement(BenchmarkLobby, { state, dispatch: vi.fn(), config, error: '', starting: false, onStart: vi.fn(), onRetry: vi.fn(), onDetails: vi.fn() }));
-    expect((markup.match(/class="lineup-model /g) ?? [])).toHaveLength(8);
+    expect((markup.match(/class="lineup-model /g) ?? [])).toHaveLength(9);
     for (const [name] of variants) {
       const button = markup.split('<button').map(part => part.split('>')[0]).find(part => part.includes(`aria-label="Add one ${name} agent"`));
       expect(button).toBeDefined();
       expect(button?.includes('disabled')).toBe(name !== 'GPT-6 Luna');
     }
   });
+});
+
+it('keeps the existing Abliterated option with its own mascot', () => {
+  expect(BENCHMARK_MODELS).toContain('Abliterated');
+  expect(modelAvatarPath('Abliterated')).toBe('/studio/avatars/abliterated.png');
+  expect(modelAvatarPath('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2')).toBe('/studio/avatars/abliterated.png');
 });

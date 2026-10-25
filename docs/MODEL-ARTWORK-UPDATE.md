@@ -26,3 +26,6 @@ Measured interval ended 2026-10-25 05:33:46 UTC (7m 1s). Both code/artwork units
 
 ## Avatar color revision
 User requested colorful small avatars matching Qwen, Claude and GPT while leaving larger scenes muted. Replaced only avatars/deepseek.png and avatars/glm.png using built-in image generation with Qwen and Claude as references. Prompt: match compact egg body, small oval eyes, tiny brown feet, tan satchel, faceted low-poly material, golden rim light and three-quarter pose. DeepSeek: saturated sky/cobalt blue body, royal-blue scarf, cream whale on side scarf flap. GLM: saturated turquoise body, jade-teal scarf, cream geometric Z on side flap. Both genuinely transparent, no scenery, no white hands. Verified large-scene hashes unchanged.
+
+## Integration with current main
+Preserved main's Featherless support and Abliterated model as a ninth selectable choice, per final user correction. Added avatars/abliterated.png with built-in generation using Qwen as reference: same round faceted body, satchel, scarf and boots, darker plum body, purple scarf with Qwen emblem, mischievous amber eyes, transparent background. Large scene artwork unchanged. Existing deployment-specific Abliterated mapping is preserved; no exact remote model version inferred.

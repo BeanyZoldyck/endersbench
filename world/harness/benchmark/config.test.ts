@@ -9,6 +9,13 @@ describe('benchmark model configuration', () => {
     expect(validModelId('openai:')).toBe(false);
   });
 
+  it('offers Abliterated, set by BENCHMARK_MODEL_ABLITERATED to a featherless model', () => {
+    expect(validModelId('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2')).toBe(true);
+    const models = modelConfig({ FEATHERLESSAI_API_KEY: 'test-only', BENCHMARK_MODEL_ABLITERATED: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
+    expect(models.map(model => model.id)).toContain('Abliterated');
+    expect(models.find(model => model.id === 'Abliterated')).toMatchObject({ available: true, modelId: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
+  });
+
   it('never returns an invalid configured value', () => {
     const models = modelConfig({ BENCHMARK_MODEL_GPT_6_LUNA: 'sk-mistaken-secret' });
     const selected = models.find(model => model.id === 'GPT-6 Luna');
@@ -18,9 +25,9 @@ describe('benchmark model configuration', () => {
 });
 
 describe('exact model connections', () => {
-  it('returns eight unavailable choices when no mappings are configured', () => {
+  it('returns nine unavailable choices when no mappings are configured', () => {
     const models = modelConfig({});
-    expect(models).toHaveLength(8);
+    expect(models).toHaveLength(9);
     expect(models.every(model => !model.available && model.modelId === null)).toBe(true);
   });
   it('accepts Bitdeer and keeps GLM and Flash independent', () => {
