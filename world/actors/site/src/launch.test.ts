@@ -38,6 +38,12 @@ describe('siteInputFromEnv', () => {
     expect(input).not.toHaveProperty('crsUsername');
   });
 
+  it('passes the Spacetime login on, so the setup page can start Clearing runs', () => {
+    const input = siteInputFromEnv({ ...env, SPACETIMEDB_TOKEN: 'st' }, models);
+    expect(input.spacetimeToken).toBe('st');
+    expect(fieldReport(input)).toContain('spacetimeToken: set');
+  });
+
   it('takes the harness\'s FEATHERLESSAI_API_KEY too', () => {
     const { FEATHERLESS_API_KEY: _, ...rest } = env;
     expect(siteInputFromEnv({ ...rest, FEATHERLESSAI_API_KEY: 'fa' }, models).featherlessApiKey).toBe('fa');

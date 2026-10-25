@@ -38,4 +38,10 @@ describe('fresh benchmark launch contract', () => {
   it('rejects an unrelated database as a launch destination', () => {
     expect(() => benchmarkViewerHref({ ...job, dbName: 'endersbench' })).toThrow('Invalid benchmark destination');
   });
+  it('follows a hosted runner to the page it names, on this site only', () => {
+    const hosted = { ...job, id: 'Iq0NkJRlpDU7v1khb', dbName: 'endersbench', viewerHref: '/?legacy=1' };
+    expect(benchmarkViewerHref(hosted)).toBe('/?legacy=1');
+    expect(benchmarkViewerHref({ ...hosted, scenario: 'ledger', viewerHref: '/finance.html?replay=/api/apify/runs/Iq0NkJRlpDU7v1khb/replay&live=1' })).toContain('/api/apify/runs/');
+    for (const elsewhere of ['//evil.test/', 'https://evil.test/', 'javascript:alert(1)', '/a b']) expect(() => benchmarkViewerHref({ ...hosted, viewerHref: elsewhere })).toThrow('Invalid benchmark destination');
+  });
 });

@@ -9,7 +9,7 @@
       "title": "Models on offer",
       "type": "array",
       "editor": "json",
-      "description": "The Run button offers only these. Each entry: id, label, provider (script, anthropic, openai, openrouter, bitdeer, featherless or custom), model, and for custom an optional baseUrl and effort. Every run spends your keys, so keep the list short.",
+      "description": "The Run button offers only these. Each entry: id, label, provider (script, anthropic, openai, openrouter, bitdeer, featherless or custom), model, and for custom an optional baseUrl and effort. Optional lobby: the setup page's model this entry is (e.g. Ender), and for custom, database: the provider:model the database asks in a Clearing run (e.g. ender:ender). Every run spends your keys, so keep the list short.",
       "default": [{ "id": "script", "label": "Policy reference script (no model)", "provider": "script" }],
       "prefill": [
         { "id": "script", "label": "Policy reference script (no model)", "provider": "script" },
@@ -62,6 +62,18 @@
     },
     "crsUsername": { "title": "CRS sandbox username", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS. Passed to each run as encrypted input." },
     "crsPassword": { "title": "CRS sandbox password", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS." },
+    "spacetimeToken": {
+      "sectionCaption": "The Clearing on SpacetimeDB",
+      "title": "SpacetimeDB login token",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "A login that may run the shared world (its owner's: `spacetime login show --token`). With it, the setup page's Start a benchmark runs the Clearing on Maincloud, where the database asks the models itself. npm run actors:site fills it in."
+    },
+    "spacetimeHost": { "title": "SpacetimeDB server", "type": "string", "editor": "textfield", "description": "The HTTP address of the server the shared world is on.", "default": "https://maincloud.spacetimedb.com" },
+    "spacetimeDb": { "title": "SpacetimeDB database", "type": "string", "editor": "textfield", "description": "The shared world's database name. The viewer watches the one it was built for (actors/build.mjs).", "default": "endersbench" },
+    "clearingRunsPerHour": { "title": "Clearing runs per hour", "type": "integer", "editor": "number", "description": "One Clearing run at a time, and at most this many an hour. Each one asks every survivor's model many times.", "minimum": 1, "maximum": 30, "default": 4 },
+    "clearingMaxMinutes": { "title": "Longest Clearing run (minutes)", "type": "integer", "editor": "number", "description": "The site pauses the world after this long even if the rescue hasn't resolved.", "minimum": 2, "maximum": 120, "default": 20 },
     "benchActor": {
       "sectionCaption": "Advanced",
       "title": "Benchmark Actor",

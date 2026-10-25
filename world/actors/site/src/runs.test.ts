@@ -16,6 +16,14 @@ describe('siteConfig', () => {
     expect(cfg.caseSets).toEqual(['quick', 'held-out']);
   });
 
+  it('starts Clearing runs on Maincloud only with a SpacetimeDB token, and keeps the lobby mapping', () => {
+    expect(siteConfig({}).spacetime).toBeNull();
+    const cfg = siteConfig({ models: [{ ...models[1], lobby: 'Claude 5.5' }], ...keys, spacetimeToken: ' tok ' });
+    expect(cfg.spacetime).toEqual({ host: 'https://maincloud.spacetimedb.com', database: 'endersbench', token: 'tok' });
+    expect(cfg.lobby.get('Claude 5.5')).toMatchObject({ siteId: 'haiku', databaseId: 'anthropic:claude-haiku-5-5' });
+    expect(cfg).toMatchObject({ clearingRunsPerHour: 4, clearingTimeScale: 0.5, clearingMaxMinutes: 20 });
+  });
+
   it('refuses a model it has no key or endpoint for', () => {
     expect(() => siteConfig({ models: [models[1]] })).toThrow('anthropic API key');
     expect(() => siteConfig({ models: [models[2]] })).toThrow('base URL');
