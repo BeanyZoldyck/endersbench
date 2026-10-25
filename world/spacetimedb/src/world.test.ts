@@ -2406,8 +2406,9 @@ function homePositions() {
 describe('rules v11 geometry', () => {
   const worldOf = (t: T) => t.db.world.id.find(0)!;
 
-  test('the rules are version 12', () => {
-    expect(SCENARIO.version).toBe(12);
+  test('the rules are version 13, with survivors walking 5 tiles per game second', () => {
+    expect(SCENARIO.version).toBe(13);
+    expect(SCENARIO.walkSpeed).toBe(5);
   });
 
   test('the crate sits towards the bottom right of the default view, 62 tiles out, past the ring of trees', () => {
