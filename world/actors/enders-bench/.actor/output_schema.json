@@ -1,0 +1,36 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "Ender's Bench results",
+  "properties": {
+    "results": {
+      "type": "string",
+      "title": "Results by case",
+      "description": "One row per case run: the decision, whether it was compliant, and every violation the verifier found.",
+      "template": "{{links.apiDefaultDatasetUrl}}/items?view=overview"
+    },
+    "scorecard": {
+      "type": "string",
+      "title": "Scorecard",
+      "description": "Compliant completion, outcome, process and output pass rates, violations by tier, tool-choice score and cost.",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/OUTPUT"
+    },
+    "liveView": {
+      "type": "string",
+      "title": "Ledger Street (while the run is open)",
+      "description": "The Ledger Street viewer playing this run's cases. Available until the run ends.",
+      "template": "{{run.containerUrl}}"
+    },
+    "replay": {
+      "type": "string",
+      "title": "Recording",
+      "description": "The Ledger Street recording of this run. Any copy of the viewer opens it with ?replay=<this URL>.",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/REPLAY"
+    },
+    "run": {
+      "type": "string",
+      "title": "Full run (finance:bench format)",
+      "description": "Every step of every case, in the format the Ender's Bench leaderboard and labelling scripts read.",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/RUN"
+    }
+  }
+}

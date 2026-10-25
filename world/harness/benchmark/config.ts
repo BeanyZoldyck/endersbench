@@ -2,16 +2,13 @@ import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createConnection } from 'node:net';
 import path from 'node:path';
-import { MODEL_IDS, SCENARIO_ID, type ModelName } from './types.js';
+import type { ModelName, BenchmarkScenario } from './types.js';
+import { MODEL_CATALOG, exactModelName } from '../../shared/models.js';
+import { providerEndpoint } from '../../spacetimedb/src/brain/protocol.js';
+import { BENCHMARK_SCENARIOS } from './scenarios.js';
 
 type Environment = Record<string, string | undefined>;
-const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama']);
-const MODEL_ENV: Record<ModelName, string> = {
-  Ender: 'BENCHMARK_MODEL_ENDER',
-  Grok: 'BENCHMARK_MODEL_GROK',
-  Claude: 'BENCHMARK_MODEL_CLAUDE',
-  ChatGPT: 'BENCHMARK_MODEL_CHATGPT',
-};
+const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'bitdeer', 'featherless']);
 
 export function validModelId(value: string | null | undefined): value is string {
   if (!value || value.length > 160 || /[\s\x00-\x1f]/.test(value)) return false;
@@ -20,11 +17,22 @@ export function validModelId(value: string | null | undefined): value is string 
 }
 
 export function modelConfig(env: Environment): Array<{ id: ModelName; modelId: string | null; available: boolean; reason?: string }> {
-  return MODEL_IDS.map(id => {
-    const candidate = env[MODEL_ENV[id]]?.trim() || null;
-    return validModelId(candidate)
-      ? { id, modelId: candidate, available: true }
-      : { id, modelId: null, available: false, reason: candidate ? 'Use a supported provider:model mapping.' : `Set ${MODEL_ENV[id]} to provider:model.` };
+  return MODEL_CATALOG.map(model => {
+    const explicit = env[model.env]?.trim();
+    const legacy = env[model.legacyEnv]?.trim();
+    // Reuse old family configuration only for its exact model variant.
+    const candidate = explicit || (legacy && exactModelName(legacy) === model.name ? legacy : null);
+    const id = model.name;
+    if (!validModelId(candidate)) return { id, modelId: null, available: false, reason: candidate ? 'Use a supported provider:model mapping.' : `Set ${model.env} to provider:model.` };
+    const identity = exactModelName(candidate);
+    const customEnder = id === 'Ender' && candidate.startsWith('ender:') && identity === null;
+    if (identity !== id && !customEnder && id !== 'Abliterated') return { id, modelId: null, available: false, reason: `The configured mapping must identify ${id}.` };
+    try {
+      if (!candidate.startsWith('codex:')) providerEndpoint(candidate.split(':')[0], name => env[name]);
+      return { id, modelId: candidate, available: true };
+    } catch {
+      return { id, modelId: candidate, available: false, reason: 'The configured provider needs its server-side connection settings.' };
+    }
   });
 }
 
@@ -52,7 +60,7 @@ export function localSpacetimeAvailable(timeoutMs = 800): Promise<boolean> {
 
 export async function benchmarkConfig(env: Environment, probe = localSpacetimeAvailable): Promise<{
   models: ReturnType<typeof modelConfig>;
-  scenarios: Array<{ id: typeof SCENARIO_ID; name: string; description: string }>;
+  scenarios: BenchmarkScenario[];
   ready: boolean;
   reason?: string;
 }> {
@@ -64,7 +72,7 @@ export async function benchmarkConfig(env: Environment, probe = localSpacetimeAv
     : !models.some(model => model.available) ? 'Configure at least one benchmark model.' : undefined;
   return {
     models,
-    scenarios: [{ id: SCENARIO_ID, name: 'The Clearing', description: 'Four survivors face scarcity, winter, rescue, and the shared charter.' }],
+    scenarios: BENCHMARK_SCENARIOS.map(scenario => ({ ...scenario })),
     ready: !reason,
     ...(reason ? { reason } : {}),
   };

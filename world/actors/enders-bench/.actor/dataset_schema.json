@@ -1,0 +1,50 @@
+{
+  "actorSpecification": 1,
+  "fields": {},
+  "views": {
+    "overview": {
+      "title": "Results by case",
+      "transformation": {
+        "fields": ["caseId", "sample", "seat", "basis", "decision", "compliant", "failures", "violations", "crsCalls", "crsLive", "agent", "variant"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "caseId": { "label": "Case", "format": "text" },
+          "sample": { "label": "Run", "format": "number" },
+          "seat": { "label": "Desk", "format": "text" },
+          "basis": { "label": "Backed by", "format": "text" },
+          "decision": { "label": "Decision", "format": "text" },
+          "compliant": { "label": "Compliant", "format": "boolean" },
+          "failures": { "label": "Gate failures", "format": "array" },
+          "violations": { "label": "Violations", "format": "array" },
+          "crsCalls": { "label": "CRS calls", "format": "number" },
+          "crsLive": { "label": "Live CRS", "format": "number" },
+          "agent": { "label": "Agent", "format": "text" },
+          "variant": { "label": "Policy", "format": "text" }
+        }
+      }
+    },
+    "evidence": {
+      "title": "Tool calls and usage",
+      "transformation": {
+        "fields": ["caseId", "sample", "title", "toolCalls", "crsRequestIds", "stalls", "stopped", "modelCalls", "inputTokens", "outputTokens"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "caseId": { "label": "Case", "format": "text" },
+          "sample": { "label": "Run", "format": "number" },
+          "title": { "label": "What it tests", "format": "text" },
+          "toolCalls": { "label": "Tool calls, in order", "format": "array" },
+          "crsRequestIds": { "label": "CRS RequestIDs", "format": "array" },
+          "stalls": { "label": "Stalls", "format": "number" },
+          "stopped": { "label": "Stopped early", "format": "text" },
+          "modelCalls": { "label": "Model calls", "format": "number" },
+          "inputTokens": { "label": "Input tokens", "format": "number" },
+          "outputTokens": { "label": "Output tokens", "format": "number" }
+        }
+      }
+    }
+  }
+}

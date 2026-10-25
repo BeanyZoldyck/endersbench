@@ -118,3 +118,69 @@ describe('persistent benchmark recordings', () => {
     expect(new BenchmarkStore(directory).history()).toEqual([]);
   });
 });
+
+it('persists a mixed roster and labels its recording with every selected model', () => {
+  const { directory, store, job } = setup();
+  job.modelId = 'openrouter:grok-test';
+  job.roster = [{ model: 'Grok', modelId: job.modelId, count: 1 }, { model: 'ChatGPT', modelId: 'openai:test', count: 2 }];
+  store.save(job);
+  store.archive(job);
+  const restored = new BenchmarkStore(directory);
+  expect(restored.load()[0].roster).toEqual(job.roster);
+  expect(restored.history()[0]).toMatchObject({ roster: job.roster, label: 'Grok ×1 + ChatGPT ×2 · The Clearing' });
+});
+
+it('serves Ledger archives in the finance viewer format while preserving partial case state', async () => {
+  const { parseFinanceRecording } = await import('../../src/finance-desk/replay');
+  const { Timestamp } = await import('spacetimedb');
+  const { directory, store, job, recorder } = setup('failed');
+  job.scenario = 'ledger';
+  job.roster = [{ model: 'Grok', modelId: 'openrouter:grok-test', count: 1 }];
+  recorder.capture([
+    ['finance_case', [{ id: 33n, modelId: 'openrouter:grok-test', scenarioId: 'lend-clean-approve', seat: 'lending', variant: 'house-rules', sample: 0, benchmarkVersion: 6, status: 'open', pendingRequestId: 55n, stalls: 0, stopped: '', queuedAt: new Timestamp(1234n) }]],
+    ['finance_step', [{ id: 1n, caseId: 33n, seq: 0, tool: 'verify_identity', args: '{"subject_id":"P01"}', result: '{}', requestId: 44n, thought: 'Verify first.', crs: '' }]],
+    ['finance_verdict', []],
+    ['meta', [{ key: 'run', value: JSON.stringify({ roster: [{ name: 'Ada', model: 'Grok', modelId: 'openrouter:grok-test' }], caseSlots: [{ caseId: '33', name: 'Ada', model: 'Grok', modelId: 'openrouter:grok-test' }] }) }]],
+  ], 500);
+  // A later delta omits unchanged case/meta tables; conversion must accumulate them.
+  recorder.capture([['finance_step', [{ id: 1n, caseId: 33n, seq: 0, tool: 'verify_identity', args: '{"subject_id":"P01"}', result: '{}', requestId: 44n, thought: 'Verify first.', crs: '' }, { id: 2n, caseId: 33n, seq: 1, tool: 'pull_credit', args: '{"subject_id":"P01"}', result: '{}', requestId: 55n, thought: 'Review saved evidence.', crs: '' }]]], 1000);
+  store.save(job);
+  store.archive(job);
+  const restored = new BenchmarkStore(directory);
+  const raw = JSON.parse(restored.replay(id)!.toString('utf8'));
+  expect(raw).toMatchObject({ timing: 'paced', stepMs: 2200, lineup: true, caseSlots: [{ caseId: '33', name: 'Ada' }] });
+  const replay = parseFinanceRecording(raw);
+  expect(replay.cases[0]).toMatchObject({ id: 33n, status: 'open', pendingRequestId: 55n });
+  expect(replay.cases[0].queuedAt.microsSinceUnixEpoch).toBe(1234n);
+  expect(replay.steps).toHaveLength(2);
+  expect(replay.verdicts).toEqual([]);
+  expect(restored.history()[0]).toMatchObject({ scenario: 'ledger', status: 'partial', label: 'Grok ×1 · Ledger Street' });
+});
+
+it('preserves exact mixed variants through request resolution, recording, restart and frontend history parsing', async () => {
+  const { parseSavedRecordings, savedRecordings } = await import('../../src/frontend/run-history');
+  const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-variants-'));
+  const models = [
+    { id: 'GLM 5.3' as const, modelId: 'bitdeer:zai-org/GLM-5.3', available: true },
+    { id: 'GLM 5.3 Flash' as const, modelId: 'bitdeer:zai-org/GLM-5.3-Flash', available: true },
+    { id: 'GPT-6 Luna' as const, modelId: 'codex:gpt-6-luna', available: true },
+    { id: 'GPT-6 Sol' as const, modelId: 'codex:gpt-6-sol', available: true },
+  ];
+  const config = async () => ({ ready: true, models });
+  const store = new BenchmarkStore(directory);
+  const service = new BenchmarkService(config, async job => {
+    const recorder = new ReplayRecorder(path.join(directory, job.id), job.dbName);
+    recorder.capture([['world', [{ id: 0, gameTimeMs: 0 }]], ['agent', models.map((model, index) => ({ id: BigInt(index + 1), modelId: model.modelId }))]], 0);
+    return {};
+  }, store);
+  const job = await service.start({ scenario: 'clearing-charter', roster: models.map(model => ({ model: model.id, count: 1 })) });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect(service.get(job.id)?.status).toBe('completed');
+  const restarted = new BenchmarkStore(directory);
+  expect(restarted.load()[0].roster).toEqual(job.roster);
+  const history = parseSavedRecordings(restarted.history());
+  expect(history[0].roster).toEqual(job.roster);
+  for (const model of models) expect(savedRecordings(model.id, history).some(run => run.id === job.id)).toBe(true);
+  const replay = parseReplay(JSON.parse(gunzipSync(restarted.replay(job.id)!).toString()));
+  expect(replay.frames[0].tables.agent.map(agent => agent.modelId)).toEqual(models.map(model => model.modelId));
+});

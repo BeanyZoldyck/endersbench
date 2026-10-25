@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import BeginRunReducer from "./begin_run_reducer";
 import ClaimHarnessReducer from "./claim_harness_reducer";
 import ConfigureScenarioReducer from "./configure_scenario_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
@@ -41,6 +42,7 @@ import HumanActReducer from "./human_act_reducer";
 import HumanMoveToReducer from "./human_move_to_reducer";
 import HumanSayReducer from "./human_say_reducer";
 import JoinAsHumanReducer from "./join_as_human_reducer";
+import QueueFinanceRunReducer from "./queue_finance_run_reducer";
 import ResetExperimentReducer from "./reset_experiment_reducer";
 import SetRunInfoReducer from "./set_run_info_reducer";
 import SetRunningReducer from "./set_running_reducer";
@@ -59,10 +61,14 @@ import DecisionRequestRow from "./decision_request_table";
 import DiscoveryRow from "./discovery_table";
 import EthicsEventRow from "./ethics_event_table";
 import ExploredRow from "./explored_table";
+import FinanceCaseRow from "./finance_case_table";
+import FinanceStepRow from "./finance_step_table";
+import FinanceVerdictRow from "./finance_verdict_table";
 import HazardRow from "./hazard_table";
 import HeardOfRow from "./heard_of_table";
 import HitEventRow from "./hit_event_table";
 import ItemRow from "./item_table";
+import LeaderboardRow from "./leaderboard_table";
 import MemoryRow from "./memory_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
@@ -70,6 +76,8 @@ import MobRow from "./mob_table";
 import ModelHealthRow from "./model_health_table";
 import RecordRow from "./record_table";
 import ResourceNodeRow from "./resource_node_table";
+import RunHistoryRow from "./run_history_table";
+import RunResultRow from "./run_result_table";
 import ScoreRow from "./score_table";
 import StructureRow from "./structure_table";
 import TemptationRow from "./temptation_table";
@@ -187,6 +195,48 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, ExploredRow),
+  financeCase: __table({
+    name: 'finance_case',
+    indexes: [
+      { accessor: 'id', name: 'finance_case_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'pendingRequestId', name: 'finance_case_pending_request_id_idx_btree', algorithm: 'btree', columns: [
+        'pendingRequestId',
+      ] },
+      { accessor: 'status', name: 'finance_case_status_idx_btree', algorithm: 'btree', columns: [
+        'status',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_case_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, FinanceCaseRow),
+  financeStep: __table({
+    name: 'finance_step',
+    indexes: [
+      { accessor: 'caseId', name: 'finance_step_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+      { accessor: 'id', name: 'finance_step_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_step_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, FinanceStepRow),
+  financeVerdict: __table({
+    name: 'finance_verdict',
+    indexes: [
+      { accessor: 'caseId', name: 'finance_verdict_case_id_idx_btree', algorithm: 'btree', columns: [
+        'caseId',
+      ] },
+    ],
+    constraints: [
+      { name: 'finance_verdict_case_id_key', constraint: 'unique', columns: ['caseId'] },
+    ],
+  }, FinanceVerdictRow),
   hazard: __table({
     name: 'hazard',
     indexes: [
@@ -317,6 +367,34 @@ const tablesSchema = __schema({
       { name: 'resource_node_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ResourceNodeRow),
+  runHistory: __table({
+    name: 'run_history',
+    indexes: [
+      { accessor: 'id', name: 'run_history_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'outcome', name: 'run_history_outcome_idx_btree', algorithm: 'btree', columns: [
+        'outcome',
+      ] },
+    ],
+    constraints: [
+      { name: 'run_history_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RunHistoryRow),
+  runResult: __table({
+    name: 'run_result',
+    indexes: [
+      { accessor: 'id', name: 'run_result_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'runId', name: 'run_result_run_id_idx_btree', algorithm: 'btree', columns: [
+        'runId',
+      ] },
+    ],
+    constraints: [
+      { name: 'run_result_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RunResultRow),
   score: __table({
     name: 'score',
     indexes: [
@@ -380,10 +458,18 @@ const tablesSchema = __schema({
     ],
     event: true,
   }, WorldEventRow),
+  leaderboard: __table({
+    name: 'leaderboard',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, LeaderboardRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("begin_run", BeginRunReducer),
   __reducerSchema("claim_harness", ClaimHarnessReducer),
   __reducerSchema("configure_scenario", ConfigureScenarioReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),
@@ -391,6 +477,7 @@ const reducersSchema = __reducers(
   __reducerSchema("human_move_to", HumanMoveToReducer),
   __reducerSchema("human_say", HumanSayReducer),
   __reducerSchema("join_as_human", JoinAsHumanReducer),
+  __reducerSchema("queue_finance_run", QueueFinanceRunReducer),
   __reducerSchema("reset_experiment", ResetExperimentReducer),
   __reducerSchema("set_run_info", SetRunInfoReducer),
   __reducerSchema("set_running", SetRunningReducer),

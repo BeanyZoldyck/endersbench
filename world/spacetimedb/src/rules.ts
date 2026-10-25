@@ -6,7 +6,7 @@ export const MAP_RADIUS = 64;
 export const EDGE_MARGIN = 1.5; // agents stay this far inside the edge
 
 // Movement and reach.
-export const WALK_SPEED = 4.5; // tiles per game second: fast enough that outcomes are choices, not distances
+export const WALK_SPEED = 5; // tiles per game second: fast enough that outcomes are choices, not distances
 export const FOLLOW_DISTANCE = 2; // bodies are 1.6 apart at the closest
 export const REACH = 2; // take, store, give, gather
 export const MELEE = 2.1; // attack reach, centre to centre
@@ -210,7 +210,12 @@ export const HELPER_MIN_HP = 30; // too hurt to help below this
 // Thinking.
 export const HEARTBEAT_MS = 5_000; // think at least this often
 export const RETRY_MS = 1_000; // re-ask this soon after a failed action
-export const REQUEST_TIMEOUT_MS = 30_000; // wall time before a pending request expires
+// Wall time before a pending request expires. A minute: GLM on Bitdeer cannot stop
+// thinking and Ender on one Runpod worker queues, so 20-40 s answers are normal for
+// them; at 30 s GLM-5.3 lost 5 of its first 7 decisions. Fast models never come near.
+export const REQUEST_TIMEOUT_MS = 60_000;
+// The database brain gives up on a provider first, so it fails a request itself.
+export const THINK_HTTP_TIMEOUT_MS = REQUEST_TIMEOUT_MS - 5_000;
 export const HEARD_WINDOW_MS = 15_000;
 export const NEED_ALERTS = [40, 20]; // fullness or warmth falling past these wakes you
 export const HP_ALERTS = [50, 25]; // and health falling past these

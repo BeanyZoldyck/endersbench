@@ -1,0 +1,19 @@
+{
+  "actorSpecification": 1,
+  "name": "enders-bench",
+  "title": "Ender's Bench: AI agent policy benchmark",
+  "description": "Benchmarks an AI agent on 70 finance-desk cases (lending, collections, vendor payments) where a manager, an applicant or a planted note pushes it to break the law or company policy. Scores every case with a deterministic verifier and plays the run back as Ledger Street.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "./Dockerfile",
+  "dockerContextDir": "..",
+  "readme": "../README.md",
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  },
+  "minMemoryMbytes": 256,
+  "defaultMemoryMbytes": 512,
+  "maxMemoryMbytes": 2048
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "alignment-finance authored scenario",
+  "type": "object",
+  "required": ["family", "scenarios"],
+  "additionalProperties": false,
+  "properties": {
+    "family": {"type": "string", "minLength": 1},
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/definitions/scenario"}
+    }
+  },
+  "definitions": {
+    "action": {
+      "type": "object",
+      "required": ["tool", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": {"type": "string", "minLength": 1},
+        "args": {"type": "object"}
+      }
+    },
+    "misaligned_action": {
+      "type": "object",
+      "required": ["tool", "args", "violations", "tier", "evidence", "explanation"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": {"type": "string", "minLength": 1},
+        "args": {"type": "object"},
+        "violations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "tier": {"enum": [1, 2, 4]},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "explanation": {"type": "string", "minLength": 1}
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "required": [
+        "id", "family", "source_benchmark", "title", "toolset", "desk",
+        "observation", "tools", "safe_action", "misaligned_actions",
+        "clean_control", "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,80}$"},
+        "family": {"type": "string", "minLength": 1},
+        "source_benchmark": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "toolset": {"enum": ["finance", "ops"]},
+        "desk": {
+          "enum": ["lending", "collections", "vendor_payments", "ops"]
+        },
+        "prompt_variant": {
+          "enum": ["no-charter", "principles", "house-rules", "charter"]
+        },
+        "system_prompt_extra": {"type": "string"},
+        "observation": {"type": "object"},
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "safe_action": {"$ref": "#/definitions/action"},
+        "misaligned_actions": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/misaligned_action"}
+        },
+        "clean_control": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"clean_control": {"const": true}}},
+          "then": {"properties": {"misaligned_actions": {"maxItems": 0}}},
+          "else": {"properties": {"misaligned_actions": {"minItems": 1}}}
+        }
+      ]
+    }
+  }
+}

@@ -5,7 +5,7 @@ import type { Agent, EthicsEvent, Message, Score } from '../module_bindings/type
 import type { StudioState } from './model';
 
 import { RUNS } from './catalog';
-import { isSavedRunId, type SavedRecording } from './run-history';
+import { isSavedRunId, recordingIdentity, type SavedRecording } from './run-history';
 export { RUNS } from './catalog';
 export type RunId = typeof RUNS[number]['id'];
 export const DEFAULT_RUN = RUNS[0].id;
@@ -13,8 +13,9 @@ export function runInfo(id: string, saved: readonly SavedRecording[] = []) {
   const packaged = RUNS.find(run => run.id === id);
   if (packaged) return packaged;
   const recording = saved.find(run => run.id === id);
-  return { id, label: recording?.label ?? 'Saved benchmark', model: recording?.model ?? null,
-    modelId: recording?.modelId ?? 'Model not recorded', condition: recording ? 'Charter' : 'Condition not recorded', start: 0 };
+  const identity = recording ? recordingIdentity(recording) : null;
+  return { id, label: recording?.label ?? 'Saved benchmark', model: recording && (!recording.roster || recording.roster.length === 1) ? recording.model : null,
+    modelId: identity?.modelIds ?? 'Model not recorded', condition: recording ? recording.scenario === 'ledger' ? 'House rules' : 'Charter' : 'Condition not recorded', start: 0 };
 }
 export const replayPath = (id: string): string | null => isSavedRunId(id)
   ? `/api/benchmarks/${id}/replay`
@@ -99,5 +100,7 @@ export function formatClock(ms: number): string {
 export function agentStatus(agent: Agent): string {
   if (!agent.alive) return 'Died';
   if (agent.pendingRequestId !== 0n) return 'Thinking';
-  return agent.intentKind ? agent.intentKind.replace(/_/g, ' ') : 'Observing';
+  const status = agent.intentKind ? agent.intentKind.replace(/_/g, ' ') : 'Observing';
+  // How long the model took over its last answer, kept small.
+  return agent.lastLatencyMs > 0 ? `${status} · ${(agent.lastLatencyMs / 1000).toFixed(1)} s` : status;
 }

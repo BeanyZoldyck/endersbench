@@ -59,7 +59,7 @@ return createServer((request, response) => {
     if (request.method === 'GET' && replay) {
       const bytes = store.replay(replay[1]);
       if (!bytes) { send(response, 404, { error: 'Recording not found.' }); return; }
-      response.writeHead(200, { 'content-type': 'application/gzip', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+      response.writeHead(200, { 'content-type': bytes[0] === 0x1f && bytes[1] === 0x8b ? 'application/gzip' : 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
       response.end(bytes);
       return;
     }

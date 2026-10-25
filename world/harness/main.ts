@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { DbConnection, tables } from '../src/module_bindings/index.js';
 import { brainFor, type Brain, type Tool } from './brains.js';
 import { promptVersion, systemPrompt } from './prompt.js';
+import { isDatabaseRun } from './takeover.js';
 
 const HOST = process.env.SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = process.env.SPACETIMEDB_DB_NAME ?? 'endersbench';
@@ -113,6 +114,12 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
       console.error('This world belongs to another harness. Delete the token file only if you mean to take it over.', err);
       process.exit(1);
     }
+    // A database-brained world (beginRun) asks its own models: leave its run as it is.
+    await applied;
+    if (isDatabaseRun(conn.db.meta.key.find('run')?.value) && process.env.HARNESS_TAKEOVER !== '1') {
+      console.log('This world is database-brained (beginRun): its module asks the models itself. Leaving its run alone and answering nothing; HARNESS_TAKEOVER=1 replaces it with this roster.');
+      return;
+    }
     for (const r of roster) {
       await conn.reducers.spawnAgent({ name: r.name, modelId: r.modelId });
     }
@@ -132,6 +139,10 @@ function onConnect(conn: DbConnection, identity: { toHexString(): string }, toke
   })();
 }
 
+// Resolves once the subscription has delivered meta, agents and pending requests.
+let markApplied = () => {};
+const applied = new Promise<void>(resolve => (markApplied = resolve));
+
 const conn = DbConnection.builder()
   .withUri(HOST)
   .withDatabaseName(DB_NAME)
@@ -144,16 +155,23 @@ const conn = DbConnection.builder()
   })
   .build();
 
-conn.db.decisionRequest.onInsert((_ctx, req) => {
-  if (req.status === 'pending') void answer(conn, req);
-});
+function route(req: { id: bigint; agentId: bigint; modelId: string; observation: string; status: string; brain: string }) {
+  // The dedicated finance worker owns agentId 0 requests. Never duplicate its
+  // model calls when the clearing and financial district run together.
+  if (req.status !== 'pending' || req.agentId === 0n) return;
+  // In a database-brained run the module asks the model itself (beginRun).
+  if (req.brain === 'database') return;
+  void answer(conn, req);
+}
+conn.db.decisionRequest.onInsert((_ctx, req) => route(req));
 
 conn
   .subscriptionBuilder()
   .onApplied(() => {
+    markApplied();
     // Answer anything left pending from before a restart.
     for (const req of conn.db.decisionRequest.iter()) {
-      if (req.status === 'pending') void answer(conn, req);
+      route(req);
     }
   })
   .subscribe([tables.meta, tables.agent, tables.decisionRequest.where(r => r.status.eq('pending'))]);

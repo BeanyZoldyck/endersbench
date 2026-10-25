@@ -262,3 +262,29 @@
  .studio .compact-setup .benchmark-start > div { display: none; }
  .studio .compact-setup .benchmark-start > button { width: 100%; }
 }
+
+.studio .pressure-comparison { padding: 28px; margin: 28px 0 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.studio .pressure-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.studio .pressure-heading h3 { font-size: 1.7rem; margin: 10px 0; }
+.studio .pressure-eyebrow { font-size: .65rem; letter-spacing: .16em; color: var(--gold); }
+.studio .pressure-badge { padding: 7px 10px; border: 1px solid var(--line); border-radius: 20px; white-space: nowrap; font-size: .7rem; color: var(--gold); }
+.studio .pressure-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; margin: 20px 0 14px; }
+.studio .pressure-controls label { display: flex; gap: 12px; align-items: center; font-size: .8rem; }
+.studio .pressure-controls select { background: var(--ground); color: var(--ink); border: 1px solid var(--line); padding: 9px; border-radius: 4px; }
+.studio .pressure-plot { display: block; width: 100%; height: auto; margin: 20px 0 4px; overflow: visible; }
+.studio .pressure-plot text { fill: var(--muted); font: 12px sans-serif; }
+.studio .pressure-plot .axis-title { fill: var(--ink); font-size: 13px; }
+.studio .pressure-grid { stroke: var(--line); stroke-width: 1; }
+.studio .pressure-grid-vertical { stroke-dasharray: 3 6; opacity: .5; }
+.studio .pressure-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 12px 0 20px; }
+.studio .pressure-legend button { display: flex; align-items: center; gap: 8px; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 8px 12px; font-size: .8rem; }
+.studio .pressure-legend button[aria-pressed="true"] { border-color: var(--gold); }
+@media(max-width:700px) { .studio .pressure-comparison { padding: 16px; } .studio .pressure-heading { flex-direction: column; gap: 8px; } .studio .pressure-plot text { font-size: 16px; } }
+
+.studio .benchmark-resume { margin: 20px auto; padding: 20px 24px; width: calc(100% - 48px); max-width: 1152px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.studio .benchmark-resume h2 { font-size: 1rem; margin: 0 0 6px; }
+.studio .benchmark-resume p { margin: 6px 0; }
+.studio .benchmark-resume-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); }
+.studio .benchmark-resume-row strong { font-size: .875rem; }
+.studio .benchmark-resume-row a { text-decoration: none; white-space: nowrap; }
+@media(max-width:700px) { .studio .benchmark-resume-row { align-items: flex-start; flex-direction: column; } }

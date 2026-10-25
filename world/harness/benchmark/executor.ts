@@ -60,7 +60,7 @@ export const executeBenchmark: Executor = async (job, onRunning) => {
   // The random database name is never supplied by the client. Never republish with data deletion.
   await run(bin, ['publish', job.dbName, '--module-path', modulePath, '--server', 'http://127.0.0.1:3000', '--anonymous', '--no-config', '--delete-data=never', '--yes'], startupTimeoutMs);
   const worker = path.join(worldDir, 'dist-harness', 'benchmark-worker.js');
-  await run(process.execPath, [worker, job.id, job.dbName, job.modelId], boundedRuntime(process.env.BENCHMARK_RUNTIME_TIMEOUT_MS), line => {
+  await run(process.execPath, [worker, job.id, job.dbName, JSON.stringify({ roster: job.roster ?? [{ model: job.model, modelId: job.modelId, count: 4 }], scenario: job.scenario })], boundedRuntime(process.env.BENCHMARK_RUNTIME_TIMEOUT_MS), line => {
     if (line === 'BENCHMARK_RUNNING') onRunning();
   }, path.join(worldDir, 'runs', job.id));
   const file = path.join(worldDir, 'runs', job.id, 'report.json');

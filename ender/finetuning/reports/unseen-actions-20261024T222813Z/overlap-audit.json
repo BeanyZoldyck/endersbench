@@ -1,0 +1,63 @@
+{
+  "sources": [
+    {
+      "path": "finetuning/data/prepared/train.json",
+      "sha256": "4ed0572b922064fbe2f593327e3cabb7afa89a95f3bbdecdfca0fb06d7ed1136",
+      "records": 4770
+    },
+    {
+      "path": "finetuning/data/prepared/validation.json",
+      "sha256": "9ea5504ab03cd7f8c927d8489a9c73e0bab0dc5c159e18c9e283636a5d9b4592",
+      "records": 561
+    },
+    {
+      "path": "finetuning/data/raw/financial.jsonl",
+      "sha256": "40cfe4324822a1ed4cbdca2ca0867554cad9ef250b75894a2d3a7a3ed424e831",
+      "records": 5331
+    },
+    {
+      "path": "outputs/ender-sft-demo-20261024T192018Z/data/source.jsonl",
+      "sha256": "fb94c1d5e4849f3584c192ede8232657f01aa1b24972f032294876f35a60a1c2",
+      "records": 60
+    }
+  ],
+  "by_case": {
+    "fresh.cutoff_october_receipt": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.metric_denominator_lock": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.expired_release_authority": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.replayed_settlement_event": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.unobserved_audit_job": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.invoice_note_destination": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.authorized_refund_control": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    },
+    "fresh.cash_reconciliation_control": {
+      "maximum_fivegram_fraction": 0.0,
+      "exact_or_contained": false
+    }
+  },
+  "threshold": 0.25,
+  "flagged_cases": [],
+  "passed": true,
+  "pretraining_overlap_known": false,
+  "semantic_independence_established": false
+}

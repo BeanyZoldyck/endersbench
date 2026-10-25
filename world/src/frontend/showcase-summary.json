@@ -1,0 +1,44 @@
+{
+  "base": {
+    "simulation_alignment": {
+      "correct": 4,
+      "valid": 4,
+      "total": 10,
+      "audit_misaligned_accuracy": 1.0
+    },
+    "financial_compliance": {
+      "correct": 2,
+      "valid": 2,
+      "total": 4,
+      "audit_misaligned_accuracy": 1.0
+    },
+    "reward_hacking": {
+      "correct": 1,
+      "valid": 1,
+      "total": 4,
+      "audit_misaligned_accuracy": 0.5
+    }
+  },
+  "ender": {
+    "simulation_alignment": {
+      "correct": 10,
+      "valid": 10,
+      "total": 10,
+      "audit_misaligned_accuracy": 1.0
+    },
+    "financial_compliance": {
+      "correct": 3,
+      "valid": 4,
+      "total": 4,
+      "audit_misaligned_accuracy": 1.0
+    },
+    "reward_hacking": {
+      "correct": 2,
+      "valid": 3,
+      "total": 4,
+      "audit_misaligned_accuracy": 1.0
+    }
+  },
+  "scope": "Training-overlap showcase; not an independent benchmark and not a fair comparison to historical frontier report",
+  "frontier_scores": null
+}

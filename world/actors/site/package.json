@@ -1,0 +1,10 @@
+{
+  "name": "enders-bench-site-actor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The Ender's Bench site as an Apify Actor. Build with `npm run actors:build` in world/, then `apify push` here.",
+  "dependencies": {
+    "apify": "^3.7.2"
+  }
+}

@@ -93,7 +93,7 @@ def stop_project_server(run):
 
 
 def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_tokens=128, memory_fraction=None,
-                 retep_shadow=False):
+                 retep_shadow=False, retep_initial=None, train_seconds=None):
     import logging
     class CastWarningOnce(logging.Filter):
         seen = False
@@ -177,7 +177,8 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             torch.cuda.synchronize()
             torch.cuda.reset_peak_memory_stats()
             self.start = self.last = time.perf_counter()
-            self.tokens = 0
+            self.tokens = state.num_input_tokens_seen
+            self.initial_tokens = self.tokens
             self.profiler = None
 
         def on_step_end(self, args, state, control, **kwargs):
@@ -195,7 +196,7 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             row = {"step": state.global_step, "elapsed_seconds": now - self.start,
                    "step_seconds": now - self.last, "input_tokens_seen": tokens,
                    "step_input_tokens_per_second": (tokens - self.tokens) / (now - self.last),
-                   "cumulative_input_tokens_per_second": tokens / (now - self.start),
+                    "cumulative_input_tokens_per_second": (tokens - self.initial_tokens) / (now - self.start),
                    "cuda_allocated_gib": torch.cuda.memory_allocated() / 2**30,
                    "peak_cuda_allocated_gib": torch.cuda.max_memory_allocated() / 2**30,
                    "note": "teacher-forced training input throughput, NOT autoregressive decode speed"}
@@ -209,12 +210,21 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             self.last, self.tokens = now, tokens
 
     torch.set_num_threads(8)
-    callbacks = [Throughput()]
+    callbacks = []
+    if os.environ.get("ENDER_ALIGNMENT_FINANCE_PROBES"):
+        # First, so the starting-point evaluation runs before the training budget
+        # and throughput timers begin.
+        from alignment_finance_monitor import monitor_callback
+        callbacks.append(monitor_callback(config, os.environ["ENDER_ALIGNMENT_FINANCE_PROBES"]))
+    callbacks.append(Throughput())
+    if retep_initial is not None and not retep_shadow:
+        raise ValueError("Sister warm start requires --retep-shadow")
     if retep_shadow:
-        if config.get("resume_from_checkpoint"):
-            raise ValueError("Resuming the experimental sister optimizer is not implemented")
         from retep_shadow import retep_callback
-        callbacks.append(retep_callback())
+        callbacks.append(retep_callback(retep_initial, config.get("resume_from_checkpoint")))
+    if train_seconds is not None:
+        from timed_training import deadline_callback
+        callbacks.append(deadline_callback(train_seconds))
     with gpu_first_loading(target_device="cpu" if config.get("quantization_bit") else "cuda:0"):
         run_exp(args=config, callbacks=callbacks)
     if decode_output is not None:
@@ -242,6 +252,8 @@ def main():
     parser.add_argument("--memory-fraction", type=float, help=argparse.SUPPRESS)
     parser.add_argument("--retep-shadow", action="store_true",
                         help="Experimental sister AdamW on negated primary gradients; not a validated adversary")
+    parser.add_argument("--retep-initial", type=Path, help="Continue saved sister weights with fresh optimizer state")
+    parser.add_argument("--train-seconds", type=float, help="Stop gracefully at an optimizer boundary after this training-time budget")
     args = parser.parse_args()
     if args.decode_repeats < 1 or args.decode_max_new_tokens < 2:
         parser.error("Decode requires at least one repeat and two generated tokens")
@@ -251,7 +263,8 @@ def main():
     import yaml
     if args.train_worker:
         train_worker(yaml.safe_load(args.train_worker.read_text()), args.decode_output,
-                     args.decode_repeats, args.decode_max_new_tokens, args.memory_fraction, args.retep_shadow)
+                     args.decode_repeats, args.decode_max_new_tokens, args.memory_fraction, args.retep_shadow,
+                     args.retep_initial, args.train_seconds)
         return
     if not args.accept_synthetic_demo:
         parser.error("Demo data is synthetic and unreviewed; pass --accept-synthetic-demo explicitly")

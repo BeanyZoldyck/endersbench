@@ -16,7 +16,7 @@ describe('run history', () => {
   it('keeps history filtering independent of model selection and across replay navigation', () => {
     let state = initialStudioState('?studio=compare');
     state = transitionStudio(state, { type: 'history-model', model: 'Claude' });
-    expect(state.draftModel).toBe('ChatGPT');
+    expect(state.draftModel).toBe('GPT-6 Luna');
     state = transitionStudio(state, { type: 'select-run', runId: 'clearing-charter-v8-rescued' });
     state = transitionStudio(state, { type: 'navigate', screen: 'monitor', timeMs: 0 });
     state = transitionStudio(state, { type: 'navigate', screen: 'compare' });

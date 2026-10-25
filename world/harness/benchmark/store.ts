@@ -1,12 +1,17 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { MODEL_IDS, SCENARIO_ID, type BenchmarkJob, type ModelName } from './types.js';
+import { gunzipSync } from 'node:zlib';
+import type { Replay } from '../../src/replay.js';
+import { ledgerRecording } from './ledger-recording.js';
+import { MODEL_IDS, type BenchmarkJob, type ModelName, type BenchmarkRosterEntry } from './types.js';
+import { isResolvedRoster, rosterLabel } from './roster.js';
+import { BENCHMARK_SCENARIOS } from './scenarios.js';
 import { workerAlive } from './worker-lifecycle.js';
 import { finalizeRecording } from './recording.js';
 
 export const validJobId = (id: string): boolean => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id);
 export type SavedRecording = {
-  id: string; model: ModelName; modelId: string; scenario: typeof SCENARIO_ID;
+  id: string; model: ModelName; modelId: string; scenario: string; roster?: BenchmarkRosterEntry[];
   label: string; recordedAt: string; durationMs: number; status: 'completed' | 'partial'; replayUrl: string;
 };
 function atomicJson(file: string, value: unknown): void {
@@ -34,7 +39,8 @@ export class BenchmarkStore {
     }
     const recording: SavedRecording = {
       id: job.id, model: job.model, modelId: job.modelId, scenario: job.scenario,
-      label: `${job.model} · The Clearing`, ...info,
+      ...(job.roster ? { roster: job.roster } : {}),
+      label: `${job.roster ? rosterLabel(job.roster) : job.model} · ${BENCHMARK_SCENARIOS.find(scenario => scenario.id === job.scenario)?.name ?? job.scenario}`, ...info,
       status: job.status === 'completed' ? 'completed' : 'partial',
       replayUrl: `/api/benchmarks/${job.id}/replay`,
     };
@@ -47,7 +53,9 @@ export class BenchmarkStore {
         const file = path.join(this.directory(id), 'job.json');
         const job = JSON.parse(readFileSync(file, 'utf8')) as BenchmarkJob;
         if (job.id !== id || !MODEL_IDS.includes(job.model) || typeof job.modelId !== 'string'
-          || job.scenario !== SCENARIO_ID || job.dbName !== `endersbench-run-${id}`
+          || !BENCHMARK_SCENARIOS.some(scenario => scenario.id === job.scenario)
+          || job.roster !== undefined && (!isResolvedRoster(job.roster) || job.roster[0].model !== job.model || job.roster[0].modelId !== job.modelId)
+          || job.dbName !== `endersbench-run-${id}`
           || !['starting', 'running', 'completed', 'failed'].includes(job.status)) continue;
         this.recover(job);
         jobs.push(job);
@@ -85,7 +93,13 @@ export class BenchmarkStore {
   replay(id: string): Buffer | null {
     const directory = this.directory(id);
     if (!existsSync(path.join(directory, 'recording.json'))) return null;
-    try { return readFileSync(path.join(directory, 'replay.json.gz')); }
+    try {
+      const bytes = readFileSync(path.join(directory, 'replay.json.gz'));
+      const recording = JSON.parse(readFileSync(path.join(directory, 'recording.json'), 'utf8')) as SavedRecording;
+      return recording.scenario === 'ledger'
+        ? Buffer.from(JSON.stringify(ledgerRecording(JSON.parse(gunzipSync(bytes).toString('utf8')) as Replay)))
+        : bytes;
+    }
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }
   }
 }

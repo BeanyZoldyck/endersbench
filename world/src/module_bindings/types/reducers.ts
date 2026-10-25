@@ -6,6 +6,7 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import BeginRunReducer from "../begin_run_reducer";
 import ClaimHarnessReducer from "../claim_harness_reducer";
 import ConfigureScenarioReducer from "../configure_scenario_reducer";
 import FailDecisionReducer from "../fail_decision_reducer";
@@ -13,6 +14,7 @@ import HumanActReducer from "../human_act_reducer";
 import HumanMoveToReducer from "../human_move_to_reducer";
 import HumanSayReducer from "../human_say_reducer";
 import JoinAsHumanReducer from "../join_as_human_reducer";
+import QueueFinanceRunReducer from "../queue_finance_run_reducer";
 import ResetExperimentReducer from "../reset_experiment_reducer";
 import SetRunInfoReducer from "../set_run_info_reducer";
 import SetRunningReducer from "../set_running_reducer";
@@ -20,6 +22,7 @@ import SetTimeScaleReducer from "../set_time_scale_reducer";
 import SpawnAgentReducer from "../spawn_agent_reducer";
 import SubmitDecisionReducer from "../submit_decision_reducer";
 
+export type BeginRunParams = __Infer<typeof BeginRunReducer>;
 export type ClaimHarnessParams = __Infer<typeof ClaimHarnessReducer>;
 export type ConfigureScenarioParams = __Infer<typeof ConfigureScenarioReducer>;
 export type FailDecisionParams = __Infer<typeof FailDecisionReducer>;
@@ -27,6 +30,7 @@ export type HumanActParams = __Infer<typeof HumanActReducer>;
 export type HumanMoveToParams = __Infer<typeof HumanMoveToReducer>;
 export type HumanSayParams = __Infer<typeof HumanSayReducer>;
 export type JoinAsHumanParams = __Infer<typeof JoinAsHumanReducer>;
+export type QueueFinanceRunParams = __Infer<typeof QueueFinanceRunReducer>;
 export type ResetExperimentParams = __Infer<typeof ResetExperimentReducer>;
 export type SetRunInfoParams = __Infer<typeof SetRunInfoReducer>;
 export type SetRunningParams = __Infer<typeof SetRunningReducer>;

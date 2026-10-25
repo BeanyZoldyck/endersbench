@@ -1,6 +1,7 @@
 // Runs one finance case against Claude, two ways, so the benchmark can tell
 // the model apart from the harness around it. Both see the same neutral
-// prompt, the same tools and the same saved CRS cards.
+// prompt, the same tools and the same CRS answers: the saved cards, or with
+// --live-crs what the CRS sandbox returns for each call.
 //  - messages: the benchmark's own loop. Every call is fresh: system prompt,
 //    tools, and the whole case so far as one observation.
 //  - managed: a Claude Managed Agents session. Anthropic runs the loop and
@@ -10,6 +11,8 @@ import { EVENT_STEP, deliver, observe, phase, takeStep, type RawCrs } from '../.
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Scenario, Seat, Step } from '../../spacetimedb/src/finance/types';
+import type { Brain } from '../../spacetimedb/src/finance/brains';
+import type { LiveCrs } from './crslive';
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
@@ -113,8 +116,9 @@ export function claudeTurn(client: Anthropic, opts: { model: string; effort?: Ef
 
 // The benchmark's own loop: a fresh call every turn with the whole case so
 // far, until the case closes, the model refuses, or it stops calling tools.
-// With `raw`, CRS tools answer with the full CRS response instead of the card.
-function benchLoop(takeTurn: TakeTurn, raw?: RawCrs): RunCase {
+// With `raw`, CRS tools answer with the full CRS response instead of the card;
+// with `live`, with what the CRS sandbox returns for the call right now.
+function benchLoop(takeTurn: TakeTurn, raw?: RawCrs, live?: LiveCrs): RunCase {
   return async (scenario, variant) => {
     const run = newRun();
     const system = financeSystemPrompt(scenario.seat, variant);
@@ -143,15 +147,32 @@ function benchLoop(takeTurn: TakeTurn, raw?: RawCrs): RunCase {
         continue;
       }
       stalled = 0;
-      steps = takeStep(scenario, steps, turn.call.name, turn.call.args, { raw });
+      const answer = await live?.(turn.call.name, turn.call.args);
+      steps = takeStep(scenario, steps, turn.call.name, turn.call.args, { raw, answer });
     }
     run.steps = steps;
     return run;
   };
 }
 
-export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort; raw?: RawCrs }): RunCase {
-  return benchLoop(claudeTurn(client, opts), opts.raw);
+export function messagesDriver(client: Anthropic, opts: { model: string; effort?: Effort; raw?: RawCrs; live?: LiveCrs }): RunCase {
+  return benchLoop(claudeTurn(client, opts), opts.raw, opts.live);
+}
+
+// A test script played through a case, as runBrain does, but able to wait on
+// live CRS answers. Scripts read cards, whatever the agent format.
+export function scriptDriver(brain: Brain, opts: { raw?: RawCrs; live?: LiveCrs } = {}): RunCase {
+  return async scenario => {
+    const run = newRun();
+    let steps = deliver(scenario, []);
+    while (phase(scenario, steps) !== 'closed') {
+      const action = brain(JSON.parse(observe(scenario, steps, 'card')));
+      const answer = await opts.live?.(action.tool, action.args);
+      steps = takeStep(scenario, steps, action.tool, action.args, { raw: opts.raw, answer });
+    }
+    run.steps = steps;
+    return run;
+  };
 }
 
 const OPENAI_ATTEMPTS = 4;
@@ -182,8 +203,46 @@ export interface OpenAiOptions {
   fetchImpl?: typeof fetch;
 }
 
-export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs }): RunCase {
-  return benchLoop(openAiTurn(opts), opts.raw);
+export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs; live?: LiveCrs }): RunCase {
+  return benchLoop(openAiTurn(opts), opts.raw, opts.live);
+}
+
+// A tool call a model wrote as text, which vLLM hands back as content when it runs
+// without a tool parser (Ender on Runpod): Qwen's XML form
+// <tool_call><function=name><parameter=k>v</parameter></function></tool_call>, or
+// Hermes JSON <tool_call>{"name", "arguments"}</tool_call>. XML values are text, so
+// each is typed by the tool's schema.
+const TOOL_CALL_BLOCK = /<tool_call>[\s\S]*?(?:<\/tool_call>|$)/;
+
+export function textToolCall(content: string, tools: DeskTool[]): { name: string; arguments: string } | null {
+  const block = content.match(TOOL_CALL_BLOCK)?.[0];
+  if (!block) return null;
+  const xml = block.match(/<function=([\w.-]+)>([\s\S]*?)(?:<\/function>|$)/);
+  if (xml) {
+    const props: Record<string, any> = tools.find(t => t.name === xml[1])?.parameters?.properties ?? {};
+    const args: Record<string, unknown> = {};
+    for (const [, key, raw] of xml[2].matchAll(/<parameter=([\w.-]+)>\s*([\s\S]*?)\s*<\/parameter>/g)) {
+      const type = props[key]?.type;
+      if (type === 'number' || type === 'integer') args[key] = Number.isFinite(Number(raw)) ? Number(raw) : raw;
+      else if (type === 'boolean') args[key] = raw === 'true' ? true : raw === 'false' ? false : raw;
+      else if (type === 'object' || type === 'array') {
+        try {
+          args[key] = JSON.parse(raw);
+        } catch {
+          args[key] = raw;
+        }
+      } else args[key] = raw;
+    }
+    return { name: xml[1], arguments: JSON.stringify(args) };
+  }
+  try {
+    const json = JSON.parse(block.replace(/<\/?tool_call>/g, '').trim());
+    if (typeof json?.name !== 'string') return null;
+    const args = typeof json.arguments === 'string' ? json.arguments : JSON.stringify(json.arguments ?? {});
+    return { name: json.name, arguments: args };
+  } catch {
+    return null;
+  }
 }
 
 export function openAiTurn(opts: OpenAiOptions): TakeTurn {
@@ -223,9 +282,12 @@ export function openAiTurn(opts: OpenAiOptions): TakeTurn {
       ],
     });
     const message = reply.choices?.[0]?.message ?? {};
-    const call = message.tool_calls?.[0]?.function;
+    const content = typeof message.content === 'string' ? message.content.trim() : '';
+    const written = message.tool_calls?.[0]?.function?.name ? null : textToolCall(content, tools);
+    const call = written ?? message.tool_calls?.[0]?.function;
+    const text = written ? content.replace(TOOL_CALL_BLOCK, '').trim() : content;
     return {
-      text: typeof message.content === 'string' && message.content.trim() ? [message.content.trim()] : [],
+      text: text ? [text] : [],
       ...(call?.name ? { call: { name: call.name, arguments: call.arguments ?? '' } } : {}),
       ...(message.refusal ? { refusal: message.refusal } : {}),
       usage: { input: reply.usage?.prompt_tokens ?? 0, cached: reply.usage?.prompt_tokens_details?.cached_tokens ?? 0, output: reply.usage?.completion_tokens ?? 0 },
@@ -352,7 +414,7 @@ type SendEvent = Anthropic.Beta.Sessions.EventSendParams['events'][number];
 // Polls the session's event list instead of holding its SSE stream open: on
 // a laptop whose security software inspects TLS (CrowdStrike here) the stream
 // is buffered and delivers nothing, while the list works through any proxy.
-export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { pollMs?: number } = {}): RunCase {
+export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { pollMs?: number; live?: LiveCrs } = {}): RunCase {
   const pollMs = opts.pollMs ?? 1000;
   return async (scenario, variant) => {
     const run = newRun();
@@ -396,7 +458,8 @@ export function managedDriver(client: Anthropic, setup: ManagedSetup, opts: { po
           }
           stalled = 0;
           const before = steps;
-          steps = takeStep(scenario, steps, event.name, event.input);
+          const answer = await opts.live?.(event.name, event.input);
+          steps = takeStep(scenario, steps, event.name, event.input, { answer });
           const reply = JSON.stringify(toolReply(scenario, before, steps));
           await send([{ type: 'user.custom_tool_result', custom_tool_use_id: event.id, content: [{ type: 'text', text: reply }] }]);
           return;

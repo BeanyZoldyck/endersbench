@@ -1,0 +1,76 @@
+{
+  "title": "Ender's Bench site",
+  "description": "Set what visitors may run. Keys are stored encrypted and never reach the browser. Start this Actor with a long timeout: its container URL is the site's address for as long as the run lasts.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "models": {
+      "sectionCaption": "What visitors can run",
+      "title": "Models on offer",
+      "type": "array",
+      "editor": "json",
+      "description": "The Run button offers only these. Each entry: id, label, provider (script, anthropic, openai, openrouter, bitdeer, featherless or custom), model, and for custom an optional baseUrl and effort. Every run spends your keys, so keep the list short.",
+      "default": [{ "id": "script", "label": "Policy reference script (no model)", "provider": "script" }],
+      "prefill": [
+        { "id": "script", "label": "Policy reference script (no model)", "provider": "script" },
+        { "id": "haiku", "label": "Claude Haiku 5.5", "provider": "anthropic", "model": "claude-haiku-5-5" }
+      ]
+    },
+    "caseSets": {
+      "title": "Case sets on offer",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Any of quick (7 cases), held-out (25) and all (70).",
+      "default": ["quick", "held-out"]
+    },
+    "maxRunsPerHour": {
+      "title": "Runs per hour",
+      "type": "integer",
+      "editor": "number",
+      "description": "The site starts one run at a time and at most this many per hour.",
+      "minimum": 1,
+      "maximum": 60,
+      "default": 10
+    },
+    "anthropicApiKey": {
+      "sectionCaption": "Keys (stored encrypted)",
+      "title": "Anthropic API key",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "Needed for any anthropic model in the list."
+    },
+    "openaiApiKey": { "title": "OpenAI API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any openai model in the list." },
+    "openrouterApiKey": { "title": "OpenRouter API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any openrouter model in the list." },
+    "bitdeerApiKey": { "title": "Bitdeer API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any bitdeer model in the list (Bitdeer AI Model Studio)." },
+    "featherlessApiKey": { "title": "Featherless API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any featherless model in the list." },
+    "customBaseUrl": {
+      "title": "Custom endpoint base URL",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "The OpenAI-compatible API for custom models without their own baseUrl, for example our fine-tune on RunPod. Kept secret so the endpoint isn't published."
+    },
+    "customApiKey": { "title": "Custom endpoint API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Sent to the custom endpoint, if it needs one." },
+    "crsLive": {
+      "sectionCaption": "Credit data (CRS)",
+      "title": "Use the live CRS sandbox",
+      "type": "boolean",
+      "editor": "checkbox",
+      "description": "Runs started here send each CRS check to the sandbox with the login below. Off: the saved Oct 24 responses.",
+      "default": false
+    },
+    "crsUsername": { "title": "CRS sandbox username", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS. Passed to each run as encrypted input." },
+    "crsPassword": { "title": "CRS sandbox password", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS." },
+    "benchActor": {
+      "sectionCaption": "Advanced",
+      "title": "Benchmark Actor",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Which Actor the Run button starts, as username/actor-name. Empty means your own enders-bench."
+    },
+    "benchMemoryMbytes": { "title": "Memory per benchmark run (MB)", "type": "integer", "editor": "number", "description": "Memory for each run the site starts.", "minimum": 256, "maximum": 4096, "default": 512 },
+    "benchTimeoutSecs": { "title": "Timeout per benchmark run (seconds)", "type": "integer", "editor": "number", "description": "A run that takes longer is stopped.", "minimum": 60, "maximum": 86400, "default": 3600 }
+  },
+  "required": []
+}
