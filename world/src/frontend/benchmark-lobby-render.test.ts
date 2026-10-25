@@ -21,18 +21,30 @@ function render(state: StudioState = initialStudioState(''), currentConfig: Benc
 function button(markup: string, label: string): string {
   return markup.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0] ?? '';
 }
+function scenarioRadio(markup: string, id: string): string {
+  return markup.match(new RegExp(`<input type="radio" name="benchmark-scenario"[^>]*value="${id}"[^>]*>`))?.[0] ?? '';
+}
 
 describe('benchmark lobby rendered controls', () => {
   it('prevents a new launch until existing runs have been checked', () => {
     const markup = render(initialStudioState(''), config, { checkingRun: true });
     expect(markup).toMatch(/<button class="button gold" disabled=""[^>]*>Checking benchmark…<\/button>/);
   });
-  it('shows the shared cap and disables every add button at four agents', () => {
-    const markup = render();
+  it('keeps adding possible at four agents for connected models that can take a seat', () => {
+    const withEnder = { ...config, models: [...config.models, { id: 'Ender' as const, modelId: 'ender:ender', available: true }] };
+    const markup = render(initialStudioState(''), withEnder);
     expect(markup).toContain('4/4 selected');
-    for (const model of BENCHMARK_MODELS) expect(button(markup, `Add one ${model} agent`)).toContain('disabled');
+    expect(button(markup, 'Add one Ender agent')).not.toContain('disabled');
+    // All four seats are already GPT-6 Luna, so there is no seat to take for it.
+    expect(button(markup, 'Add one GPT-6 Luna agent')).toContain('disabled');
     expect(button(markup, 'Remove one GPT-6 Luna agent')).not.toContain('disabled');
     expect(button(markup, 'Remove one Ender agent')).toContain('disabled');
+    for (const model of BENCHMARK_MODELS.filter(m => !withEnder.models.some(c => c.id === m && c.available))) expect(button(markup, `Add one ${model} agent`)).toContain('disabled');
+  });
+  it('lists every model without a scroll box, and leaves out the filler text', () => {
+    const markup = render();
+    expect(markup).not.toContain('tabindex="0"');
+    for (const filler of ['Build a lineup', 'Four agents maximum', 'Scenario illustration', 'Ethics and task performance', 'Ready for fresh decisions', 'One fresh world']) expect(markup).not.toContain(filler);
   });
   it('disables adding a disconnected model while explaining its connection requirement', () => {
     const state = initialStudioState('');
@@ -43,10 +55,14 @@ describe('benchmark lobby rendered controls', () => {
     expect(markup).not.toContain('BENCHMARK_MODEL_CLAUDE');
     expect(markup).toContain('2/4 selected');
   });
-  it('renders only the configured scenarios, with the supported description and disabled unavailable option', () => {
+  it('offers the configured scenarios as picture cards, the selected one checked and an unavailable one disabled', () => {
     const markup = render();
+    expect(markup).not.toContain('<select');
     expect(markup).toContain('Share scarce supplies.');
-    expect(markup).toMatch(/<option value="ledger" disabled="">Ledger/);
+    expect(scenarioRadio(markup, 'clearing-charter')).toContain('checked=""');
+    expect(scenarioRadio(markup, 'ledger')).toContain('disabled=""');
+    expect(markup).toContain('/studio/clearing-deepseek.png');
+    expect(markup).toContain('/studio/ledger-deepseek.png');
     expect(markup).not.toContain('Lending Desk');
   });
   it('shows a selected unavailable scenario truthfully without a Clearing illustration', () => {
@@ -93,7 +109,6 @@ describe('benchmark lobby Start and Continue actions', () => {
     const markup = render();
     expect(launchButton(markup)).toContain('Start benchmark');
     expect(launchButton(markup)).not.toContain('disabled');
-    expect(markup).toContain('Ready for fresh decisions and scores.');
   });
 
   it('locks lineup edits, scenario changes, retries and launch while creating a fresh world', () => {
@@ -102,7 +117,7 @@ describe('benchmark lobby Start and Continue actions', () => {
     expect(launchButton(markup)).toContain('disabled');
     expect(markup).toContain('Preparing a new world for 4 GPT-6 Luna…');
     expect(button(markup, 'Remove one GPT-6 Luna agent')).toContain('disabled');
-    expect(markup).toMatch(/<select[^>]*id="benchmark-scenario"[^>]*disabled=""/);
+    expect(scenarioRadio(markup, 'clearing-charter')).toContain('disabled=""');
     expect(markup).toMatch(/<button class="text-link" disabled="">Retry connection/);
   });
 

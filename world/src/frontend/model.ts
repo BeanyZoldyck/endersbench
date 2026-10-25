@@ -7,6 +7,12 @@ export const BENCHMARK_MODELS: StudioModel[] = SELECTABLE_MODELS;
 export function rosterSize(roster: BenchmarkRoster): number {
   return ALL_MODEL_NAMES.reduce((total, model) => total + (roster[model] ?? 0), 0);
 }
+// Who gives up a seat when a full lineup adds another model: the largest other group, if any.
+export function seatDonor(roster: BenchmarkRoster, adding: StudioModel): StudioModel | null {
+  let donor: StudioModel | null = null;
+  for (const model of ALL_MODEL_NAMES) if (model !== adding && (roster[model] ?? 0) > (donor ? roster[donor] ?? 0 : 0)) donor = model;
+  return donor;
+}
 export type Scenario = 'clearing' | 'lending';
 export type StudioSnapshot = Pick<StudioState, 'screen' | 'runId' | 'selectedAgentId' | 'eventIndex' | 'replayTimeMs' | 'briefingScenario' | 'contextTab' | 'compareScenario' | 'comparePair'>;
 export type StudioState = {
@@ -112,8 +118,16 @@ export function transitionStudio(state: StudioState, action: StudioAction): Stud
     }
     case 'select-draft-model': return { ...state, draftModel: action.model, draftRoster: { [action.model]: Math.max(1, rosterSize(state.draftRoster)) } };
     case 'adjust-draft-count': {
-      if ((action.delta === 1 && rosterSize(state.draftRoster) >= MAX_BENCHMARK_AGENTS) || (action.delta === -1 && (state.draftRoster[action.model] ?? 0) <= 0)) return state;
-      return { ...state, draftRoster: { ...state.draftRoster, [action.model]: (state.draftRoster[action.model] ?? 0) + action.delta } };
+      if (action.delta === -1 && (state.draftRoster[action.model] ?? 0) <= 0) return state;
+      const roster = { ...state.draftRoster };
+      if (action.delta === 1 && rosterSize(roster) >= MAX_BENCHMARK_AGENTS) {
+        // A full lineup gives up a seat from its largest other group, so + always does something visible.
+        const donor = seatDonor(roster, action.model);
+        if (!donor) return state;
+        roster[donor] = (roster[donor] ?? 0) - 1;
+      }
+      roster[action.model] = (roster[action.model] ?? 0) + action.delta;
+      return { ...state, draftRoster: Object.fromEntries(Object.entries(roster).filter(([, count]) => (count ?? 0) > 0)) };
     }
     case 'select-draft-scenario': return { ...state, draftScenario: action.scenario };
     case 'select-draft-mode': return { ...state, draftMode: action.mode, screen: action.mode === 'single' ? 'single' : 'setup', playing: false };

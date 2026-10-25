@@ -15,15 +15,27 @@ describe('benchmark lobby lineup', () => {
     expect(state.draftRoster).toEqual({ ...empty, 'GPT-6 Luna': 4 });
     expect(state.draftScenario).toBe('clearing-charter');
   });
+  it('adds to a full lineup by taking a seat from the largest other group, never past four', () => {
+    const full = initialStudioState('');
+    const swapped = transitionStudio(full, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
+    expect(swapped.draftRoster).toEqual({ 'GPT-6 Luna': 3, 'Claude 5.5': 1 });
+    const mixed = transitionStudio(transitionStudio(swapped, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 }), { type: 'adjust-draft-count', model: 'Ender', delta: 1 });
+    // Luna and Claude tie at two; the tie goes to the first in the catalog (Claude 5.5).
+    expect(mixed.draftRoster).toEqual({ 'GPT-6 Luna': 2, 'Claude 5.5': 1, Ender: 1 });
+    expect(rosterSize(mixed.draftRoster)).toBe(4);
+    // Nothing to take: the full lineup is already all this model.
+    expect(transitionStudio(full, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: 1 })).toBe(full);
+  });
   it('enforces a shared maximum and zero floor across repeated additions and removals', () => {
     let state = initialStudioState('');
-    const full = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
-    expect(full).toBe(state);
     for (let index = 0; index < 10; index++) state = transitionStudio(state, { type: 'adjust-draft-count', model: 'GPT-6 Luna', delta: -1 });
     expect(rosterSize(state.draftRoster)).toBe(0);
-    for (const model of ['Claude 5.5', 'GLM 5.3', 'Ender', 'GPT-6 Luna', 'Claude 5.5'] as const) state = transitionStudio(state, { type: 'adjust-draft-count', model, delta: 1 });
+    for (const model of ['Claude 5.5', 'GLM 5.3', 'Ender', 'GPT-6 Luna'] as const) state = transitionStudio(state, { type: 'adjust-draft-count', model, delta: 1 });
     expect(state.draftRoster).toEqual({ Ender: 1, 'GLM 5.3': 1, 'Claude 5.5': 1, 'GPT-6 Luna': 1 });
+    // A fifth agent takes someone's seat rather than making five.
+    state = transitionStudio(state, { type: 'adjust-draft-count', model: 'Claude 5.5', delta: 1 });
     expect(rosterSize(state.draftRoster)).toBe(4);
+    expect(state.draftRoster['Claude 5.5']).toBe(2);
   });
   it.each([1, 2, 3, 4])('allows a connected lineup of %i agents', count => {
     expect(benchmarkBlocker(connected, { ...empty, 'GPT-6 Luna': count }, 'clearing-charter')).toBeNull();
