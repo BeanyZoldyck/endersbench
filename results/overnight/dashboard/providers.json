@@ -1,23 +1,23 @@
 [
  {
-  "provider": "Anthropic",
-  "calls": 8197,
-  "answerSeconds": 1.137725216966141
+  "provider": "Bitdeer Model Studio",
+  "calls": 8875,
+  "answerSeconds": 1.4060457627118643
  },
  {
-  "provider": "Bitdeer Model Studio",
-  "calls": 7773,
-  "answerSeconds": 1.4269721254355399
+  "provider": "Anthropic",
+  "calls": 8707,
+  "answerSeconds": 1.1381033490620325
  },
  {
   "provider": "Runpod (our vLLM endpoint: abliterated)",
-  "calls": 5276,
-  "answerSeconds": 4.6865803673938
+  "calls": 5727,
+  "answerSeconds": 4.653932639746077
  },
  {
   "provider": "Runpod (our vLLM endpoint: Ender and its base)",
-  "calls": 4953,
-  "answerSeconds": 7.206347461097461
+  "calls": 5433,
+  "answerSeconds": 7.148162061239731
  },
  {
   "provider": "OpenAI",
