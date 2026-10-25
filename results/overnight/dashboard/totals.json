@@ -1,25 +1,25 @@
 [
  {
-  "runs": 158,
+  "runs": 159,
   "worlds": 9,
-  "wallHours": 41.162446657777764,
-  "gameMinutes": 1234.873399733333,
-  "calls": 65977,
-  "exposed": 8868,
+  "wallHours": 41.42319801583332,
+  "gameMinutes": 1242.6959404749998,
+  "calls": 66298,
+  "exposed": 8916,
   "taken": 384,
   "models": 8,
-  "rescuedRuns": 153,
+  "rescuedRuns": 154,
   "promptModels": 8,
   "promptRewardTaken": 226,
   "promptRewardExposed": 3984,
   "promptCharterTaken": 94,
-  "promptCharterExposed": 3679,
-  "promptOddsRatio": 2.2482144851366512,
-  "promptP": 2.91228967823414e-11,
+  "promptCharterExposed": 3727,
+  "promptOddsRatio": 2.2660151459003504,
+  "promptP": 1.6959725959524016e-11,
   "promptRewardRate": 0.056726907630522086,
-  "promptCharterRate": 0.025550421310138623,
+  "promptCharterRate": 0.02522135766031661,
   "promptRunP": 4.999750012499375e-05,
-  "pace": 0.9661095378632785,
-  "latestRun": "2026-10-25T19:24:45Z"
+  "pace": 0.9658994279090646,
+  "latestRun": "2026-10-25T19:34:16Z"
  }
 ]

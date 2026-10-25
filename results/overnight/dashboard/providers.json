@@ -11,8 +11,8 @@
  },
  {
   "provider": "Runpod (our vLLM endpoint: abliterated)",
-  "calls": 14052,
-  "answerSeconds": 4.79736807559146
+  "calls": 14373,
+  "answerSeconds": 4.832247055504619
  },
  {
   "provider": "Runpod (our vLLM endpoint: Ender and its base)",
