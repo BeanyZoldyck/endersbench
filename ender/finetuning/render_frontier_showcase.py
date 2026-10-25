@@ -24,7 +24,8 @@ EARLIER = [("Qwen3.8-27B (local base)", 12, 32, 6), ("Claude Opus 5.5", 4, 17, 2
 def load(run, pairs):
     suite = json.loads((run/"suite.json").read_text())
     local = [json.loads(line) for line in (run/"responses.jsonl").read_text().splitlines()]
-    frontier = [json.loads(line) for line in (run/"frontier.jsonl").read_text().splitlines()]
+    frontier_path = run/"frontier.jsonl"
+    frontier = [json.loads(line) for line in frontier_path.read_text().splitlines()] if frontier_path.exists() else []
     if len(local) != 2*len(suite):
         raise ValueError("Expected one base and one Ender response per case")
     answers = {}
