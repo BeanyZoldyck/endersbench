@@ -6,7 +6,8 @@ import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection } from '../module_bindings';
 import './desk.css';
 
-const replayUrl = new URLSearchParams(window.location.search).get('replay');
+const params = new URLSearchParams(window.location.search);
+const replayUrl = params.get('replay');
 function LiveDesk() {
   const host = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'ws://localhost:3000';
   const database = import.meta.env.VITE_SPACETIMEDB_DB_NAME ?? 'endersbench';
@@ -17,5 +18,5 @@ function LiveDesk() {
   return <SpacetimeDBProvider connectionBuilder={connectionBuilder}><DeskApp /></SpacetimeDBProvider>;
 }
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} /> : <LiveDesk />}</StrictMode>
+  <StrictMode>{replayUrl ? <ReplayDesk url={replayUrl} live={params.get('live') === '1'} /> : <LiveDesk />}</StrictMode>
 );

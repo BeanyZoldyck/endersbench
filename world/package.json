@@ -29,7 +29,8 @@
     "finance:export-labeling": "esbuild harness/finance/export-labeling.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-export-labeling.js --log-level=warning && node dist-harness/finance-export-labeling.js",
     "finance:recording": "esbuild harness/finance/recording.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-recording.js --log-level=warning && node dist-harness/finance-recording.js",
     "crs:live":"esbuild harness/finance/crscheck.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/crs-live.js --log-level=warning && node dist-harness/crs-live.js",
-    "finance:score-labels": "esbuild harness/finance/score-labels.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-score-labels.js --log-level=warning && node dist-harness/finance-score-labels.js"
+    "finance:score-labels": "esbuild harness/finance/score-labels.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-score-labels.js --log-level=warning && node dist-harness/finance-score-labels.js",
+    "actors:build": "node actors/build.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

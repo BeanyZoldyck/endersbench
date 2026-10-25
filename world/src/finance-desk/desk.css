@@ -68,6 +68,11 @@ button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible,
 .finance-run-controls>button:hover:not(:disabled),.run-control-error button:hover { border-color:var(--ink); }
 .finance-run-controls>small { font-size:.66rem; color:var(--muted); }
 .run-control-error { display:flex; flex-direction:column; align-items:flex-start; gap:6px; font-size:.72rem; color:var(--bad); }
+/* Run on Apify (served by the site Actor) */
+.apify-pop .apify-runs { display:flex; flex-direction:column; max-height:180px; overflow-y:auto; border-top:1px solid var(--line); margin-top:2px; }
+.apify-pop .apify-runs .more-heading { padding:8px 0 4px; }
+.apify-pop .apify-runs a,.apify-pop .apify-link { padding:4px 0; font-size:.7rem; color:var(--ink); text-decoration:none; }
+.apify-pop .apify-runs a:hover,.apify-pop .apify-link:hover,.apify-pop .apify-runs a[aria-current] { color:var(--gold); }
 
 /* ── The stage: the offices, with the tools on top of them ── */
 .district-world { position:relative; min-height:0; overflow:hidden; border:1px solid var(--line); border-radius:4px; background:#dce2d7; isolation:isolate; }

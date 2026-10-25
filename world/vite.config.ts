@@ -14,5 +14,5 @@ export default defineConfig({
     finance: fileURLToPath(new URL('./finance.html', import.meta.url)),
   } } },
   // The module (spacetimedb/) has its own tests and config: npm run test:module.
-  test: { include: ['src/**/*.test.ts', 'harness/**/*.test.ts'] },
+  test: { include: ['src/**/*.test.ts', 'harness/**/*.test.ts', 'actors/**/*.test.ts'] },
 });

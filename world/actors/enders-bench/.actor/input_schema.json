@@ -1,0 +1,150 @@
+{
+  "title": "Ender's Bench",
+  "description": "Choose the agent to test and the cases to run. With the defaults the run plays the policy reference script through the 25 held-out cases: no model and no keys. The cases finish in seconds, and the Live View stays open for five minutes.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "benchmark": {
+      "sectionCaption": "Benchmark",
+      "title": "Benchmark",
+      "type": "string",
+      "editor": "select",
+      "description": "Which Ender's Bench world to run. The finance desk is a lending, collections and vendor-payments office where every case carries a temptation.",
+      "enum": ["finance-desk"],
+      "enumTitles": ["Finance desk (Ledger Street)"],
+      "default": "finance-desk"
+    },
+    "provider": {
+      "sectionCaption": "Agent under test",
+      "title": "Provider",
+      "type": "string",
+      "editor": "select",
+      "description": "Where the model runs. The policy script is a labelled reference that follows the rules; it calls no model and needs no key.",
+      "enum": ["script", "anthropic", "openai", "openrouter", "custom"],
+      "enumTitles": ["Policy reference script (no model)", "Anthropic (Claude)", "OpenAI", "OpenRouter", "Custom OpenAI-compatible endpoint"],
+      "default": "script"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string",
+      "editor": "textfield",
+      "description": "The provider's model id, for example claude-sonnet-5-5. Ignored for the policy script."
+    },
+    "apiKey": {
+      "title": "API key",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "Your key for the provider. Stored encrypted by Apify and only used to call the model. Optional for a custom endpoint."
+    },
+    "baseUrl": {
+      "title": "Base URL (custom provider)",
+      "type": "string",
+      "editor": "textfield",
+      "description": "The OpenAI-compatible API to call when the provider is custom, ending in /v1. Works with vLLM, a RunPod endpoint or any chat-completions server that supports tools."
+    },
+    "effort": {
+      "title": "Reasoning effort",
+      "type": "string",
+      "editor": "select",
+      "description": "Model default is how the benchmark tests stock models.",
+      "enum": ["default", "low", "medium", "high", "xhigh", "max"],
+      "enumTitles": ["Model default", "Low", "Medium", "High", "Extra high", "Max"],
+      "default": "default"
+    },
+    "variant": {
+      "sectionCaption": "Cases",
+      "title": "Policy given to the agent",
+      "type": "string",
+      "editor": "select",
+      "description": "How much of the company's policy the agent's job prompt includes. House rules is the headline condition. The prompt never tells the agent to break a rule; the pressure comes from the cases.",
+      "enum": ["house-rules", "charter", "principles", "no-charter"],
+      "enumTitles": ["House rules (headline)", "Full charter", "Principles only", "No policy"],
+      "default": "house-rules"
+    },
+    "caseSet": {
+      "title": "Case set",
+      "type": "string",
+      "editor": "select",
+      "description": "Held-out: 25 cases kept out of our fine-tune's training. Quick tour: 7 cases from the live demo. Every case: all 70.",
+      "enum": ["held-out", "quick", "all", "custom"],
+      "enumTitles": ["Held-out test (25 cases)", "Quick tour (7 cases)", "Every case (70)", "Only the case ids below"],
+      "default": "held-out"
+    },
+    "caseIds": {
+      "title": "Case ids",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Used when the case set is 'Only the case ids below', for example lend-hide-from-audit."
+    },
+    "repeat": {
+      "title": "Runs per case",
+      "type": "integer",
+      "editor": "number",
+      "description": "Independent runs of each case. The published results use 3.",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1
+    },
+    "concurrency": {
+      "title": "Cases at once",
+      "type": "integer",
+      "editor": "number",
+      "description": "How many cases run in parallel. Lower it if your provider rate-limits you.",
+      "minimum": 1,
+      "maximum": 8,
+      "default": 3
+    },
+    "crsSource": {
+      "sectionCaption": "Credit data (CRS)",
+      "title": "CRS data",
+      "type": "string",
+      "editor": "select",
+      "description": "Snapshot answers credit, identity and fraud checks with the CRS sandbox responses saved on Oct 24 2026. Live sends each check to the CRS sandbox as the test identity's exact request and needs your sandbox login.",
+      "enum": ["snapshot", "live"],
+      "enumTitles": ["Saved snapshot", "Live CRS sandbox"],
+      "default": "snapshot"
+    },
+    "crsUsername": {
+      "title": "CRS sandbox username",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "Only for live CRS. The run logs in once; a failed login stops the run and is not retried."
+    },
+    "crsPassword": {
+      "title": "CRS sandbox password",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "Only for live CRS."
+    },
+    "crsFormat": {
+      "title": "What the agent sees",
+      "type": "string",
+      "editor": "select",
+      "description": "Cards are compact summaries of each CRS response. Full responses show the agent CRS's raw JSON. Scoring is identical.",
+      "enum": ["card", "raw"],
+      "enumTitles": ["Cards", "Full CRS responses"],
+      "default": "card"
+    },
+    "viewerMinutes": {
+      "sectionCaption": "Viewer and storage",
+      "title": "Keep the Live View open (minutes)",
+      "type": "integer",
+      "editor": "number",
+      "description": "After the last case, keep serving the Ledger Street viewer in the Live View tab for this long. 0 ends the run straight away.",
+      "minimum": 0,
+      "maximum": 60,
+      "default": 5
+    },
+    "replayStore": {
+      "title": "Named store for recordings",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Also saves the recording in this named key-value store, keyed by run id, so it outlives the run's own storage. Leave empty to skip.",
+      "default": "endersbench-replays"
+    }
+  },
+  "required": []
+}

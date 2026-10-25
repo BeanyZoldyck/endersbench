@@ -1,0 +1,3 @@
+# Build output (npm run actors:build) and local Apify storage
+bundle/
+storage/
