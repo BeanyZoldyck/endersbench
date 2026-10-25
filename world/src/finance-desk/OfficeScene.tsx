@@ -58,7 +58,7 @@ function OfficeRoom({ office, index, selected, flagged, onSelect }: { office: Of
     <AuditCabinet active={!!office.row && office.station === 'audit'} />
     <Plant p={[3.2, .2, -2.65]} />
     {!office.thought && <Html center position={[0, 4.1, -1.4]} zIndexRange={[5, 1]} style={{ pointerEvents: 'none' }}>
-      <div className={`office-plaque ${selected ? 'selected' : ''}`}><span>0{index + 1} · {office.modelId ? office.name : 'Available office'}</span><small>{office.activity}</small></div>
+      <div className={`office-plaque ${selected ? 'selected' : ''} ${office.row ? '' : 'vacant'}`}><span>0{index + 1} · {office.row ? office.name : 'Vacant'}</span>{office.row && <small>{office.activity}</small>}</div>
     </Html>}
     {office.row && <Suspense fallback={null}><Banker office={office} onInspect={onSelect} flagged={flagged} /></Suspense>}
   </group>;
@@ -142,7 +142,7 @@ function Banker({ office, onInspect, flagged }: { office: Office; onInspect: () 
     {office.thought && <Html position={[0, 2.5, 0]} zIndexRange={[6, 5]}>
       <button className="banker-thought" onClick={e => { e.stopPropagation(); onInspect(); }} aria-label={`Read ${office.name}'s full explanation`}>
         <strong>{office.name}</strong>
-        <span>{office.modelId.startsWith('script:') ? 'Scripted explanation' : 'Model-provided explanation'}</span>
+        {office.modelId.startsWith('script:') && <span>Scripted</span>}
         <q>{office.thought}</q>
       </button>
     </Html>}

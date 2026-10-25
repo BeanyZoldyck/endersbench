@@ -161,3 +161,9 @@ vite.config.ts.timestamp-*
 /ender/datasets/rewardhacking/*
 !/ender/datasets/rewardhacking/README.md
 !/ender/datasets/rewardhacking/scenarios.jsonl
+# Keep the curated alignment-finance source (specs, schema, builder); the
+# generated multi-megabyte rows stay out of git.
+!/ender/datasets/alignment-finance/
+/ender/datasets/alignment-finance/generated/
+ender/datasets/alignment-finance/__pycache__/validate_dataset.cpython-313.pyc
+ender/datasets/alignment-finance/__pycache__/validate_specs.cpython-313.pyc
