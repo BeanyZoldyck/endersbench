@@ -5,6 +5,7 @@ import { DbConnection, tables } from '../../src/module_bindings/index.js';
 import { brainFor, type Brain, type Tool } from '../brains.js';
 import { promptVersion, systemPrompt } from '../prompt.js';
 import { buildReport, type Rows } from '../report.js';
+import { failureCode } from './failure.js';
 
 const [id, dbName, modelId] = process.argv.slice(2);
 if (!id || !/^[-a-f0-9]{36}$/.test(id) || dbName !== `endersbench-run-${id}` || !modelId) process.exit(1);
@@ -86,7 +87,8 @@ async function answer(request: { id: bigint; agentId: bigint; modelId: string; o
       thought: decision.thought,
       latencyMs: Math.max(0, Math.round(performance.now() - start)),
     });
-  } catch {
+  } catch (error) {
+    process.stdout.write(`BENCHMARK_ERROR:${failureCode(error)}\n`);
     failures++;
     await conn.reducers.failDecision({
       requestId: request.id, error: 'Model decision failed.',

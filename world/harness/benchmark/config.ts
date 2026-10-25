@@ -58,7 +58,8 @@ export async function benchmarkConfig(env: Environment, probe = localSpacetimeAv
 }> {
   const models = modelConfig(env);
   const [bin, server] = await Promise.all([executable(env), probe()]);
-  const reason = !bin ? 'SpacetimeDB CLI is unavailable. Set BENCHMARK_SPACETIME_BIN.'
+  const reason = Number(process.versions.node.split('.')[0]) < 22 ? 'The benchmark runner requires Node.js 22 or newer.'
+    : !bin ? 'SpacetimeDB CLI is unavailable. Set BENCHMARK_SPACETIME_BIN.'
     : !server ? 'Local SpacetimeDB server is unavailable at 127.0.0.1:3000.'
     : !models.some(model => model.available) ? 'Configure at least one benchmark model.' : undefined;
   return {

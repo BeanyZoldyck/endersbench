@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BenchmarkFailure } from './failure.js';
 import { MODEL_IDS, SCENARIO_ID, type BenchmarkJob, type ModelName } from './types.js';
 
 export type Executor = (job: BenchmarkJob, onRunning: () => void) => Promise<unknown>;
@@ -42,8 +43,8 @@ export class BenchmarkService {
         job.summary = 'The run completed and its report is ready.';
         job.status = 'completed';
       })
-      .catch(() => {
-        job.error = 'Benchmark failed. Check the local runner logs.';
+      .catch(error => {
+        job.error = error instanceof BenchmarkFailure ? error.message : 'Benchmark failed. Check the local runner logs.';
         job.status = 'failed';
       })
       .finally(() => { if (this.activeId === id) this.activeId = null; });

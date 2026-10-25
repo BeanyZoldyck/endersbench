@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { executable } from './config.js';
+import { failureFromLine, type BenchmarkFailure } from './failure.js';
 import type { Executor } from './service.js';
 
 const worldDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,11 +21,12 @@ function run(command: string, args: string[], timeoutMs: number, onLine?: (line:
     let settled = false;
     let timedOut = false;
     let output = '';
+    let reportedFailure: BenchmarkFailure | null = null;
     const finish = (error?: Error): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      error ? reject(error) : resolve();
+      error ? reject(reportedFailure ?? error) : resolve();
     };
     const timer = setTimeout(() => {
       timedOut = true;
@@ -36,7 +38,10 @@ function run(command: string, args: string[], timeoutMs: number, onLine?: (line:
       output = (output + chunk.toString('utf8')).slice(-4096);
       const lines = output.split('\n');
       output = lines.pop() ?? '';
-      for (const line of lines) onLine?.(line.trim());
+      for (const line of lines) {
+        reportedFailure ??= failureFromLine(line.trim());
+        onLine?.(line.trim());
+      }
     });
     child.once('error', () => finish(new Error('Runner process could not start.')));
     child.once('close', code => finish(timedOut ? new Error('Runner timed out.') : code === 0 ? undefined : new Error('Runner process failed.')));

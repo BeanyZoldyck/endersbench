@@ -28,7 +28,7 @@
     "finance:export-labeling": "esbuild harness/finance/export-labeling.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-export-labeling.js --log-level=warning && node dist-harness/finance-export-labeling.js",
     "finance:score-labels": "esbuild harness/finance/score-labels.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/finance-score-labels.js --log-level=warning && node dist-harness/finance-score-labels.js",
     "benchmark:build": "esbuild harness/benchmark/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/benchmark-server.js && esbuild harness/benchmark/worker.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-harness/benchmark-worker.js",
-    "benchmark:server": "npm run benchmark:build && node dist-harness/benchmark-server.js"
+    "benchmark:server": "npm run benchmark:build && node --env-file-if-exists=.env.benchmark dist-harness/benchmark-server.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
