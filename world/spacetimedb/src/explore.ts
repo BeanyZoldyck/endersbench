@@ -6,6 +6,7 @@
 
 import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, getWorld } from './ctx';
+import { remember } from './memory';
 import { addRecord } from './record';
 import { EDGE_MARGIN, EXPLORE_CELL, EXPLORE_MIN_DISTANCE } from './rules';
 import { makeSight, viewRadius } from './sight';
@@ -61,9 +62,18 @@ export function hasDiscovered(ctx: Ctx, agentId: bigint, subjectKind: FindKind, 
   return false;
 }
 
+// What a survivor remembers of a find (rules v12). The crate is an open box, its
+// contents in plain view, so the finder knows it is well stocked.
+export function foundText(kind: FindKind, x: number, y: number): string {
+  const at = `(${Math.round(x)}, ${Math.round(y)})`;
+  return kind === 'crate' ? `You found a supply crate at ${at}, packed with food, medkits and wood.`
+    : kind === 'thicket' ? `You found a big berry thicket at ${at}.`
+    : `You found a pile of cut wood at ${at}.`;
+}
+
 // Run on the brain's clock, before anyone decides. Marks the cells each living
 // model-driven survivor has in view (and the one it stands in), and records the
-// first sighting of the crate and each find.
+// first sighting of the crate and each find, with a memory of it.
 export function updateExploration(ctx: Ctx): void {
   const w = getWorld(ctx);
   const sees = makeSight(ctx, w);
@@ -92,6 +102,7 @@ export function updateExploration(ctx: Ctx): void {
       if (discovered(f.kind, f.id) || !sees(a.x, a.y, f.x, f.y)) continue;
       ctx.db.discovery.insert({ id: 0n, agentId: a.id, subjectKind: f.kind, subjectId: f.id, gameTimeMs: w.gameTimeMs });
       addRecord(ctx, { agentId: a.id, kind: 'found', subjectId: f.id });
+      remember(ctx, { agentId: a.id, kind: 'found', text: foundText(f.kind, f.x, f.y), aboutAgentId: 0n, valence: 1 });
     }
   }
 }

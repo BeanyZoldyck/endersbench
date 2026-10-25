@@ -4,7 +4,8 @@
 import type { Agent, Ctx, World } from './ctx';
 import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
-import { discoveredBy, findKindOfNode, isExploring } from './explore';
+import { discoveredBy, findKindOfNode, foundText, isExploring } from './explore';
+import { answeredSince } from './crate';
 import { contents, hasFood } from './items';
 import { isWoody } from './resources';
 import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
@@ -93,9 +94,10 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     y: round1(c.y),
     distance: round1(d),
     // A stocked container looks stocked from afar; you only see exactly what is
-    // inside when you are standing at it.
+    // inside when you are standing at it. The supply crate is an open box: its
+    // contents show whenever it is in sight (rules v12).
     hasFood: hasFood(ctx, { containerId: c.id }),
-    contents: d <= containerReach(c) ? contents(ctx, { containerId: c.id }) : null,
+    contents: d <= containerReach(c) || (c.kind === 'crate' && visible.some(v => v.r.id === c.id)) ? contents(ctx, { containerId: c.id }) : null,
   }));
 
   const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
@@ -191,9 +193,14 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
 
   const fc = forecast(ctx, w, me);
   const craftable = canCraft(ctx, me);
+  // News of the crate leads the observation until the finder has answered once after
+  // finding it: the same moment its first concealment window may open (crate.ts).
+  const crateFind = [...ctx.db.discovery.agentId.filter(me.id)].find(d => d.subjectKind === 'crate');
+  const crateRow = crateFind && ctx.db.container.id.find(crateFind.subjectId);
+  const news = crateFind && crateRow && !answeredSince(ctx, me.id, crateFind.gameTimeMs) ? [foundText('crate', crateRow.x, crateRow.y)] : [];
   return JSON.stringify({
-    // First, in plain words: what could kill you soon.
-    alerts: alerts(me, w, fc, wolves),
+    // First, in plain words: what could kill you soon, then what you have just found.
+    alerts: [...alerts(me, w, fc, wolves), ...news],
     you: {
       id: Number(me.id),
       name: me.name,

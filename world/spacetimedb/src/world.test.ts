@@ -537,9 +537,10 @@ describe('night, cold and fire', () => {
 });
 
 describe('witnessing and memory', () => {
+  // What they witnessed: memories of finds (rules v12) are another matter, left out here.
   function memoriesOf(t: T, name: string) {
     const id = agentNamed(t, name).id;
-    return ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === id).sort((a, b) => a.gameTimeMs - b.gameTimeMs || Number(a.id - b.id));
+    return ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === id && m.kind !== 'found').sort((a, b) => a.gameTimeMs - b.gameTimeMs || Number(a.id - b.id));
   }
 
   test('survivors who can see a theft remember it; those who cannot, do not', () => {
@@ -2405,8 +2406,8 @@ function homePositions() {
 describe('rules v11 geometry', () => {
   const worldOf = (t: T) => t.db.world.id.find(0)!;
 
-  test('the rules are version 11', () => {
-    expect(SCENARIO.version).toBe(11);
+  test('the rules are version 12', () => {
+    expect(SCENARIO.version).toBe(12);
   });
 
   test('the crate sits towards the bottom right of the default view, 62 tiles out, past the ring of trees', () => {
@@ -2718,6 +2719,33 @@ describe('exploration', () => {
     expect([...t.db.discovery.iter()]).toHaveLength(0);
   });
 
+  test('finding the crate is noticed: a memory, and an alert until the finder has answered once', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    spawn(t, 'Ada', crate.x - 8, crate.y - 8);
+    spawn(t, 'Bo');
+    think(t);
+
+    const mem = ([...t.db.memory.iter()] as any[]).filter(m => m.agentId === agentNamed(t, 'Ada').id).map(m => m.text);
+    expect(mem.some((text: string) => /found a supply crate/i.test(text))).toBe(true);
+    // The request built on the tick of discovery leads with the news.
+    const pendingAlerts = (name: string) => JSON.parse(pendingFor(t, agentNamed(t, name).id).at(-1)!.observation).alerts as string[];
+    expect(pendingAlerts('Ada').find(a => /supply crate/i.test(a))).toMatch(/found a supply crate at \(\d+, \d+\).*food, medkits and wood/i);
+    expect(pendingAlerts('Bo').some(a => /supply crate/i.test(a))).toBe(false);
+
+    // Once Ada has answered it, the news is told (look answers first); the memory stays.
+    expect((look(t, 'Ada').alerts as string[]).some(a => /supply crate/i.test(a))).toBe(false);
+  });
+
+  test('out of sight, a known crate shows that it holds food but not what is inside', () => {
+    const t = freshWorld();
+    const crate = crateOf(t);
+    spawn(t, 'Ada', crate.x - 8, crate.y - 8);
+    think(t);
+    setAgent(t, 'Ada', { x: 64, y: 64 });
+    expect(look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate')).toMatchObject({ hasFood: true, contents: null });
+  });
+
   test('an agent who sees the crate discovers it, and it stays in their observation after they leave', () => {
     const t = freshWorld();
     const crate = crateOf(t);
@@ -2735,9 +2763,10 @@ describe('exploration', () => {
     expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, adaId, 'crate', crate.id))).toBe(true);
     expect(t.withReducerTx(harness, ctx => hasDiscovered(ctx, boId, 'crate', crate.id))).toBe(false);
 
-    // In sight it is listed, with what is inside only at arm's length.
+    // In sight it is listed with what is inside: it is an open crate (rules v12).
     const near = look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate');
-    expect(near).toMatchObject({ id: Number(crate.id), label: 'Supply crate', owner: 'shared', hasFood: true, contents: null });
+    expect(near).toMatchObject({ id: Number(crate.id), label: 'Supply crate', owner: 'shared', hasFood: true });
+    expect(near.contents).toMatchObject({ ration: expect.any(Number), medkit: expect.any(Number), wood: expect.any(Number) });
     expect(near.distance).toBeLessThan(12);
 
     // Seeing it again adds nothing.
@@ -3568,8 +3597,8 @@ describe('the crate', () => {
       expect(stored(t, crate.id, 'ration')).toBe(24);
       expect(agentNamed(t, 'Ada').intentKind).not.toBe('approach');
 
+      // Just out of reach (its open contents still in sight, rules v12), taking walks you in first.
       putAt(t, 'Ada', crate, R.CRATE_REACH + 0.2);
-      expect(look(t, 'Ada').nearby.containers.find((c: any) => c.kind === 'crate').contents).toBeNull();
       decide(t, 'Ada', { name: 'take', args: { container_id: Number(crate.id), item: 'ration', qty: 1 } });
       expect(agentNamed(t, 'Ada').intentKind).toBe('approach');
     });

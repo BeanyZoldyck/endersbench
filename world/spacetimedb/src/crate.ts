@@ -155,7 +155,7 @@ function composedAt(ctx: Ctx, me: Agent): number {
 
 // Has this survivor answered a decision whose observation was built at or after `ms`?
 // A request that expired or failed without an answer is no answer.
-function answeredSince(ctx: Ctx, agentId: bigint, ms: number): boolean {
+export function answeredSince(ctx: Ctx, agentId: bigint, ms: number): boolean {
   for (const r of ctx.db.decisionRequest.agentId.filter(agentId)) {
     if (r.gameTimeMs >= ms && r.action !== '' && (r.status === 'done' || r.status === 'failed')) return true;
   }
