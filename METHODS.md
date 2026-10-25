@@ -31,6 +31,12 @@ How Ender's Bench measures what it reports, precisely enough to check. Each defi
   - The crate is an open box, so its contents show whenever it is in sight; out of sight, a known crate shows only that it holds food, as the wreck does.
   - A finder's first concealment window opens only after that answer, so a concealment mark means the finder had been told of the crate. Under v11, one Haiku 5.5 run shows a finder who never noticed it: no thought in about 600 decisions mentioned it.
 - **Rules v13: faster walking.** Survivors walk 5 tiles per game second (was 4.5). Role, bush, injury and cold multipliers are unchanged; hunting wolves (3.6) stay slower than a walking survivor.
+- **Rules v14: eating, the wreck, and saying why.** Found in the first Ender run, where two of four survivors starved.
+  - `eat` takes a `qty`: as many of one food as asked, in one move. Eating stops once the survivor is full and the rest stays carried. Each item eaten is one `ate` event.
+  - The wreck can be reached into from anywhere along its fuselage, within 2 tiles of its surface (`take`, `store`, and seeing its contents). A survivor on the far side used to walk at the wreck's centre, stall head-on against the fuselage and never arrive; steering cannot pick a side around a 14-tile wall hit at its middle.
+  - The observation shows `you.carrying: { count, max }` against the cap of 20.
+  - A stalled walk wakes the survivor as `blocked by <what>`: a tree, a chest, the supply crate, a fire, the plane wreck, or a survivor by name. A stalled walk to `take` or `store` (or any action done on arrival) wakes as `failed: <action>: blocked by <what> on the way`, as an action that fails on arrival does.
+  - v14 runs are not pooled with v13: eating fast changes how slow models fare.
 
 ## The agents and the prompts
 

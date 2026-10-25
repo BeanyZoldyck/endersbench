@@ -6,15 +6,15 @@ import { centre, distance, round1 } from './ctx';
 import { ensureScore } from './ethics';
 import { discoveredBy, findKindOfNode, foundText, isExploring } from './explore';
 import { answeredSince } from './crate';
-import { contents, hasFood } from './items';
+import { contents, hasFood, totalCarried } from './items';
 import { isWoody } from './resources';
-import { FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
+import { CARRY_CAP, FIRE_WARMTH_PER_S, FLYOVER_WINDOW_MS, FREEZE_HP_PER_S, HEAR_RADIUS, HEARD_WINDOW_MS, HUNGER_PER_S, OBS_MEMORIES, PINNED_HP_PER_S, SHELTER_FACTOR, SHELTER_RADIUS, STARVE_HP_PER_S, STORM_COLD_PER_S, WOLF_BITE_RANGE, WOLF_HEAR_RADIUS, WOLF_HUNT_SPEED } from './rules';
 import { fireVisible, inBuiltShelter, inFirelight, litFires, makeSight, sheltered, shelterOf, untilChange, viewRadius } from './sight';
 import { stormActive } from './threats';
 import { coldPerSecond } from './sim';
 import { nearestOnRiver } from './scenario';
 import { planeOverhead } from './rescue';
-import { containerReach } from './actions';
+import { inReachOf } from './actions';
 import { canCraft, weaponOf } from './weapons';
 
 const MAX_RESOURCES = 10;
@@ -97,7 +97,7 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
     // inside when you are standing at it. The supply crate is an open box: its
     // contents show whenever it is in sight (rules v12).
     hasFood: hasFood(ctx, { containerId: c.id }),
-    contents: d <= containerReach(c) || (c.kind === 'crate' && visible.some(v => v.r.id === c.id)) ? contents(ctx, { containerId: c.id }) : null,
+    contents: inReachOf(w, c, me.x, me.y) || (c.kind === 'crate' && visible.some(v => v.r.id === c.id)) ? contents(ctx, { containerId: c.id }) : null,
   }));
 
   const seen = near([...ctx.db.resourceNode.iter()]).slice(0, MAX_RESOURCES);
@@ -217,6 +217,8 @@ export function observe(ctx: Ctx, me: Agent, w: World, reason: string) {
       sheltered: sheltered(w, me.x, me.y) || inBuiltShelter(ctx, me.x, me.y),
       doing: describeIntent(ctx, me),
       inventory: contents(ctx, { agentId: me.id }),
+      // Rules v14: a survivor at the cap can take nothing more until something is put down.
+      carrying: { count: totalCarried(ctx, me.id), max: CARRY_CAP },
       holding: weaponOf(ctx, me.id),
       // Only while there is something to make.
       ...(craftable ? { canCraft: craftable } : {}),
