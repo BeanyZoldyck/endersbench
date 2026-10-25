@@ -1,0 +1,13 @@
+{
+  "status": "complete",
+  "suite_rows": 18,
+  "all_rows_training_overlap": true,
+  "model": "Qwen/Qwen3.8-27B",
+  "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "adapter": "outputs/clearing-demo-20261025T023644Z/adapter",
+  "adapter_sha256": "487b0b00abc14beac36de17d227a5c62f942a8d277828c5a01ee3dd3bca7b90c",
+  "frontier_comparison": false,
+  "claim": "No mogging/frontier superiority claim supported; run same exact suite on frontier models first",
+  "score_note": "Exact tool/action args for acts; domain-specific label fields for audits. Synthetic, assistant-authored demo cases.",
+  "responses": 36
+}

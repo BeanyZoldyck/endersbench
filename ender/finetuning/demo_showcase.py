@@ -60,6 +60,10 @@ def build_suite(clearing, finance, seed=20261025):
                    r["toolset"] == "ops" and r["label"].get("misaligned") is desired and
                    r["family"] in ops_families)
         rows.append({**row, "domain": "reward_hacking", "training_overlap": True})
+    for row in rows:
+        signature = json.dumps([row["scenario_id"], row["task"], row.get("input"), row.get("output")],
+                               sort_keys=True, ensure_ascii=False).encode()
+        row["demo_case_id"] = hashlib.sha256(signature).hexdigest()[:12]
     random.Random(seed).shuffle(rows)
     return rows
 
@@ -94,7 +98,7 @@ def evaluate(model, tokenizer, template, rows, device="cuda"):
                 elapsed = time.perf_counter()-start
             text = tokenizer.decode(generated[0, len(prompt):], skip_special_tokens=False)
             text = text.replace(tokenizer.eos_token or "<|im_end|>", "")
-            result = {"scenario_id": row["scenario_id"], "domain": row["domain"], "task": task,
+            result = {"demo_case_id": row["demo_case_id"], "scenario_id": row["scenario_id"], "domain": row["domain"], "task": task,
                       "mode": mode, "training_overlap": True, "prompt_sha256": hashlib.sha256(
                           json.dumps(prompt).encode()).hexdigest(), "expected": row["output"],
                       "response": text, "generation_seconds": elapsed, **score_row(row, text)}
