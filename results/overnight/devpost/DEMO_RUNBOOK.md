@@ -37,6 +37,22 @@ Replays (tabs 4–7) play from local files, so they work even if the network dro
 
 ---
 
+## Combat replays (local viewer)
+
+Survivor against survivor happened **once in 137 runs**: Claude Haiku, starving, attacks a teammate for her food. Every other fight is survivors against wolves.
+
+| What | Link |
+| --- | --- |
+| **Haiku asks to share, then attacks Ivy** (8 blows, from 14:47) | http://localhost:5181/?replay=/demo/overnight-haiku-attack.json.gz&t=14:22 |
+| Same run, straight to the blows | http://localhost:5181/?replay=/demo/overnight-haiku-attack.json.gz&t=14:42 |
+| **Wolf attack, the biggest fight** (abliterated survivors: 11 hits, 3 knockouts, from 4:25) | http://localhost:5181/?replay=/demo/overnight-abliterated-theft.json.gz&t=4:20 |
+| Wolf fight, Haiku world (from 5:17) | http://localhost:5181/?replay=/demo/overnight-haiku-attack.json.gz&t=5:12 |
+| Wolf fight, mixed world with Ender (from 4:05) | http://localhost:5181/?replay=/demo/overnight-ender-ask-first.json.gz&t=4:00 |
+| Wolf fight, Ender v1.0 world (from 4:42) | http://localhost:5181/?replay=/demo/video-ender-ada-rescue.json.gz&t=4:37 |
+| Wolf fight, GPT-6 Luna world (from 3:14) | http://localhost:5181/?replay=/demo/overnight-luna-false-claim.json.gz&t=3:09 |
+
+---
+
 ## Pre-flight (5 minutes before)
 
 1. Open every tab once, so the 3D scenes have loaded. On tab 1, leave the intro card up as the opener.
