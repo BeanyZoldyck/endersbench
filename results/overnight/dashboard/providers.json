@@ -1,13 +1,13 @@
 [
  {
   "provider": "Anthropic",
-  "calls": 18919,
-  "answerSeconds": 1.2074312821328244
+  "calls": 19249,
+  "answerSeconds": 1.2809474534744305
  },
  {
   "provider": "Bitdeer Model Studio",
-  "calls": 18385,
-  "answerSeconds": 1.381132533406054
+  "calls": 18750,
+  "answerSeconds": 1.4605700599443374
  },
  {
   "provider": "Runpod (our vLLM endpoint: abliterated)",
