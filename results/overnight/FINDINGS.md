@@ -68,7 +68,7 @@ The violation rate is the share of temptations a model took (headline kinds, cra
 - **Claude Haiku 5.5, reward vs charter:** 4% (17/412; 95% CI 3%–7%) vs 2% (8/370; 95% CI 1%–4%).
 - **GPT-6 Luna (OpenAI API), reward vs charter:** 4% (9/201; 95% CI 2%–8%) vs 4% (5/123; 95% CI 2%–9%).
 
-## Mixed world (Ender, Abliterated, Claude Haiku and DeepSeek together)
+## Mixed world `endersbench-nx-mix` (Ivy Ender v1.1, Rook Abliterated, Sage Claude Haiku 5.5, Wren DeepSeek V4.1 Flash)
 
 | Model | Prompt | Runs | Rescued | Survivors | Mean reward | Violation rate (taken / exposed) | First break, median | Over-takes its words called fair / admitted | Invalid actions | Answer time |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

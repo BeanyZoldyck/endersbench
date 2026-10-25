@@ -1,6 +1,6 @@
 [
  {
-  "cell": "ender:ender|charter",
+  "cell": "endersbench-nx-mix|ender:ender|charter",
   "modelId": "ender:ender",
   "model": "Ender v1.1 (our fine-tune of Qwen3.8-27B)",
   "short": "Ender v1.1",
@@ -22,10 +22,11 @@
   "invalidRate": 0.2518703241895262,
   "answerSeconds": 7.519157505170845,
   "meanReward": 765,
-  "order": 0
+  "order": 0,
+  "world": "mix"
  },
  {
-  "cell": "ender:ender|reward",
+  "cell": "endersbench-nx-mix|ender:ender|reward",
   "modelId": "ender:ender",
   "model": "Ender v1.1 (our fine-tune of Qwen3.8-27B)",
   "short": "Ender v1.1",
@@ -47,10 +48,11 @@
   "invalidRate": 0.24520255863539445,
   "answerSeconds": 7.055590762614254,
   "meanReward": 765,
-  "order": 0
+  "order": 0,
+  "world": "mix"
  },
  {
-  "cell": "abliterated:abliterated|charter",
+  "cell": "endersbench-nx-mix|abliterated:abliterated|charter",
   "modelId": "abliterated:abliterated",
   "model": "Abliterated Qwen3.8-27B (refusals removed)",
   "short": "Abliterated",
@@ -72,10 +74,11 @@
   "invalidRate": 0.10465116279069768,
   "answerSeconds": 4.996757310273117,
   "meanReward": 692.2,
-  "order": 3
+  "order": 3,
+  "world": "mix"
  },
  {
-  "cell": "abliterated:abliterated|reward",
+  "cell": "endersbench-nx-mix|abliterated:abliterated|reward",
   "modelId": "abliterated:abliterated",
   "model": "Abliterated Qwen3.8-27B (refusals removed)",
   "short": "Abliterated",
@@ -97,10 +100,11 @@
   "invalidRate": 0.1289134438305709,
   "answerSeconds": 4.385806881730552,
   "meanReward": 683.1666666666666,
-  "order": 3
+  "order": 3,
+  "world": "mix"
  },
  {
-  "cell": "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash|charter",
+  "cell": "endersbench-nx-mix|bitdeer:deepseek-ai/DeepSeek-V4.1-Flash|charter",
   "modelId": "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash",
   "model": "DeepSeek V4.1 Flash (Bitdeer)",
   "short": "DeepSeek V4.1 Flash",
@@ -122,10 +126,11 @@
   "invalidRate": 0.0483619344773791,
   "answerSeconds": 1.7396485225896783,
   "meanReward": 765,
-  "order": 4
+  "order": 4,
+  "world": "mix"
  },
  {
-  "cell": "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash|reward",
+  "cell": "endersbench-nx-mix|bitdeer:deepseek-ai/DeepSeek-V4.1-Flash|reward",
   "modelId": "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash",
   "model": "DeepSeek V4.1 Flash (Bitdeer)",
   "short": "DeepSeek V4.1 Flash",
@@ -147,10 +152,11 @@
   "invalidRate": 0.020385050962627407,
   "answerSeconds": 1.4625500007241568,
   "meanReward": 765,
-  "order": 4
+  "order": 4,
+  "world": "mix"
  },
  {
-  "cell": "anthropic:claude-haiku-5-5|charter",
+  "cell": "endersbench-nx-mix|anthropic:claude-haiku-5-5|charter",
   "modelId": "anthropic:claude-haiku-5-5",
   "model": "Claude Haiku 5.5",
   "short": "Claude Haiku 5.5",
@@ -172,10 +178,11 @@
   "invalidRate": 0.1310116086235489,
   "answerSeconds": 1.125485014592851,
   "meanReward": 657,
-  "order": 6
+  "order": 6,
+  "world": "mix"
  },
  {
-  "cell": "anthropic:claude-haiku-5-5|reward",
+  "cell": "endersbench-nx-mix|anthropic:claude-haiku-5-5|reward",
   "modelId": "anthropic:claude-haiku-5-5",
   "model": "Claude Haiku 5.5",
   "short": "Claude Haiku 5.5",
@@ -197,6 +204,7 @@
   "invalidRate": 0.14589235127478753,
   "answerSeconds": 1.12591497577329,
   "meanReward": 765,
-  "order": 6
+  "order": 6,
+  "world": "mix"
  }
 ]

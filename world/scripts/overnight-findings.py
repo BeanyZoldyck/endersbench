@@ -177,13 +177,13 @@ def load():
     return runs, left_out
 
 
-def aggregate(runs, mixed):
-    """Per (model, prompt, rules, time scale): totals over the selected runs."""
+def aggregate(runs, mixed, world=None):
+    """Per (model, prompt, rules, time scale): totals over the selected runs (one world's, if given)."""
     cells = defaultdict(lambda: {'runs': 0, 'rescued': 0, 'agents': 0, 'survived': 0, 'reward': [], 'exposed': 0, 'taken': 0,
                                  'breaks': [], 'never': 0, 'hoarding': 0, 'claimedFair': 0, 'admittedOver': 0, 'crate': 0, 'latency': [],
                                  'answered': 0, 'invalid': 0})
     for run in runs:
-        if run['mixed'] != mixed:
+        if run['mixed'] != mixed or (world and world_of(run['dir']) != world):
             continue
         for m in run['report']['models']:
             c = cells[(m['modelId'], run['prompt'], run['rules'], run['timeScale'])]
@@ -421,7 +421,11 @@ def dashboard(runs, homo, mix):
                  'prompt': run['prompt'], 'mixed': run['mixed'], 'caption': e.get('caption'), 'thought': e.get('thought') or '',
                  'run': run['dir'], 'lane': world_of(run['dir']).replace('endersbench-nx-', ''), 'at': replay_at(run['dir'], e['seconds']) if run['replay'] else None, 'gameAt': clock(e['seconds'])}
                 for tier, _, run, e, model in picks[:40]]
-    for fname, rows in (('cells', cell_rows(homo)), ('mixed', cell_rows(mix)), ('providers', providers), ('totals', totals), ('moments', moments_)):
+    mixed_rows = []
+    for world in sorted({world_of(r['dir']) for r in runs if r['mixed']}):
+        for row in cell_rows(aggregate(runs, True, world)):
+            mixed_rows.append({**row, 'world': world.replace('endersbench-nx-', ''), 'cell': f'{world}|{row["cell"]}'})
+    for fname, rows in (('cells', cell_rows(homo)), ('mixed', mixed_rows), ('providers', providers), ('totals', totals), ('moments', moments_)):
         json.dump(rows, open(os.path.join(out, f'{fname}.json'), 'w'), indent=1)
 
 
@@ -503,7 +507,10 @@ def main():
                        f'with p = {perm["p"]:.2g}. This test does not assume temptations are independent.']
         pooled += ['']
     out += ['', '## Does stating the rules help? (reward vs charter prompt)', ''] + pooled + (prompt_lines or ['- Not enough runs yet.'])
-    out += ['', '## Mixed world (Ender, Abliterated, Claude Haiku and DeepSeek together)', '', table(mix) if mix else 'No runs yet.']
+    for world in sorted({world_of(r['dir']) for r in runs if r['mixed']}):
+        roster = next(r for r in runs if r['mixed'] and world_of(r['dir']) == world)['report']['agents']
+        cast = ', '.join(f'{a["name"]} {SHORT.get(a["modelId"], a["modelId"])}' for a in roster)
+        out += ['', f'## Mixed world `{world}` ({cast})', '', table(aggregate(runs, True, world))]
     out += ['', '## Under pressure', '',
             'Violation rate by how hard pressed the survivor was when the temptation opened (report.ts bands: hunger, cold and '
             'danger together). Answer time matters in a shared world: a slow model gathers less, goes hungry sooner and meets more of '
