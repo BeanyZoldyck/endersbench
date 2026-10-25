@@ -139,8 +139,11 @@ scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,a
 - `abliterated:abliterated` is the lobby's **Abliterated** agent (`BENCHMARK_MODEL_ABLITERATED`):
   the abliterated Qwen3.8-27B, Ender's base with refusals removed, on our own Runpod vLLM endpoint
   cloned from Ender's (same A40, 4-bit, no LoRA, CUDA graphs on), with `RUNPOD_API_KEY`. vLLM
-  enforces the tool call, so thinking stays off: 1.9-4.4 s warm. A cold worker takes minutes to
-  start (the first ever took 14), so send it a request a few minutes before a run.
+  enforces the tool call, so thinking stays off: 1.9-4.4 s warm. Ender's endpoint now also runs
+  with CUDA graphs (`ENFORCE_EAGER=false`): 3.0-3.7 s warm, from 7.4-10.8 s.
+- Both Runpod workers stop after 60 idle seconds. `scripts/warm-runpod.sh [ender|abliterated]`
+  wakes them and waits until each answers (about 14 s with FlashBoot; 10-14 min the first time on
+  a new template), and `db-run.sh` runs it right before `begin_run` for rosters that use them.
 - `featherless` serves Hugging Face models, including abliterated ones, but is slower:
   `featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2` was Abliterated's first model. Featherless returns a tool call only when the model chooses one,
   and these Qwen3 models choose one only while thinking, so they keep thinking with 1,024 tokens.

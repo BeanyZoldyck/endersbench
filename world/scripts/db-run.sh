@@ -38,6 +38,15 @@ for name in Ivy Rook Sage Wren; do
   roster+="${roster:+,}{\"name\":\"$name\",\"model_id\":\"${M[$((i % ${#M[@]}))]}\"}"
   i=$((i + 1))
 done
+# A cold Runpod worker takes minutes; warm the endpoints this roster uses right before
+# the run starts (their workers stop after 60 idle seconds).
+warm=''
+case ",$MODELS," in *,ender:*) warm+=' ender' ;; esac
+case ",$MODELS," in *,abliterated:*) warm+=' abliterated' ;; esac
+if [ -n "$warm" ]; then
+  "$W/scripts/warm-runpod.sh" $warm || echo "Some Runpod endpoints are not warm; starting anyway (their first decisions may time out)."
+fi
+
 out=$(cd /tmp && spacetime call "$DB" begin_run "[$roster]" "\"$VARIANT\"" "$FOOD" 0 0 "$SCALE" --server "$SERVER" 2>&1) \
   || { echo "$out" | grep -v WARNING; echo "begin_run failed"; exit 1; }
 echo "Started $DB: [$roster] · prompt $VARIANT · food $FOOD · time scale $SCALE. Logs: $LOG"
