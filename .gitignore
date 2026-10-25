@@ -169,3 +169,4 @@ vite.config.ts.timestamp-*
 /ender/datasets/alignment-finance/generated/
 ender/datasets/alignment-finance/__pycache__/validate_dataset.cpython-313.pyc
 ender/datasets/alignment-finance/__pycache__/validate_specs.cpython-313.pyc
+voice.zip

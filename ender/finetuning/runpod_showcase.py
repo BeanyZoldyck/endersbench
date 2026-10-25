@@ -24,13 +24,13 @@ ENDPOINT = "https://api.runpod.ai/v2/n823bkhsuvtgg6/openai/v1/chat/completions"
 
 def call(model, message, key, max_tokens):
     body = json.dumps({"model": model, "messages": [{"role": "user", "content": message}],
-                       "max_tokens": max_tokens, "temperature": 0}).encode()
+                       "max_tokens": max_tokens, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}}).encode()
     last = None
     for attempt in range(4):
         request = urllib.request.Request(ENDPOINT, data=body, headers={
             "Content-Type": "application/json", "Authorization": f"Bearer {key}"})
         try:
-            with urllib.request.urlopen(request, timeout=600) as response:
+            with urllib.request.urlopen(request, timeout=300) as response:
                 return json.load(response), None
         except urllib.error.HTTPError as exc:
             last = f"HTTP {exc.code}: {exc.read().decode(errors='replace')[:300]}"
@@ -46,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path, help="Showcase run directory containing suite.json")
     parser.add_argument("--model", default="ender")
-    parser.add_argument("--max-tokens", type=int, default=2048)
+    parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

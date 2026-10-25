@@ -1,0 +1,11 @@
+{
+  "model": "ender",
+  "cases": 18,
+  "errors": 0,
+  "strict_correct": 14,
+  "valid": 17,
+  "decision_correct": 14,
+  "violations_chosen": null,
+  "identity_note": "Served under the name 'ender'; not verified to equal the ender1.1 adapter.",
+  "suite_sha256": "174c0aeaf45f235238c9ede6629af6aa9aa7adbbc8d20ae6394aa1a014ff70e0"
+}
