@@ -305,7 +305,7 @@ describe('openai-compatible brain', () => {
       const input = { agentName: 'Ada', observation, tools, system: 'SYS' };
       await brainFor('bitdeer:zai-org/GLM-5.3', { BITDEER_API_KEY: 'k' }).decide(input);
       expect(calls[0].body).toEqual(buildModelCall('bitdeer:zai-org/GLM-5.3', input, () => 'k').body);
-      expect(calls[0].body.max_tokens).toBe(1024);
+      expect(calls[0].body.max_tokens).toBe(4096);
     } finally {
       globalThis.fetch = realFetch;
     }

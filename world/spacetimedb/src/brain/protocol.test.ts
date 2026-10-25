@@ -14,7 +14,7 @@ describe('buildModelCall', () => {
       const body = buildModelCall(`bitdeer:${model}`, input, envOf({ BITDEER_API_KEY: 'k' })).body as any;
       expect(body.model).toBe(model);
       expect(body.reasoning_effort).toBeUndefined();
-      expect(body.max_tokens).toBe(1024);
+      expect(body.max_tokens).toBe(4096);
       expect(body.tool_choice).toBe('required');
     }
   });

@@ -70,14 +70,16 @@ export const PROVIDERS: Record<string, ProviderSpec> = {
   // DeepSeek on Bitdeer reasons by default, and the reasoning counts against
   // max_tokens: at MAX_OUTPUT_TOKENS it never reaches the tool call.
   // GLM on Bitdeer refuses reasoning_effort ("invalid request") and thinks whatever it is
-  // sent (enable_thinking, thinking: disabled): 600-800 characters, then the tool call.
-  // At 1024 tokens it called a tool 6 times out of 6, in 1-3.4 s.
+  // sent (enable_thinking, thinking: disabled). On a real survivor's observation it needs
+  // up to 2-4 thousand tokens before its tool call (7-22 s): at 1024 and 2048 GLM-5.3
+  // ran out every time; at 4096 it answered in 790 and 2266 tokens. It is the one
+  // reasoning model in a run; its decisions take Ender-like time.
   bitdeer: {
     api: 'openai-chat',
     baseUrl: 'https://api-inference.bitdeer.ai/v1',
     keyEnv: 'BITDEER_API_KEY',
     extraBody: { reasoning_effort: 'none' },
-    models: [{ prefix: 'zai-org/GLM', extraBody: {}, maxTokens: 1024 }],
+    models: [{ prefix: 'zai-org/GLM', extraBody: {}, maxTokens: 4096 }],
   },
   // Ender is a Qwen3 fine-tune on vLLM (Runpod: https://api.runpod.ai/v2/<endpoint>/openai/v1,
   // model "ender"). Qwen3 thinks by default and runs out of max_tokens before answering.
