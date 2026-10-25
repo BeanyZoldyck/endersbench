@@ -6,6 +6,7 @@ import { brainFor, type Brain, type Tool } from '../brains.js';
 import { promptVersion, systemPrompt } from '../prompt.js';
 import { buildReport, type Rows } from '../report.js';
 import { failureCode } from './failure.js';
+import { canSubmitDecision, hasIncompleteDecisions } from './completion.js';
 
 const [id, dbName, modelId] = process.argv.slice(2);
 if (!id || !/^[-a-f0-9]{36}$/.test(id) || dbName !== `endersbench-run-${id}` || !modelId) process.exit(1);
@@ -81,6 +82,7 @@ async function answer(request: { id: bigint; agentId: bigint; modelId: string; o
       brain.decide({ agentName, observation: JSON.parse(request.observation), tools, system: prompt }),
       new Promise<never>((_resolve, reject) => setTimeout(() => reject(new Error('Decision timed out.')), 20_000)),
     ]);
+    if (!canSubmitDecision(closing, conn.db.decisionRequest.id.find(request.id))) return;
     await conn.reducers.submitDecision({
       requestId: request.id,
       action: JSON.stringify(decision.action),
@@ -88,6 +90,9 @@ async function answer(request: { id: bigint; agentId: bigint; modelId: string; o
       latencyMs: Math.max(0, Math.round(performance.now() - start)),
     });
   } catch (error) {
+    // Knockout/death can expire a request while the provider is responding,
+    // including between the local check and reducer execution.
+    if (!canSubmitDecision(closing, conn.db.decisionRequest.id.find(request.id))) return;
     process.stdout.write(`BENCHMARK_ERROR:${failureCode(error)}\n`);
     failures++;
     await conn.reducers.failDecision({
@@ -108,7 +113,7 @@ async function finish(): Promise<void> {
     const rows = snapshot();
     const llms = rows.agents.filter(agent => agent.kind === 'llm');
     if (failures || llms.length !== names.length || rows.decisions.filter(decision => decision.status === 'done').length === 0
-      || rows.decisions.some(decision => decision.status === 'failed' || decision.status === 'pending' || decision.status === 'expired' && !/^(superseded:|knocked out$|agent is a ghost$|agent died$)/.test(decision.error ?? ''))
+      || hasIncompleteDecisions(rows.decisions)
       || llms.some(agent => !rows.scores.some(score => score.agentId === agent.id))) throw new Error('Incomplete run.');
     const report = buildReport(rows);
     const runsDir = path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), 'runs');
