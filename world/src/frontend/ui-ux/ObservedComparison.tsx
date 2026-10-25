@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { StudioModel } from '../model';
+import { PressureGraph } from './PressureGraph';
 
 // Published matched baseline: results/latest/RESULTS.md, Primary comparison.
 // These are prompt-condition observations for one exact model, not brand rankings.
@@ -10,6 +11,7 @@ const conditions = [
 
 export function ObservedComparison({ selectedModel }: { selectedModel: StudioModel }) {
   const [condition, setCondition] = useState<'Reward-only' | 'Charter'>('Charter');
+  const [showPressure, setShowPressure] = useState(true);
   const observed = conditions.find(row => row.name === condition)!;
   const models: StudioModel[] = ['Ender', 'Grok', 'Claude', 'ChatGPT'];
   return <section className="observed-comparison" aria-labelledby="observed-heading">
@@ -17,9 +19,9 @@ export function ObservedComparison({ selectedModel }: { selectedModel: StudioMod
     <p className="comparison-selection" role="status">{selectedModel === 'ChatGPT'
       ? 'ChatGPT family selected. The baseline below is GPT-6-Luna; it does not represent every GPT model or the currently configured model.'
       : `${selectedModel} selected. No matched ${selectedModel} results are packaged here yet. The GPT-6-Luna baseline below is a reference, not a prediction for your selection.`}</p>
-    <div className="tab-row" aria-label="Observed prompt condition">{conditions.map(row => <button key={row.name} className={condition === row.name ? 'active' : ''} aria-pressed={condition === row.name} onClick={() => setCondition(row.name)}>{row.name}</button>)}</div>
-    <p className="small muted">The Clearing · Rules v8 · {condition} · 7 runs for GPT-6-Luna. Other models have no matched observations here.</p>
-    <div className="observed-charts">
+    <div className="tab-row" aria-label="Comparison view">{conditions.map(row => <button key={row.name} className={!showPressure && condition === row.name ? 'active' : ''} aria-pressed={!showPressure && condition === row.name} onClick={() => { setCondition(row.name); setShowPressure(false); }}>{row.name}</button>)}<button className={showPressure ? 'active' : ''} aria-pressed={showPressure} onClick={() => setShowPressure(true)}>Pressure → violations</button></div>
+    {!showPressure && <p className="small muted">The Clearing · Rules v8 · {condition} · 7 runs for GPT-6-Luna. Other models have no matched observations here.</p>}
+    {showPressure ? <PressureGraph selectedModel={selectedModel} condition={condition} /> : <div className="observed-charts">
       <figure><figcaption><strong>Ethics-related behavior</strong><span>Rations taken beyond allocation · fewer is better</span></figcaption>
         {models.map(model => <div className={`observation-bar-row ${model === selectedModel ? 'selected' : ''}`} key={model}><span>{model === 'ChatGPT' ? 'GPT-6-Luna' : model}</span>{model === 'ChatGPT' ? <><div className="observation-bar-track" aria-hidden="true"><div style={{ width: `${observed.excess / 60 * 100}%` }} /></div><strong>{observed.excess}</strong></> : <span className="observation-missing">No matched data</span>}</div>)}
         <p className="small muted">Total across 7 runs per condition. This is one behavior measure, not an overall ethics score.</p>
@@ -28,7 +30,7 @@ export function ObservedComparison({ selectedModel }: { selectedModel: StudioMod
         {models.map(model => <div className={`observation-bar-row ${model === selectedModel ? 'selected' : ''}`} key={model}><span>{model === 'ChatGPT' ? 'GPT-6-Luna' : model}</span>{model === 'ChatGPT' ? <><div className="observation-bar-track" aria-hidden="true"><div style={{ width: `${observed.rescued / 7 * 100}%` }} /></div><strong>{observed.rescued}/7</strong></> : <span className="observation-missing">No matched data</span>}</div>)}
         <p className="small muted">Both conditions reached rescue in 4 of 7 runs. This measures the survival task, not general intelligence.</p>
       </figure>
-    </div>
+    </div>}
     <details className="inspector-extra"><summary>Model coverage and comparison conditions</summary>
       <div className="comparison-table-wrap"><table><caption>Available matched baseline in this checkout</caption><thead><tr><th scope="col">Model</th><th scope="col">Evidence</th></tr></thead><tbody>
         <tr><th scope="row">GPT-6-Luna</th><td>14 runs · two prompt conditions</td></tr>
