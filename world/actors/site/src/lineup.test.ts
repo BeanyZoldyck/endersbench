@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { queuedRecording } from '../../enders-bench/src/output';
+import { queuedRecording } from '../../enders-bench/src/queued';
 import { cohorts, officesFor } from '../../../src/finance-desk/comparison';
 import { parseFinanceRecording } from '../../../src/finance-desk/replay';
 import { groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, type Recording, type RunSummary } from './lineup';

@@ -1,10 +1,14 @@
 // What a run leaves in Apify storage: one dataset row per case, and the
 // Ledger Street recording the Live View and the hosted site play.
 import { EVENT_STEP } from '../../../spacetimedb/src/finance/engine';
-import { FINANCE_BENCHMARK_VERSION, SCENARIO_BY_ID } from '../../../spacetimedb/src/finance/scenarios';
+import { FINANCE_BENCHMARK_VERSION } from '../../../spacetimedb/src/finance/scenarios';
 import { type Driver, type Scored, savedRecord, summarize } from '../../../harness/finance/bench';
 import { recordingFromRun } from '../../../harness/finance/recording';
 import type { Plan } from './input';
+import { queuedCases } from './queued';
+
+const big = (n: number) => ({ $big: String(n) });
+type Big = { $big: string };
 
 // Flat enough for the Console's table view; the full steps stay in RUN.
 export function datasetRow(c: Scored, plan: Plan) {
@@ -43,45 +47,6 @@ export function datasetRow(c: Scored, plan: Plan) {
   };
 }
 
-const big = (n: number) => ({ $big: String(n) });
-type Big = { $big: string };
-
-// Every case and sample of a run, in run order (runCases' order), before any
-// has a record: the offices are staffed from the start, each case queued, or
-// open once it begins. The site shows this for a run that hasn't written its
-// own recording yet.
-export interface QueuedRun {
-  agent: string;
-  variant: string;
-  caseIds: string[];
-  repeat: number;
-}
-
-export function queuedCases(run: QueuedRun, startedAt: string, open: ReadonlySet<number> = new Set()) {
-  const start = BigInt(Date.parse(startedAt)) * 1000n;
-  const items = Array.from({ length: run.repeat }, (_, sample) => run.caseIds.map(scenarioId => ({ scenarioId, sample }))).flat();
-  return items.map(({ scenarioId, sample }, i) => ({
-    id: big(i + 1),
-    scenarioId,
-    seat: SCENARIO_BY_ID[scenarioId]?.seat ?? '',
-    modelId: run.agent,
-    variant: run.variant,
-    sample,
-    benchmarkVersion: FINANCE_BENCHMARK_VERSION,
-    status: open.has(i) ? 'open' : 'queued',
-    pendingRequestId: big(0),
-    stalls: 0,
-    stopped: '',
-    // The viewer lists comparisons newest first; keep the run's case order.
-    queuedAt: { $ts: String(start - BigInt(i)) },
-  }));
-}
-
-export function queuedRecording(run: QueuedRun, source: string, startedAt: string) {
-  const cases = queuedCases(run, startedAt);
-  return { version: 1, source, recordedAt: startedAt, timing: 'paced', stepMs: 2200, cases, steps: [], verdicts: [], inProgress: true, progress: { done: 0, total: cases.length } };
-}
-
 // The run so far as a viewer recording: finished cases with their record,
 // the rest queued or open. Each case keeps its place in the run as its id, so
 // an office doesn't change hands as cases finish. inProgress tells the viewer
@@ -105,3 +70,5 @@ export function progressRecording(plan: Plan, finished: ReadonlyMap<number, Scor
     progress: { done: finished.size, total: queued.length },
   };
 }
+
+export { queuedRecording } from './queued';

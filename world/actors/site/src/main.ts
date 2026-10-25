@@ -23,7 +23,7 @@ import { serve } from '../../shared/serve';
 import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, warmEndpoint, warmTargets, type LineupEntry, type WarmTarget } from './clearing';
 import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/src/finance/prompt';
 import { CASE_SETS } from '../../enders-bench/src/input';
-import { queuedRecording } from '../../enders-bench/src/output';
+import { queuedRecording } from '../../enders-bench/src/queued';
 import { historyEntry, lineupEntry, type BenchRunInput } from './history';
 import { DONE, groupRuns, lineupIds, lineupSummary, mergeRecordings, replayPath, type Recording } from './lineup';
 import { PasswordGuard, RequestError, RunLimiter, lineupInputs, publicConfig, siteConfig } from './runs';
