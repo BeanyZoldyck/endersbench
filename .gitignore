@@ -157,6 +157,7 @@ vite.config.ts.timestamp-*
 /ender/datasets/alignment/*
 !/ender/datasets/alignment/README.md
 !/ender/datasets/alignment/scenarios.jsonl
+!/ender/datasets/clearing-runs/
 !/ender/datasets/rewardhacking/
 /ender/datasets/rewardhacking/*
 !/ender/datasets/rewardhacking/README.md
