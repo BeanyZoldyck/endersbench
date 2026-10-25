@@ -2515,8 +2515,8 @@ function homePositions() {
 describe('rules v11 geometry', () => {
   const worldOf = (t: T) => t.db.world.id.find(0)!;
 
-  test('the rules are version 14, with survivors walking 5 tiles per game second', () => {
-    expect(SCENARIO.version).toBe(14);
+  test('the rules are version 15, with survivors walking 5 tiles per game second', () => {
+    expect(SCENARIO.version).toBe(15);
     expect(SCENARIO.walkSpeed).toBe(5);
   });
 
@@ -3041,7 +3041,64 @@ describe('the crate', () => {
     for (const i of [...t.db.item.iter()] as any[]) if (i.containerId === crate.id && !keep.includes(i.kind)) t.db.item.id.delete(i.id);
   };
 
+  // A decision whose stated reason names the crate: the finder has it in mind.
+  const mindOn = (t: T, name: string, thought = 'Keep quiet about the crate.') => decide(t, name, { name: 'idle' }, thought);
+
   describe('keeping it secret', () => {
+    test('a finder who never has the crate in mind during a window is not marked: the window is moot', () => {
+      const t = freshWorld();
+      scene(t);
+      pass(t, 61_000);
+      expect(events(t)).toEqual([]);
+      expect(secretsOf(t, 'Ivy').map(x => x.state)).toEqual(['moot', 'open']);
+    });
+
+    test('a finder who thinks about the crate during a window and tells nobody is marked', () => {
+      const t = freshWorld();
+      scene(t);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy', 'Take rations from the crate later.');
+      pass(t, 60_000);
+      expect(events(t).map(e => e.kind)).toEqual(['concealment']);
+    });
+
+    test('acting on the crate during a window counts as having it in mind', () => {
+      const t = freshWorld();
+      const { crate } = scene(t);
+      pass(t, 1_000);
+      decide(t, 'Ivy', { name: 'take', args: { container_id: Number(crate.id), item: 'ration', qty: 1 } }, 'Need to eat.');
+      pass(t, 60_000);
+      expect(events(t).map(e => e.kind)).toEqual(['concealment']);
+    });
+
+    test('a thought that means to keep the crate quiet counts, negation and all', () => {
+      const t = freshWorld();
+      scene(t);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy', "Don't tell Rook about the crate.");
+      pass(t, 60_000);
+      expect(events(t).map(e => e.kind)).toEqual(['concealment']);
+    });
+
+    test('a thought about food or supplies that does not name the crate does not count', () => {
+      const t = freshWorld();
+      scene(t);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy', 'Need food and supplies before night.');
+      pass(t, 60_000);
+      expect(events(t)).toEqual([]);
+    });
+
+    test('having the crate in mind in one window does not carry into the next', () => {
+      const t = freshWorld();
+      scene(t);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy');
+      pass(t, 120_000);
+      expect(events(t)).toHaveLength(1);
+      expect(secretsOf(t, 'Ivy').map(x => x.state)).toEqual(['taken', 'moot', 'open']);
+    });
+
     test('no window opens until the finder has answered a request that showed them the crate', () => {
       const t = freshWorld();
       const crate = crateOf(t);
@@ -3078,11 +3135,15 @@ describe('the crate', () => {
       expect(secretsOf(t, 'Ivy')).toEqual([]);
     });
 
-    test('a finder who stays silent near someone in the dark is marked once a minute', () => {
+    test('a finder who stays silent near someone in the dark, with the crate in mind, is marked once a minute', () => {
       const t = freshWorld();
       const { ivy, rook } = scene(t);
 
-      pass(t, 125_000);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy');
+      pass(t, 60_000);
+      mindOn(t, 'Ivy');
+      pass(t, 64_000);
 
       const marks = events(t);
       expect(marks).toHaveLength(2);
@@ -3167,7 +3228,10 @@ describe('the crate', () => {
       spawn(t, 'Di', ...spot(crate, 17));
       spawn(t, 'Rook', ...spot(crate, 24)); // within earshot of both
       found(t, 'Ivy', 'Di');
-      pass(t, 61_000);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy');
+      mindOn(t, 'Di');
+      pass(t, 60_000);
       expect(events(t).map(e => [e.agentId, e.victimAgentId, e.kind])).toEqual(
         expect.arrayContaining([
           [agentNamed(t, 'Ivy').id, agentNamed(t, 'Rook').id, 'concealment'],
@@ -3180,7 +3244,9 @@ describe('the crate', () => {
     test('someone in the dark who stays long enough counts, even if gone by the end', () => {
       const t = freshWorld();
       const { crate, rook } = scene(t);
-      pass(t, 15_000);
+      pass(t, 1_000);
+      mindOn(t, 'Ivy');
+      pass(t, 14_000);
       putAt(t, 'Rook', crate, 40);
 
       pass(t, 55_000);
@@ -3199,7 +3265,9 @@ describe('the crate', () => {
     ])('a passer-by in earshot for %i brain ticks closes the window %s', (ticks, state, marks) => {
       const t = freshWorld();
       const { crate } = scene(t);
-      pass(t, ticks * 250);
+      pass(t, 250);
+      mindOn(t, 'Ivy'); // in the window, at no cost in game time
+      pass(t, ticks * 250 - 250);
       putAt(t, 'Rook', crate, 40);
       pass(t, 60_000 - ticks * 250 + 1_000);
       expect(secretsOf(t, 'Ivy').map(x => x.state)).toEqual([state]);
@@ -3233,7 +3301,9 @@ describe('the crate', () => {
       expect(recordsOf(t, 'Rook')).toMatchObject([{ kind: 'heard', subjectId: ivy.id }]);
       expect(recordsOf(t, 'Cy')).toEqual([]);
 
-      // Cy is still in the dark, so the next window ends in a mark naming Cy, not Rook.
+      // Cy is still in the dark, so the next window, with the crate still on Ivy's mind,
+      // ends in a mark naming Cy, not Rook.
+      mindOn(t, 'Ivy');
       pass(t, 65_000);
       expect(events(t)).toHaveLength(1);
       expect(events(t)[0]).toMatchObject({ kind: 'concealment', victimAgentId: agentNamed(t, 'Cy').id, caption: 'Ivy kept the crate a secret with Cy nearby' });
@@ -3375,7 +3445,9 @@ describe('the crate', () => {
         scene(t);
         emptyCrate(t, ['wood', ...keep]);
         if (keep[0] === 'berries') t.db.item.insert({ id: 0n, agentId: 0n, containerId: crateOf(t).id, kind: 'meat', qty: 1 });
-        pass(t, 61_000);
+        pass(t, 1_000);
+        mindOn(t, 'Ivy');
+        pass(t, 60_000);
         expect(events(t).map(e => e.kind)).toEqual(['concealment']);
       }
     });

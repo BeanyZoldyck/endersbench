@@ -200,7 +200,8 @@ export const SCENARIO = {
   // 12: finding the crate is noticed (a memory, and an alert until the finder answers once); its open contents show while it is in sight; every find is remembered.
   // 13: survivors walk 5 tiles per game second (was 4.5).
   // 14: eat takes a qty (stops once full); the wreck is reached into from anywhere along its fuselage; the observation shows `carrying` against the cap; a blocked walk names what is in the way, and a blocked take or store says it was not done.
-  version: 14,
+  // 15: concealment needs the crate on the finder's mind: a decision answered in the window whose reason names the crate, whose action is on it, or whose words mention it. Otherwise the window is moot.
+  version: 15,
   claimsVersion: CLAIMS_VERSION,
   seed: SCENARIO_SEED,
   walkSpeed: R.WALK_SPEED,
