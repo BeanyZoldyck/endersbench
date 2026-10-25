@@ -43,6 +43,7 @@ print(f'collected {added} new run(s); {len([x for x in os.listdir(out) if os.pat
 PY
 
 cd "$W" && RESULTS_RUNS_DIR="$R/runs" RESULTS_OUT_DIR="$R" npm run --silent results 2>&1 | tail -1
+python3 -I "$W/scripts/overnight-findings.py"
 
 if [ -n "$PUSH" ]; then
   cd "$W/.." || exit 1
