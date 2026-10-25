@@ -1,6 +1,19 @@
 # Ender's Bench: demo and pitch runbook
 
-## Tabs to open on the big monitor (in this order)
+## Apify: the live product (open these first)
+
+The public site runs as an Apify Actor (`masomidev/enders-bench-site`, run `OWcdhjapXipViyYyY`, up since 01:11 with a two-day timeout). It's the build of main from last night, so it has the landing page, Start a benchmark and the Apify run history, but not the overnight replays (those are the local tabs below).
+
+| What | Link |
+| --- | --- |
+| **Landing: “Put models to the test”** | https://1erbqujfjhx0.runs.apify.net/ |
+| **Run history:** 21 benchmark recordings run on Apify, each with Open recording | https://1erbqujfjhx0.runs.apify.net/?studio=compare |
+| **Start a benchmark:** launches an `enders-bench` Actor run and follows it into Ledger Street | https://1erbqujfjhx0.runs.apify.net/?studio=setup |
+| **Booth tour** (main's exhibits, including the guilt moment) | https://1erbqujfjhx0.runs.apify.net/?replay=/demo/clearing-charter-v8-admission.json.gz&t=2:15&tour=0&studio=monitor |
+
+If the site run stops, a new run gets a new address: `apify runs ls masomidev/enders-bench-site --desc`, then `apify runs info <run id> --json` for its `containerUrl`.
+
+## Tabs to open on the big monitor (local: the overnight data)
 
 | # | What | Link |
 | --- | --- | --- |
