@@ -44,9 +44,15 @@ export type BenchmarkJob = {
   error?: string;
   summary?: string;
   report?: unknown;
+  // A hosted runner (the Apify site Actor) names the page its run plays on.
+  viewerHref?: string;
 };
 
 export function benchmarkViewerHref(job: BenchmarkJob): string {
+  if (job.viewerHref !== undefined) {
+    if (!/^\/(?!\/)\S*$/.test(job.viewerHref)) throw new Error('Invalid benchmark destination.');
+    return job.viewerHref;
+  }
   if (!/^endersbench-run-[a-z0-9-]+$/.test(job.dbName) || !/^[a-z0-9-]+$/.test(job.id)) throw new Error('Invalid benchmark destination.');
   if (job.scenario === 'ledger') return `/finance.html?${new URLSearchParams({ benchmark: job.id, db: job.dbName })}`;
   if (job.scenario !== 'clearing-charter') throw new Error('Unsupported benchmark scenario.');

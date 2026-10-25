@@ -5,12 +5,15 @@
 //   npm run actors:site                            start the site (two days, 256 MB) and print its address
 //   npm run actors:site -- --env ../../.env        read another .env (default: ./.env, then ../.env)
 //   npm run actors:site -- --replace               abort a site run that's already going first
+//   npm run actors:site -- --no-clearing           don't pass the Spacetime login: no Clearing runs from the setup page
 //
 // Reads ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, BITDEER_API_KEY,
 // FEATHERLESS_API_KEY (or FEATHERLESSAI_API_KEY), ENDER_BASE_URL, ENDER_API_KEY (or RUNPOD_API_KEY), CRS_USERNAME, CRS_PASSWORD
-// and APIFY_TOKEN (or APIFY_API_KEY); the environment wins over the file.
-// The models on offer are in models.json.
+// and APIFY_TOKEN (or APIFY_API_KEY); the environment wins over the file. SPACETIMEDB_TOKEN,
+// else the Spacetime CLI's login (`spacetime login show --token`), lets the setup page start
+// Clearing runs on Maincloud. The models on offer, and which setup-page model each is, are in models.json.
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fieldReport, parseEnv, siteInputFromEnv } from './src/launch';
@@ -30,7 +33,16 @@ const fail = (message: string): never => {
 
 const envFile = option('env') ?? ['.env', '../.env'].map(f => path.resolve(f)).find(f => fs.existsSync(f));
 if (!envFile || !fs.existsSync(envFile)) fail(`No .env found${envFile ? ` at ${envFile}` : ' here or one folder up'}. Pass --env <path>.`);
-const env = { ...parseEnv(fs.readFileSync(envFile!, 'utf-8')), ...process.env };
+const env: Record<string, string | undefined> = { ...parseEnv(fs.readFileSync(envFile!, 'utf-8')), ...process.env };
+// The Spacetime CLI's login owns the shared world on Maincloud; the site needs it to start Clearing runs.
+if (!env.SPACETIMEDB_TOKEN && !flag('no-clearing')) {
+  try {
+    const shown = execFileSync('spacetime', ['login', 'show', '--token'], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
+    env.SPACETIMEDB_TOKEN = shown.match(/[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/)?.[0];
+  } catch {
+    // No CLI or no login: the site offers the Clearing as unavailable.
+  }
+}
 // The models file sits next to this script in the repo; the bundle runs from dist-harness/.
 const modelsFile = option('models') ?? [path.join(here, 'models.json'), path.resolve('actors/site/models.json')].find(f => fs.existsSync(f));
 const models = JSON.parse(fs.readFileSync(modelsFile ?? fail('No models.json: pass --models <path>.'), 'utf-8')) as SiteModel[];

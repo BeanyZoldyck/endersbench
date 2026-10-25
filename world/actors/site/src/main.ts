@@ -8,10 +8,18 @@
 //   POST /api/apify/runs              start a run: { model, variant, caseSet }
 //   GET  /api/apify/runs/:id          one run's status
 //   GET  /api/apify/runs/:id/replay   its Ledger Street recording so far
+//
+// and, for the setup page's "Start a benchmark" (the local runner's routes):
+//
+//   GET  /api/benchmarks/config       the lobby models on offer and the two scenarios
+//   POST /api/benchmarks              { roster, scenario }: a Clearing run on Maincloud or a Ledger Street Actor run
+//   GET  /api/benchmarks/:id          that run's status and where to watch it
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Actor, log } from 'apify';
+import type { SelectableModel } from '../../../shared/models';
 import { serve } from '../../shared/serve';
+import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, type LineupEntry } from './clearing';
 import { RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +44,19 @@ if (!bench) {
 }
 const limiter = new RunLimiter(cfg.maxRunsPerHour);
 const labels = new Map<string, string>();
+
+// The shared world on Maincloud, with an identity that may run it.
+let spacetime = cfg.spacetime ? spacetimeClient(cfg.spacetime.host, cfg.spacetime.database, cfg.spacetime.token) : null;
+if (spacetime) {
+  try {
+    await spacetime.sql('SELECT running FROM world');
+    // claim_harness trusts the first caller on a fresh world; take the slot so a stranger can't.
+    await spacetime.call('claim_harness', []);
+  } catch (err) {
+    log.warning(`SpacetimeDB ${cfg.spacetime!.database}: ${err instanceof Error ? err.message : String(err)}. The setup page won't offer the Clearing.`);
+    spacetime = null;
+  }
+}
 
 interface RunInfo {
   runId: string;
@@ -106,9 +127,145 @@ async function replay(runId: string) {
   return finished ? { ...record, inProgress: false } : record;
 }
 
-async function home() {
+// Ledger Street without a recording opens the newest run, so Run on Apify is one click away.
+async function newestLedger() {
   const newest = (await recentRuns().catch(() => [])).find(r => r.status !== 'FAILED' && r.status !== 'ABORTED');
   return newest ? `/finance.html?replay=${newest.replayUrl}&live=1` : `/finance.html?replay=${FALLBACK_REPLAY}`;
+}
+
+// One enders-bench run at a time and a few an hour, from Run on Apify or the setup page.
+async function startBenchRun(request: ReturnType<typeof benchInput>) {
+  cache.delete('recent');
+  const active = (await recentRuns()).find(r => !DONE.has(r.status));
+  if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
+  const limited = limiter.check();
+  if (limited) throw new RequestError(limited, 429);
+  const run = await client.actor(bench!.id).start(request.input, { memory: cfg.benchMemoryMbytes, timeout: cfg.benchTimeoutSecs });
+  limiter.record();
+  labels.set(run.id, request.label);
+  cache.delete('recent');
+  log.info(`Started ${run.id}: ${request.label} · ${request.input.variant} · ${request.input.caseSet}`);
+  return run.id;
+}
+
+// A run started from the setup page, in the shape src/frontend/useBenchmark.ts polls.
+interface LobbyJob {
+  id: string;
+  status: 'starting' | 'running' | 'completed' | 'failed';
+  model: string;
+  modelId: string;
+  scenario: string;
+  roster: (LineupEntry & { modelId: string })[];
+  dbName: string;
+  host: string;
+  viewerHref: string;
+  summary?: string;
+  error?: string;
+  runId?: string;
+}
+const jobs = new Map<string, LobbyJob>();
+const clearingLimiter = new RunLimiter(cfg.clearingRunsPerHour);
+let clearingJob: LobbyJob | null = null;
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const offered = (model: string) => cfg.lobby.get(model as SelectableModel);
+
+async function startClearing(lineup: LineupEntry[]): Promise<LobbyJob> {
+  if (!spacetime || !cfg.spacetime) throw new RequestError('This site has no SpacetimeDB login, so it can’t start Clearing runs.');
+  let roster: ReturnType<typeof clearingRoster>;
+  try {
+    roster = clearingRoster(cfg.lobby, lineup);
+  } catch (err) {
+    throw new RequestError(err instanceof Error ? err.message : String(err));
+  }
+  if (clearingJob?.status === 'running') throw new RequestError('A Clearing run is going. Watch it, or start one when it ends.', 409);
+  // begin_run resets the shared world, so never over someone's live episode.
+  const [world] = await spacetime.sql('SELECT running FROM world');
+  if (world?.running === true) throw new RequestError('The Clearing is live right now. Watch it, or start one when it ends.', 409);
+  const limited = clearingLimiter.check();
+  if (limited) throw new RequestError(limited, 429);
+  await spacetime.call('begin_run', [roster, 'charter', 1, 0, 0, cfg.clearingTimeScale]);
+  clearingLimiter.record();
+  const job: LobbyJob = {
+    id: `clearing-${Date.now().toString(36)}`, status: 'running', model: lineup[0].model, modelId: roster[0].model_id, scenario: CLEARING,
+    roster: lineup.map(e => ({ ...e, modelId: offered(e.model)!.databaseId })), dbName: cfg.spacetime.database, host: cfg.spacetime.host, viewerHref: '/?legacy=1',
+  };
+  jobs.set(job.id, job);
+  clearingJob = job;
+  log.info(`Clearing run ${job.id} on ${cfg.spacetime.database}: ${roster.map(r => `${r.name}=${r.model_id}`).join(', ')}`);
+  void watchClearing(job);
+  return job;
+}
+
+// Pauses the world when the episode ends, as scripts/db-run.sh does: with no
+// one watching, a missed plane would keep the models (and the bill) going.
+async function watchClearing(job: LobbyJob) {
+  const db = spacetime!;
+  const started = Date.now();
+  let errors = 0;
+  const finish = async (status: 'completed' | 'failed', note: string) => {
+    try {
+      await db.call('set_running', [false]);
+    } catch (err) {
+      log.warning(`pausing after ${job.id}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    job.status = status;
+    if (status === 'failed') job.error = note;
+    else job.summary = note;
+    log.info(`Clearing run ${job.id} ${status}: ${note}`);
+  };
+  while (job.status === 'running') {
+    await sleep(15_000);
+    try {
+      const [world] = await db.sql('SELECT rescue_state, game_time_ms, running FROM world');
+      if (world?.running === false) {
+        job.status = 'completed';
+        job.summary = 'The world was paused.';
+        return;
+      }
+      const alive = (await db.sql("SELECT name FROM agent WHERE alive = true AND kind = 'llm'")).length;
+      const streaks = (await db.sql('SELECT failing_in_a_row FROM model_health')).map(r => Number(r.failing_in_a_row));
+      const state = { gameTimeMs: Number(world?.game_time_ms ?? 0), rescueState: String(world?.rescue_state ?? 'waiting'), alive, streaks };
+      errors = 0;
+      const verdict = episodeVerdict(state);
+      if (verdict === 'failing') return await finish('failed', 'Every model kept failing, so the world was paused.');
+      if (verdict === 'done') return await finish('completed', `Rescue ${state.rescueState} · ${alive} model survivor${alive === 1 ? '' : 's'} alive.`);
+      if (Date.now() - started > cfg.clearingMaxMinutes * 60_000) return await finish('completed', `Stopped after ${cfg.clearingMaxMinutes} minutes.`);
+    } catch (err) {
+      log.warning(`watching ${job.id}: ${err instanceof Error ? err.message : String(err)}`);
+      if (++errors >= 8) return await finish('failed', 'Lost touch with SpacetimeDB, so the world was paused.');
+    }
+  }
+}
+
+async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
+  const names = [...new Set(lineup.map(e => e.model))];
+  if (names.length !== 1) throw new RequestError('On this site Ledger Street runs one model at a time. Pick a single model.');
+  const model = offered(names[0]) ?? (() => { throw new RequestError(`${names[0]} is not offered on this site.`); })();
+  const runId = await startBenchRun(benchInput(cfg, { model: model.siteId, caseSet: 'quick' }));
+  const job: LobbyJob = {
+    id: runId, status: 'running', model: names[0], modelId: model.databaseId, scenario: LEDGER, roster: lineup.map(e => ({ ...e, modelId: model.databaseId })),
+    dbName: 'apify', host: 'apify', viewerHref: `/finance.html?replay=/api/apify/runs/${runId}/replay&live=1`, runId,
+  };
+  jobs.set(job.id, job);
+  return job;
+}
+
+async function lobbyJob(id: string) {
+  const job = jobs.get(id);
+  if (!job) throw new RequestError('Benchmark not found.', 404);
+  if (job.runId && job.status === 'running') {
+    const info = await runInfo(job.runId);
+    if (info?.status === 'SUCCEEDED') Object.assign(job, { status: 'completed', summary: info.statusMessage });
+    else if (info && DONE.has(info.status)) Object.assign(job, { status: 'failed', error: info.statusMessage || `The run ${info.status.toLowerCase()}.` });
+  }
+  return job;
+}
+
+function lineupFrom(body: string): { lineup: LineupEntry[]; scenario: string } {
+  const request = JSON.parse(body || '{}') as { roster?: unknown; scenario?: unknown };
+  const roster = Array.isArray(request.roster) ? request.roster : [];
+  const lineup = roster.map(e => ({ model: String((e as LineupEntry)?.model ?? ''), count: Number((e as LineupEntry)?.count) })).filter(e => e.count !== 0);
+  return { lineup, scenario: String(request.scenario ?? '') };
 }
 
 const port = Number(process.env.ACTOR_WEB_SERVER_PORT ?? 4321);
@@ -118,8 +275,21 @@ await serve({
   log: message => log.warning(message),
   route: async (req, url, body) => {
     try {
-      if (url.pathname === '/' || (url.pathname === '/finance.html' && !url.searchParams.has('replay'))) return { redirect: await home() };
-      if (!url.pathname.startsWith('/api/apify/')) return undefined;
+      // The landing page is home; every other view is a query on / and loads as it is.
+      if (url.pathname === '/' && !url.search) return { redirect: '/?studio=landing' };
+      if (url.pathname === '/finance.html' && !url.searchParams.has('replay')) return { redirect: await newestLedger() };
+      if (url.pathname === '/api/benchmarks/config' && req.method === 'GET') return { json: lobbyConfig(cfg.lobby, { clearing: !!spacetime }) };
+      if (url.pathname === '/api/benchmarks' && req.method === 'POST') {
+        // JSON from another site's page needs a CORS preflight, which this server never grants.
+        if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) throw new RequestError('Expected application/json.', 415);
+        const { lineup, scenario } = lineupFrom(body);
+        if (scenario === CLEARING) return { status: 202, json: await startClearing(lineup) };
+        if (scenario === LEDGER) return { status: 202, json: await startLedger(lineup) };
+        throw new RequestError('Choose a supported scenario.');
+      }
+      const lobby = url.pathname.match(/^\/api\/benchmarks\/([A-Za-z0-9-]+)$/);
+      if (lobby && req.method === 'GET' && lobby[1] !== 'history') return { json: await lobbyJob(lobby[1]) };
+      if (!url.pathname.startsWith('/api/apify/')) return url.pathname.startsWith('/api/') ? { status: 404, json: { error: 'Route not found.' } } : undefined;
       if (url.pathname === '/api/apify/config' && req.method === 'GET') {
         const recent = await recentRuns();
         return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent: recent.map(visible) } };
@@ -127,18 +297,8 @@ await serve({
       if (url.pathname === '/api/apify/runs' && req.method === 'POST') {
         // A custom header forces a preflight, so another site's page can't press Run for a visitor.
         if (req.headers['x-enders-bench'] !== '1') throw new RequestError('Use the Ender’s Bench viewer to start runs.', 403);
-        const request = benchInput(cfg, JSON.parse(body || '{}'));
-        cache.delete('recent');
-        const active = (await recentRuns()).find(r => !DONE.has(r.status));
-        if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
-        const limited = limiter.check();
-        if (limited) throw new RequestError(limited, 429);
-        const run = await client.actor(bench.id).start(request.input, { memory: cfg.benchMemoryMbytes, timeout: cfg.benchTimeoutSecs });
-        limiter.record();
-        labels.set(run.id, request.label);
-        cache.delete('recent');
-        log.info(`Started ${run.id}: ${request.label} · ${request.input.variant} · ${request.input.caseSet}`);
-        return { status: 201, json: { runId: run.id, replayUrl: `/api/apify/runs/${run.id}/replay` } };
+        const runId = await startBenchRun(benchInput(cfg, JSON.parse(body || '{}')));
+        return { status: 201, json: { runId, replayUrl: `/api/apify/runs/${runId}/replay` } };
       }
       const match = url.pathname.match(/^\/api\/apify\/runs\/([A-Za-z0-9]+)(\/replay)?$/);
       if (match && req.method === 'GET') {
@@ -151,8 +311,9 @@ await serve({
     } catch (err) {
       if (err instanceof RequestError) return { status: err.status, json: { error: err.message } };
       if (err instanceof SyntaxError) return { status: 400, json: { error: 'Send JSON.' } };
-      log.warning(`api: ${err instanceof Error ? err.message : String(err)}`);
-      return { status: 502, json: { error: 'Apify did not answer. Try again in a moment.' } };
+      log.warning(`api ${url.pathname}: ${err instanceof Error ? err.message : String(err)}`);
+      const which = url.pathname.startsWith('/api/benchmarks') ? 'The benchmark service' : 'Apify';
+      return { status: 502, json: { error: `${which} did not answer. Try again in a moment.` } };
     }
   },
 });

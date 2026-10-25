@@ -6,16 +6,20 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
 
 ## What visitors can do
 
-- Watch the recorded exhibits and any Ender's Bench run.
+- Land on the dashboard (`/` opens `/?studio=landing`) and move between the views from there. The live Clearing watches the shared world on SpacetimeDB Maincloud.
+- Press **Start a benchmark**, build a lineup of up to four agents and pick a scenario. The site answers the setup page in place of the local benchmark runner:
+  - **The Clearing** resets the shared world on Maincloud with that lineup (`begin_run`). The database's think procedure asks the models itself, and every visitor watches the same live world. The site pauses the world when the rescue resolves, every model survivor has died, every model keeps failing, or **Longest Clearing run** passes.
+  - **Ledger Street** runs one model through the seven-case quick tour as an `enders-bench` run.
 - Press **Run on Apify** in Ledger Street, pick an agent, a policy and a case set, and start a run of the `enders-bench` Actor. The offices fill in as cases finish.
 - Open recent runs, including ones started from the Console or the API.
 
 ## Keeping it safe to share
 
-- Visitors choose only from the **Models on offer** you list. By default that's the policy script, which calls no model.
-- API keys, the custom endpoint and the CRS login are stored encrypted in this Actor's input. They're passed to each benchmark run as encrypted secret input and never sent to the browser.
-- The site starts one run at a time and at most **Runs per hour** runs.
+- Visitors choose only from the **Models on offer** you list. By default that's the policy script, which calls no model. Entries with a `lobby` name are the setup page's models.
+- API keys, the custom endpoint, the CRS login and the SpacetimeDB token are stored encrypted in this Actor's input. They're passed to each benchmark run as encrypted secret input, or used only by this run, and never sent to the browser. A Clearing run's models are asked with the keys loaded into the database (`scripts/load-model-keys.sh`).
+- The site starts one `enders-bench` run at a time and at most **Runs per hour**; one Clearing run at a time and at most **Clearing runs per hour**. It never resets the world while it's running.
 - The site starts runs with the API token Apify gives this run, so no token appears in the page.
+- On start, the site claims the shared world's harness slot (`claim_harness` trusts the first caller on a fresh world), so a stranger can't take it.
 
 ## Set it up
 

@@ -3,6 +3,7 @@
 // picks from that list, so a public Run button can't spend more than we allow.
 import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/src/finance/prompt';
 import { CASE_SETS, PROVIDERS } from '../../enders-bench/src/input';
+import { lobbyModels } from './clearing';
 
 export interface SiteModel {
   id: string;
@@ -11,6 +12,10 @@ export interface SiteModel {
   model?: string;
   baseUrl?: string;
   effort?: string;
+  // The setup page's model this entry is (shared/models.ts), and for a custom
+  // endpoint the provider:model the database asks in a Clearing run.
+  lobby?: string;
+  database?: string;
 }
 
 export interface SiteInput {
@@ -30,6 +35,12 @@ export interface SiteInput {
   maxRunsPerHour?: number;
   benchMemoryMbytes?: number;
   benchTimeoutSecs?: number;
+  spacetimeToken?: string;
+  spacetimeHost?: string;
+  spacetimeDb?: string;
+  clearingRunsPerHour?: number;
+  clearingTimeScale?: number;
+  clearingMaxMinutes?: number;
 }
 
 export const POLICY_SCRIPT: SiteModel = { id: 'script', label: 'Policy reference script (no model)', provider: 'script' };
@@ -68,6 +79,7 @@ export function siteConfig(raw: unknown) {
   for (const id of caseSets) if (!CASE_SETS[id]) throw new Error(`Unknown case set "${id}". Choose from ${Object.keys(CASE_SETS).join(', ')}.`);
   const crsLive = input.crsLive === true;
   if (crsLive && (!text(input.crsUsername) || !text(input.crsPassword))) throw new Error('Live CRS needs crsUsername and crsPassword.');
+  const spacetimeToken = text(input.spacetimeToken);
   return {
     benchActor: text(input.benchActor),
     models,
@@ -77,6 +89,12 @@ export function siteConfig(raw: unknown) {
     maxRunsPerHour: Math.max(1, Math.min(60, Number(input.maxRunsPerHour) || 10)),
     benchMemoryMbytes: Number(input.benchMemoryMbytes) || 512,
     benchTimeoutSecs: Number(input.benchTimeoutSecs) || 3600,
+    lobby: lobbyModels(listed),
+    // The shared world the setup page's Clearing runs start on. Without a token the Clearing is offered as unavailable.
+    spacetime: spacetimeToken ? { host: text(input.spacetimeHost) || 'https://maincloud.spacetimedb.com', database: text(input.spacetimeDb) || 'endersbench', token: spacetimeToken } : null,
+    clearingRunsPerHour: Math.max(1, Math.min(30, Number(input.clearingRunsPerHour) || 4)),
+    clearingTimeScale: Math.max(0.05, Math.min(4, Number(input.clearingTimeScale) || 0.5)),
+    clearingMaxMinutes: Math.max(2, Math.min(120, Number(input.clearingMaxMinutes) || 20)),
   };
 }
 
