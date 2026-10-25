@@ -12,3 +12,10 @@ Baseline: 2026-10-25 03:05:16 UTC. Codex window 10080 minutes, reset 1793424641,
 - Iteration 1: Sol high frontend/backend; Luna max scenario audit. Root owns browser checklist and integration.
 - Audit found one Clearing map only. Second map clarification pending.
 - Integrated existing teammate main sources for real Ledger viewer and module support without changing original checkout.
+
+- User clarified only The Clearing and Ledger Street; no second map needed.
+- Iteration 2: independent review exposed four integration seams; fixed all and reviewer rechecked successfully.
+- Integrated teammate main. One test run overlapped merge conflict markers and was discarded; resolved merge, removed duplicate Vite config keys, reran checks successfully.
+- Final code checks: 505 app/harness and 565 module tests; build/bundles pass. Real Ledger run completed and archived. Desktop visual/counters verified; mobile browser gate remains incomplete because Computer Use stopped.
+- Acceptance: 2/3 units fully accepted; integration/visual unit partial due mobile visual gate. No third repair iteration or scheduled loop. Browser stopped, code remains reviewable.
+- Measurement interval starts 03:05:16 UTC; last sample 03:13:42 UTC (8m26s, excludes final real-run/shipping tail). Account 82% -> 84% on same 10080-minute/reset window; observed account-wide +2pp, not attributable to this task. One submitted implementation correction cycle, plus coordinator merge cleanup.
