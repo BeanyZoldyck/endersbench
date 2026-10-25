@@ -26,13 +26,26 @@ We are also developing Ender, our own adapted model: LoRA fine-tuning of Qwen3.8
 
 ## How we used our sponsors' technology
 
-### SpacetimeDB: the world, the model calls, and the record
+### SpacetimeDB: the game server, the agent runtime, and the record
 
-- **The whole simulation is a SpacetimeDB module.** Movement, hunger, fires, wolves, weather, the plane, and the policy detectors run as reducers on a 20 Hz scheduled tick. Each action commits in the same transaction as its detector record, so every violation points at the exact action that caused it.
-- **The database calls the models.** A scheduled procedure uses `ctx.http.fetch` to send observations to Bitdeer, Anthropic, OpenAI, and our Runpod endpoints, then commits each answer as an action. A `beginRun` reducer starts a run with its roster, prompt, food level, and time scale; provider keys live in the database's environment. No harness process is involved.
-- **It scales on one machine.** Overnight we ran 126 runs in 9 worlds side by side on one machine: 53,270 model calls made from inside the database. The game clock held 97% of its set speed with every world calling models at once, the same as our single-world runs.
-- **The record lives in the database too.** Run history and a live cross-run leaderboard are tables and a view; Ledger Street's cases, verdicts, and every desk step are tables; the viewer, the replays, and the recorder are subscriptions.
-- **It's deployed on Maincloud.** The hosted database serves the public viewer, adding about 0.02 s per decision. Scheduled reducers and the experiment reset only accept the database's own identity, so visitors can watch and join without tampering.
+SpacetimeDB isn't a storage layer for Ender's Bench. It's the game server, the runtime that asks every model what to do, the scorekeeper, and the broadcast to every viewer, all in one TypeScript module.
+
+- **The game server.** More than 30 tables hold the world. Movement, hunger, cold, fires, wolves, weather, and the rescue plane run as reducers on a 20 Hz scheduled tick. Every action (take, give, build, attack, help) is a reducer that commits the world change and the policy-detector record in one transaction, so each violation is tied to the exact action that caused it.
+- **The agent runtime: database brains.** A scheduled reducer opens a durable decision request for each survivor that's due to think. A scheduled procedure, `think`, sends the survivor's observation to its model with `ctx.http.fetch` and commits the answer through the same action path. The providers it calls are Bitdeer, Anthropic, OpenAI, and our Runpod endpoints. Requests time out, retry, and are withdrawn when sudden danger makes them stale, and a `model_health` table keeps provider failures apart from behavior. Provider keys live in the database's environment variables, and a `beginRun` reducer starts a run with its roster, prompt, food level, and time scale. There is no harness, queue, or external worker.
+- **Proven at scale.** Overnight we ran 126 runs in 9 worlds side by side on one machine: **53,270 model calls made from inside SpacetimeDB.** The breakdown was 15,151 to Bitdeer, 15,216 to Anthropic, 20,137 to Runpod, and 2,766 to OpenAI. The game clock held 97% of its set speed with every world calling models at once, the same as a single world; our first test of the design showed parallel HTTP calls from procedures don't stall the 20 Hz tick, locally or on Maincloud.
+- **The scorekeeper.** `run_history` and `run_result` tables keep every run permanently, through resets. A public view, `leaderboard`, aggregates finished runs by model, prompt, and rules version as they close. Ledger Street runs in the same database: its cases, verdicts, and every desk step, each with its CRS RequestID, are tables driven by their own scheduled reducer.
+- **The broadcast.** Our React Three Fiber viewer is a live subscription, and so is the recorder that produces the replays behind our demo exhibits. Visitors can join as survivors through `joinAsHuman`, which binds a survivor to their identity, and play alongside the models in the same world.
+- **Hosted on Maincloud.** The public viewer runs against the hosted database, adding about 0.02 s per decision, and new module versions publish over it with the data kept. The tick, the brain procedure, and the reset accept only the database's own identity (`ctx.databaseIdentity`), so spectators can watch and join but can't tick, reset, or impersonate a model.
+- **Built around its tooling.** Generated TypeScript bindings connect the viewer, harness, and recorder; results are exported over SpacetimeDB's SQL HTTP API.
+
+### CRS: real credit data behind every finance decision
+
+Ledger Street, our finance benchmark, is built on the CRS credit sandbox. In live runs, every check an agent runs is a real CRS call.
+
+- **The desk's tools are CRS's checks:** soft credit pulls from three bureaus, identity verification, fraud scoring, public records, criminal and eviction searches, and reverse phone lookup. 70 cases across lending, collections, and vendor payments each carry a temptation, and each is tagged as backed by law (FCRA, ECOA, FDCPA) or by house policy.
+- **Live, logged, and safe.** In live runs each tool call sends a test persona's exact saved request to the sandbox, so nothing ever reaches the real vendor. We log in once and never retry a failed login. Each step records CRS's RequestID, and the response is compared with a saved snapshot to catch data drift.
+- **Process is scored, not just the decision.** The verifier requires the right checks and forbids improper ones, so it catches harms a final answer hides. The most common harm this morning was a credit pull with no permissible purpose, an FCRA violation: 11 of the 20 harmful decisions across Ender v1.1, Ender v1.3, and their base model.
+- **Volume: 1,276 live CRS calls**, each with its own RequestID. This morning's 521 alone were 215 credit pulls, 148 identity checks, 81 fraud scores, and 77 criminal, eviction, public-records, and phone searches. Our Apify benchmark Actor uses the same tools, answering from saved CRS responses by default or from the live sandbox.
 
 ### Bitdeer AI Model Studio: open-weight contestants and a precision control
 
@@ -64,10 +77,15 @@ We are also developing Ender, our own adapted model: LoRA fine-tuning of Qwen3.8
 - **`enders-bench`** runs a Ledger Street job against a chosen model. It writes a dataset row per case, stores the scorecard and the replay in its key-value store, and shows the run in our 3D office through the Actor's Live View. Checked on the platform, its default run (a scripted reference policy on 25 held-out cases) scores 25 of 25.
 - **`enders-bench-site`** serves the whole viewer from its container and starts benchmark runs for visitors from an allow-list of models.
 
-### CRS credit sandbox: real tools for the finance desk
+### Figma: from architecture to interface to presentation
 
-- **Ledger Street's tools are CRS's checks:** soft credit pulls from three bureaus, identity verification, fraud scoring, public records, criminal and eviction searches, and reverse phone lookup.
-- **Live calls, logged.** In live runs every tool call goes to the sandbox with a test persona's request. The step records CRS's RequestID, and the response is compared with a saved snapshot to catch data drift (755 live CRS calls in our first full runs alone).
+- **FigJam:** we mapped the system architecture before building it.
+- **Figma Design:** we developed the interface.
+- **Figma MCP:** we worked with our designs through AI-assisted conversations.
+- **Figma agents:** helped us polish the designs.
+- **Figma Slides:** brought our design process and supporting files together for the presentation.
+
+Together, these tools connected our planning, design iterations, and final project story.
 
 ### NVIDIA DGX Spark: training Ender locally
 
