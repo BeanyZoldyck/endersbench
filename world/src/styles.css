@@ -621,6 +621,16 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .app .strip-tick { font-size:8.5px; }
 .app .glow-legend button { white-space:nowrap; }
 
+/* Nothing past the window's edge. The top bar keeps its tools in view: the
+   rescue line gives up width first (full text on hover), the wordmark goes
+   on narrow windows. The dock's corner keeps its width and the cards scroll. */
+.app .world-status > * { flex-shrink:0; }
+.app .world-status > .rescue-banner { flex:0 1 auto; min-width:60px; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:1400px) { .app .brand span { display:none; } }
+.app .spectator-dock > .scene-tools { flex:0 0 auto; max-width:300px; }
+.app .scene-tools .glow-legend { flex-wrap:wrap; justify-content:flex-end; }
+.app .scene-tools .glow-legend ul { flex-wrap:wrap; justify-content:flex-end; row-gap:4px; }
+
 /* Keyboard play: the inventory, with what each item can do, and the container E opened. */
 .app .inventory h2 { margin-bottom:6px; }
 .app .inventory h3 { margin:18px 0 8px; color:var(--gold); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; }

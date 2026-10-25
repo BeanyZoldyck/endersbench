@@ -94,6 +94,13 @@ export default function App() {
   const [hint, setHint] = useState('');
   useEffect(() => { if (!hint) return; const t = window.setTimeout(() => setHint(''), 1600); return () => window.clearTimeout(t); }, [hint]);
   const menu = useRef<HTMLDetailsElement>(null);
+  // The ⋯ menu closes on a click anywhere else, or Escape, like any menu.
+  useEffect(() => {
+    const close = (e: Event) => { const m = menu.current; if (m?.open && (e instanceof KeyboardEvent ? e.key === 'Escape' : !m.contains(e.target as Node))) m.removeAttribute('open'); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', close); };
+  }, []);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
   const [survivalPreview, setSurvivalPreview] = useState(false);
@@ -206,7 +213,7 @@ export default function App() {
       {condition && <span className="condition-chip" title={`${condition} · the experimental condition of this run; realtime continues while models deliberate`}>{conditionShort}</span>}
       {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food</span>}
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown" title="Search plane arrives in">Plane {time(world.rescueAtMs - world.gameTimeMs)}</span>}
-      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
+      {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status" title={rescueLine}>{rescueLine}</div>}
       <nav className="utility" aria-label="Viewer tools">
         {me && <button aria-expanded={panel === 'inventory'} title="Inventory (I)" onClick={() => { setLootId(undefined); setPanel(panel === 'inventory' ? null : 'inventory'); }}>Inventory</button>}
         <button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button>
