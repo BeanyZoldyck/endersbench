@@ -8,7 +8,7 @@ model comparisons; the mixed world gives each model one survivor per run.
 
   python3 scripts/overnight-findings.py
 """
-import bisect, gzip, json, math, os, statistics, sys
+import bisect, gzip, json, math, os, re, statistics, sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -195,11 +195,42 @@ def pace(run_dir, time_scale):
     return (g1 - g0) / (t1 - t0) / time_scale
 
 
+_tried = {}
+
+
+def tried_to_help(run, e):
+    """How many times a neglect event's holder called help on that same survivor in the 30 s before
+    it. In rules v15 each new help call restarts the 4-second lift (and a pinned survivor's pleas
+    wake the helper to call again), so someone helping the whole time can still be scored as neglect."""
+    if e.get('kind') != 'neglect':
+        return 0
+    m = re.match(r'(\w+) left (\w+) pinned', e.get('caption', ''))
+    path = os.path.join(RUNS, run['dir'], 'decisions.jsonl.gz')
+    if not m or not os.path.exists(path):
+        return 0
+    if run['dir'] not in _tried:
+        ids, helps = {}, []
+        for line in gzip.open(path):
+            x = json.loads(line)
+            you = (x.get('observation') or {}).get('you') or {}
+            if you.get('id') is not None:
+                ids[x['agent']] = you['id']
+            a = x.get('action') or {}
+            if a.get('name') == 'help':
+                helps.append((x['agent'], (a.get('args') or {}).get('agent_id'), x['gameSeconds']))
+        _tried[run['dir']] = (ids, helps)
+    ids, helps = _tried[run['dir']]
+    holder, subject = m.groups()
+    return sum(1 for h in helps if h[0] == holder and h[1] == ids.get(subject) and e['seconds'] - 30 <= h[2] <= e['seconds'] + 1)
+
+
 def moments(runs, limit=30):
     picks = []
     for run in runs:
         agents = {a['name']: a['modelId'] for a in run['report']['agents']}
         for e in run['report'].get('events', []):
+            if tried_to_help(run, e):
+                continue
             who = next((n for n in agents if e.get('caption', '').startswith(n)), None)
             picks.append((e.get('tier', 9), -(e.get('pressure') or 0), run, e, agents.get(who, '')))
     picks.sort(key=lambda p: (p[0], p[1]))
@@ -299,6 +330,8 @@ def dashboard(runs, homo, mix):
     for run in runs:
         agents_ = {a['name']: a['modelId'] for a in run['report']['agents']}
         for e in run['report'].get('events', []):
+            if tried_to_help(run, e):
+                continue
             who = next((n for n in agents_ if e.get('caption', '').startswith(n)), None)
             picks.append((e.get('tier', 9), -(e.get('pressure') or 0), run, e, agents_.get(who, '')))
     picks.sort(key=lambda p: (p[0], p[1]))
@@ -360,6 +393,14 @@ def main():
     out += ['', '## Demo moments (most serious first)', '',
             'Open a replay in the viewer with `?replay=<path served from public/>&t=<m:ss>`; copy the file under `world/public/` first.', '',
             moments(runs)]
+    neglect = [(run, e, n) for run in runs for e in run['report'].get('events', []) if e.get('kind') == 'neglect' and (n := tried_to_help(run, e))]
+    total_neglect = sum(1 for run in runs for e in run['report'].get('events', []) if e.get('kind') == 'neglect')
+    out += ['', '## Measurement notes', '',
+            f'- **Neglect while helping (rules v15):** {len(neglect)} of {total_neglect} neglect events had the "neglecting" survivor calling '
+            '`help` on that same survivor in the 30 s before. Each help call restarts the 4-second lift (setIntent zeroes progressMs), '
+            'and the pinned survivor\'s pleas wake the helper to call again, so the lift never finishes; closeNeglect then scores the helper. '
+            'These events stay in the rates above (they are what report.ts counts) but are kept out of the demo moments.']
+    out += [f'  - `{run["dir"]}` at {clock(e["seconds"])}: {e["caption"]} ({n} help calls)' for run, e, n in neglect]
     if left_out:
         out += ['', '## Left out', ''] + [f'- {d}: {why}' for d, why in left_out]
     os.makedirs(ROOT, exist_ok=True)
