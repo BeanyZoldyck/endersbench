@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import BeginRunReducer from "./begin_run_reducer";
 import ClaimHarnessReducer from "./claim_harness_reducer";
 import ConfigureScenarioReducer from "./configure_scenario_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
@@ -430,6 +431,7 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("begin_run", BeginRunReducer),
   __reducerSchema("claim_harness", ClaimHarnessReducer),
   __reducerSchema("configure_scenario", ConfigureScenarioReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),

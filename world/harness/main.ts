@@ -144,10 +144,12 @@ const conn = DbConnection.builder()
   })
   .build();
 
-function route(req: { id: bigint; agentId: bigint; modelId: string; observation: string; status: string }) {
+function route(req: { id: bigint; agentId: bigint; modelId: string; observation: string; status: string; brain: string }) {
   // The dedicated finance worker owns agentId 0 requests. Never duplicate its
   // model calls when the clearing and financial district run together.
   if (req.status !== 'pending' || req.agentId === 0n) return;
+  // In a database-brained run the module asks the model itself (beginRun).
+  if (req.brain === 'database') return;
   void answer(conn, req);
 }
 conn.db.decisionRequest.onInsert((_ctx, req) => route(req));

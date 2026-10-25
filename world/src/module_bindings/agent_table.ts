@@ -50,4 +50,5 @@ export default __t.row({
   wake: __t.bool(),
   wakeReason: __t.string().name("wake_reason"),
   pendingAction: __t.string().name("pending_action"),
+  lastLatencyMs: __t.u32().name("last_latency_ms"),
 });

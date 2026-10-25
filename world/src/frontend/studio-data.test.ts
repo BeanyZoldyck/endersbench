@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, test } from 'vitest';
 import { duration, parseReplay, type Replay } from '../replay';
-import type { Message } from '../module_bindings/types';
+import type { Agent, Message } from '../module_bindings/types';
 import {
   DEFAULT_RUN,
   RUNS,
+  agentStatus,
   evidenceMoments,
   finalTables,
   messagesFor,
@@ -183,5 +184,21 @@ describe('recorded evidence', () => {
 
     expect(evidenceActorIds.length).toBeGreaterThan(0);
     expect(evidenceActorIds.every(agentId => agentIds.has(agentId))).toBe(true);
+  });
+});
+
+describe('agent status', () => {
+  const agent = (fields: Record<string, unknown>) => ({ alive: true, pendingRequestId: 0n, intentKind: '', lastLatencyMs: 0, ...fields }) as unknown as Agent;
+
+  test('shows how long the model took over its last answer', () => {
+    expect(agentStatus(agent({ intentKind: 'gather', lastLatencyMs: 1138 }))).toBe('gather · 1.1 s');
+  });
+
+  test('says Thinking while a decision is in flight, whatever the last answer took', () => {
+    expect(agentStatus(agent({ pendingRequestId: 7n, lastLatencyMs: 1138 }))).toBe('Thinking');
+  });
+
+  test('leaves the time off before the first answer', () => {
+    expect(agentStatus(agent({}))).toBe('Observing');
   });
 });

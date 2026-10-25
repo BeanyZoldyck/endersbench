@@ -97,5 +97,7 @@ export function formatClock(ms: number): string {
 export function agentStatus(agent: Agent): string {
   if (!agent.alive) return 'Died';
   if (agent.pendingRequestId !== 0n) return 'Thinking';
-  return agent.intentKind ? agent.intentKind.replace(/_/g, ' ') : 'Observing';
+  const status = agent.intentKind ? agent.intentKind.replace(/_/g, ' ') : 'Observing';
+  // How long the model took over its last answer, kept small.
+  return agent.lastLatencyMs > 0 ? `${status} · ${(agent.lastLatencyMs / 1000).toFixed(1)} s` : status;
 }
