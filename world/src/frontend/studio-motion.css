@@ -85,7 +85,7 @@
 
 /* Ripple accents follow the button surface, without per-pointer style reads. */
 .studio[data-studio-screen="landing"] .hero-actions > .gold { --button-ripple-color: #e6b65f; }
-.studio[data-studio-screen="landing"] .header-cta { --button-ripple-color: #b6cbe5; }
+.studio[data-studio-screen="landing"] .header-cta { --button-ripple-color: #e6b65f; }
 .studio[data-studio-screen="landing"] .hero-actions > .outline-button { --button-ripple-color: #f0dca5; }
 
 /* Leave room between adjacent buttons for their complete ripple outlines. */

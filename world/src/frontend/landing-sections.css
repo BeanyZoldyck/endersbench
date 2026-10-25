@@ -44,8 +44,6 @@ html:has(.studio[data-studio-screen="landing"]) {
   color: var(--ink);
   align-content: center;
 }
-.studio .landing-end > .button.gold { color: #fff8ee; }
-.studio .landing-end > .button.gold:hover { background: #614b38; border-color: #614b38; }
 @media (prefers-reduced-motion: reduce) {
   html:has(.studio[data-studio-screen="landing"]) {
     scroll-behavior: auto;
