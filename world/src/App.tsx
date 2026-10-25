@@ -79,6 +79,7 @@ export default function App() {
   const condition = runConfig?.promptVariant
     ? [runConfig.promptVariant === 'charter' ? 'Charter · policy compliance' : `${runConfig.promptVariant} · behavior comparison`, runConfig.foodScale && runConfig.foodScale !== 1 ? `food ${runConfig.foodScale}x` : '', runConfig.rescueSeats ? `${runConfig.rescueSeats} seats` : '', rulesVersion ? `rules v${rulesVersion}` : '', runConfig.timeScale ? `time ${runConfig.timeScale}×` : ''].filter(Boolean).join(' · ')
     : '';
+  const conditionShort = runConfig?.promptVariant ? [runConfig.promptVariant, rulesVersion ? `v${rulesVersion}` : ''].filter(Boolean).join(' · ') : '';
   const physics = useMemo(() => parsePhysics(physicsRaw), [physicsRaw]);
   const [scores, scoresReady] = useTable(tables.score, LIVE);
   const [modelHealth] = useTable(tables.modelHealth, LIVE);
@@ -86,6 +87,7 @@ export default function App() {
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
   const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | null>(null);
+  const menu = useRef<HTMLDetailsElement>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
   const [survivalPreview, setSurvivalPreview] = useState(false);
@@ -179,19 +181,33 @@ export default function App() {
     </div>
     <div className="topbar">
     <header className="masthead">
-      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span><a className="studio-link" href="/">Observation Studio ↗</a></div>
+      <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span></div>
       <h1>The Clearing<span>.</span></h1>
     </header>
     <div className="world-status">
-      <span className={`connection ${isActive && ready ? 'online' : ''}`}><i />{replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}</span>
-      {world && <div className="season"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><div><span>{isWinter ? 'WINTER' : 'AUTUMN'} · {world.daylight.toUpperCase()}</span><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div></div>}
+      <span className={`connection ${isActive && ready ? 'online' : ''}`} title={replay.active ? 'Recorded playback' : preview ? 'Art preview' : !isActive ? 'Reconnecting · last known state' : !ready ? 'Syncing world…' : world?.running ? 'Live world' : 'World paused'}><i />{replay.active ? 'Replay' : preview ? 'Art preview' : !isActive ? 'Reconnecting' : !ready ? 'Syncing' : world?.running ? 'Live' : 'Paused'}</span>
+      {world && <div className="season" title={`${isWinter ? 'Winter' : 'Autumn'} · ${world.daylight}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={isWinter ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3' : 'M5 19C2 7 13 3 20 4c1 10-4 17-15 15ZM5 19l10-9'} fill="none" stroke="currentColor" strokeWidth="1.3" /></svg><strong>{isWinter ? 'The cold has arrived' : winterIn > 0 ? `Winter in ${time(winterIn)}` : 'Awaiting winter'}</strong></div>}
       {trouble && <span className="model-trouble" role="alert" title="The survivors cannot act while their model is failing. Exhibits has recorded runs.">{trouble}</span>}
-      {interactive && <span className="interactive-chip" role="status">Interactive demo · excluded from benchmark results</span>}
-      {condition && <span className="condition-chip" title="The experimental condition of this run; realtime continues while models deliberate">{condition}</span>}
-      {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food left</span>}
-      {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown">Search plane in {time(world.rescueAtMs - world.gameTimeMs)}</span>}
+      {interactive && <span className="interactive-chip" role="status" title="Interactive demo · excluded from benchmark results">Interactive demo</span>}
+      {condition && <span className="condition-chip" title={`${condition} · the experimental condition of this run; realtime continues while models deliberate`}>{conditionShort}</span>}
+      {world && <span className="food-left" title="Food anywhere in the world: carried, stored, dropped, and on bushes">{foodLeft} food</span>}
+      {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown" title="Search plane arrives in">Plane {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
-      <nav className="utility" aria-label="Viewer tools"><a className="results-link" href="/finance.html">Finance ↗</a><a className="results-link" href="/results.html" target="_blank" rel="noreferrer">Results ↗</a><button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button><button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button><button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button><button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button><button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button></nav>
+      <nav className="utility" aria-label="Viewer tools">
+        <button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button>
+        <details className="more-menu" ref={menu}>
+          <summary aria-label="More">⋯</summary>
+          <div className="more-items" onClick={() => menu.current?.removeAttribute('open')}>
+            <button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button>
+            <button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button>
+            <button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button>
+            <a href="/results.html" target="_blank" rel="noreferrer">Results ↗</a>
+            <a href="/finance.html">Ledger Street ↗</a>
+            <a href="/">Observation Studio ↗</a>
+            <button className="reset" disabled={!conn || !isActive || !!preview || replay.active} onClick={resetExperiment}>Reset experiment</button>
+          </div>
+        </details>
+      </nav>
     </div>
     </div>
     {preview && <div className="preview-banner" role="status">STAGED ART PREVIEW · NOT MODEL OUTCOMES <button onClick={() => { setStaged(false); setMode('audience'); }}>Return to live</button></div>}
@@ -213,14 +229,13 @@ export default function App() {
     {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} promptVariant={runConfig?.promptVariant} onJump={replay.active ? replay.jumpToGame : undefined} />}
     {!replay.active && !preview && <Intro promptVariant={runConfig?.promptVariant} />}
     <footer className="spectator-dock">
-      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
-      <div className="cast-heading"><span>THE SURVIVORS</span></div>
       <div className="cast-strip" aria-label="Survivors">
         {[...agents].sort((a, b) => a.name.localeCompare(b.name)).map(a => <button key={String(a.id)} className={`cast-card ${selectedId === a.id ? 'selected' : ''}`} aria-pressed={selectedId === a.id} onClick={() => select(a.id)} style={{ '--agent-color': a.color } as CSSProperties}>
           <Portrait agent={a} /><div className="cast-info"><div className="cast-name"><strong>{a.name}</strong><span className={hunted.has(a.id) ? 'hunted' : ''}>{!a.alive ? 'Dead' : hunted.has(a.id) ? 'Hunted!' : a.pinned ? 'Pinned' : a.stunnedUntilMs > (world?.gameTimeMs ?? 0) ? 'Dazed' : a.pendingRequestId !== 0n ? 'Thinking…' : intentLabel(a)}</span></div>{a.role && <span className="role-label">{a.role}</span>}{(() => { const w = wreckShare(scoreRows.find(sc => sc.agentId === a.id)?.wreckTaken ?? 0, world?.fairShare ?? 0); return w && <span className={`wreck-share ${w.over ? 'over' : ''}`} title="Rations taken from the shared wreck, against a fair share">{w.label}</span>; })()}<span className="model-name" title={a.modelId}>{a.modelId}</span></div>{a.alive && <span className="card-pressure" title="Survival pressure: the worst of health, fullness and warmth" style={{ '--p': `${Math.round(pressureOf(a) * 100)}%` } as CSSProperties}>{Math.round(pressureOf(a) * 100)}%</span>}<Needs agent={a} compact />
         </button>)}
         {!agents.length && <div className="empty-cast">Waiting for the first survivors.</div>}
       </div>
+      <div className="scene-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div><GlowLegend />{(event || worldCaption || narration) && <div className={`event-caption ${event || worldCaption ? '' : 'narration'}`} role="status"><span className="event-mark" />{worldCaption || (event && event.caption) || narration}</div>}</div>
     </footer>
   </main>;
 }

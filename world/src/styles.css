@@ -527,3 +527,60 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .intro-actions .primary { background:#d7bd78; color:#101010; border-radius:4px; font-weight:700; }
 .app .avatar.model-dot { display:block; width:40px; height:40px; border-radius:50%; border:0; box-shadow:inset -4px -5px 8px #00000040; }
 .app .nametag .avatar.model-dot { width:22px; height:22px; }
+
+/* ── One top bar, a compact dock: the stage and the record are the focus ── */
+.app .topbar { flex-wrap:nowrap; gap:18px; min-height:40px; padding-bottom:10px; }
+.app .masthead { gap:12px; }
+.app .masthead h1 { font-size:1.25rem; }
+.app .world-status { display:flex; flex-wrap:nowrap; align-items:center; gap:8px; margin-left:auto; min-width:0; }
+.app .world-status > * { order:0; }
+.app .topbar::after { display:none; }
+.app .season { gap:6px; } .app .season svg { width:15px; height:15px; } .app .season strong { font-size:.75rem; font-weight:600; }
+.app .connection { font-size:.72rem; }
+.app .condition-chip, .app .food-left, .app .rescue-countdown, .app .model-trouble, .app .interactive-chip { padding:4px 8px; font-size:.68rem; }
+.app .rescue-banner { font-size:.72rem; padding:4px 10px; }
+.app .utility { display:flex; align-items:center; gap:6px; margin-left:6px; order:9; }
+.app .utility > button { padding:6px 14px; }
+.app .more-menu { position:relative; }
+.app .more-menu summary { list-style:none; cursor:pointer; display:grid; place-items:center; width:34px; height:30px; border:1px solid #555; border-radius:4px; color:var(--ink); font-size:1rem; line-height:1; }
+.app .more-menu summary::-webkit-details-marker { display:none; }
+.app .more-menu[open] summary, .app .more-menu summary:hover { border-color:var(--gold); color:var(--gold); }
+.app .more-items { position:absolute; right:0; top:calc(100% + 6px); z-index:45; min-width:200px; display:flex; flex-direction:column; padding:6px; background:var(--surface); border:1px solid var(--line); border-radius:4px; box-shadow:0 12px 32px #00000080; }
+.app .more-items > button, .app .more-items > a { all:unset; box-sizing:border-box; cursor:pointer; padding:9px 12px; border-radius:3px; font-size:.78rem; color:var(--ink); white-space:nowrap; }
+.app .more-items > button:hover, .app .more-items > a:hover, .app .more-items > button:focus-visible, .app .more-items > a:focus-visible { background:var(--surface2); color:var(--gold); }
+.app .more-items > button[aria-expanded=true] { color:var(--gold); }
+.app .more-items > .reset { color:var(--bad); border-top:1px solid var(--line); margin-top:4px; padding-top:11px; }
+.app .more-items > button:disabled { opacity:.4; cursor:default; }
+@media (max-width:1180px) { .app .topbar { flex-wrap:wrap; } .app .world-status { flex-wrap:wrap; justify-content:flex-end; } }
+
+/* The dock: compact survivor cards on the left, the small scene tools tucked in the corner. */
+.app .spectator-dock { display:flex; align-items:center; gap:16px; min-width:0; }
+.app .cast-strip { flex:0 1 auto; min-width:0; padding:2px 2px 4px; }
+.app .cast-card { flex:0 0 auto; width:250px; gap:10px; padding:9px 11px; align-items:center; }
+.app .cast-info { flex:1; min-width:0; }
+.app .cast-name { display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin:0; }
+.app .cast-name strong { font-size:1rem; line-height:1.15; }
+.app .cast-name > span { font-size:.66rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.app .role-label { margin:1px 0 0; font-size:.62rem; }
+.app .model-name { font-size:.6rem; max-width:120px; }
+.app .card-pressure { align-self:center; margin-right:2px; }
+.app .needs.vertical { gap:4px; } .app .vbar { height:38px; width:7px; }
+.app .scene-tools { margin:0 0 0 auto; flex:0 1 auto; display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; min-width:0; }
+.app .scene-tools .event-caption { order:-1; margin:0; max-width:340px; font-size:.72rem; padding:5px 10px; white-space:normal; }
+.app .camera-toggle button { padding:6px 12px; font-size:.7rem; }
+.app .glow-legend { font-size:.66rem; } .app .glow-legend ul { gap:8px; padding:4px 9px; }
+@media (max-width:1180px) { .app .spectator-dock { flex-wrap:wrap; } .app .scene-tools { margin-left:0; justify-content:flex-start; } }
+/* Compact cards: picture, the words, then pressure above the three bars. Nothing dropped. */
+.app .cast-card { width:222px; display:grid; grid-template-columns:40px minmax(0,1fr) auto; grid-template-areas:"pic info pressure" "pic info bars"; column-gap:9px; row-gap:4px; padding:8px 10px; }
+.app .cast-card > .portrait, .app .cast-card > .agent-pfp { grid-area:pic; width:40px; height:40px; }
+.app .cast-card .portrait i { top:14px; left:12px; } .app .cast-card .portrait i+i { left:22px; } .app .cast-card .portrait b { top:27px; }
+.app .cast-card > .cast-info { grid-area:info; align-self:center; }
+.app .cast-card > .card-pressure { grid-area:pressure; justify-self:end; align-self:end; margin:0; }
+.app .cast-card > .needs { grid-area:bars; justify-self:end; }
+.app .cast-card .vbar { height:30px; }
+.app .scene-tools .event-caption { max-width:300px; }
+@media (min-width:1500px) { .app .cast-card { width:250px; } .app .scene-tools .event-caption { max-width:420px; } }
+@media (max-width:1499px) {
+  .app .scene-tools { display:grid; grid-template-columns:auto auto; justify-content:end; justify-items:end; gap:6px 8px; }
+  .app .scene-tools .event-caption { grid-column:1 / -1; max-width:260px; }
+}
