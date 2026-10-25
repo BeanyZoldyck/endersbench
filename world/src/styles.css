@@ -620,3 +620,19 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .app .strip-row { font-size:9.5px; }
 .app .strip-tick { font-size:8.5px; }
 .app .glow-legend button { white-space:nowrap; }
+
+/* Keyboard play: the inventory, with what each item can do, and the container E opened. */
+.app .inventory h2 { margin-bottom:6px; }
+.app .inventory h3 { margin:18px 0 8px; color:var(--gold); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; }
+.app .keys-hint { font-size:.72rem; line-height:1.9; }
+.app kbd { display:inline-block; min-width:18px; padding:1px 5px; margin:0 1px; border:1px solid #555; border-bottom-width:2px; border-radius:3px; font:600 .66rem/1.3 Manrope, system-ui, sans-serif; color:var(--ink); text-align:center; background:var(--surface2); }
+.app .inventory-items { list-style:none; margin:8px 0 0; padding:0; }
+.app .inventory-items li { display:flex; flex-direction:column; gap:6px; padding:9px 0; border-bottom:1px solid var(--line); }
+.app .item-name { font-size:.85rem; } .app .item-name b { color:var(--gold); margin-right:4px; }
+.app .item-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.app .item-actions button { background:none; border:1px solid #555; border-radius:4px; color:var(--ink); padding:4px 9px; font-size:.7rem; }
+.app .item-actions button:hover:not(:disabled) { border-color:var(--gold); color:var(--gold); }
+.app .small-note { font-size:.72rem; margin-top:14px; }
+/* A passing word for a key that found nothing to do; it fades on its own. */
+.app .play-hint { position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:33; padding:7px 14px; border-radius:4px; background:#101010d9; border:1px solid var(--line); color:var(--ink); font-size:.78rem; pointer-events:none; animation:hint-fade 1.6s ease forwards; }
+@keyframes hint-fade { 0% { opacity:0; transform:translate(-50%, 6px); } 12%, 75% { opacity:1; transform:translate(-50%, 0); } 100% { opacity:0; } }

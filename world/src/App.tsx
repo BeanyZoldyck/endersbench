@@ -19,6 +19,7 @@ import { Spotlight, type Beat } from './Spotlight';
 import { describeDeath, intentLabel } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
+import { InventoryPanel, useHumanKeys } from './HumanPlay';
 
 // A replay doesn't show the live world, so it doesn't subscribe to it: the live
 // world's 20 Hz updates would otherwise re-render the page for nothing.
@@ -86,7 +87,10 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
-  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | null>(null);
+  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | 'inventory' | null>(null);
+  const [lootId, setLootId] = useState<bigint>();
+  const [hint, setHint] = useState('');
+  useEffect(() => { if (!hint) return; const t = window.setTimeout(() => setHint(''), 1600); return () => window.clearTimeout(t); }, [hint]);
   const menu = useRef<HTMLDetailsElement>(null);
   const [staged, setStaged] = useState(false);
   const [winterPreview, setWinterPreview] = useState(false);
@@ -114,6 +118,10 @@ export default function App() {
   const ready = !LIVE.enabled ? !!recorded : worldReady && agentsReady && nodesReady && containersReady && itemsReady && messagesReady && ethicsReady && scoresReady && metadataReady && structuresReady && mobsReady && hazardsReady && memoriesReady;
   const selected = agents.find(a => a.id === selectedId);
   const me = liveAgents.find(a => a.controller && identity && a.controller.isEqual(identity));
+  // A person at the controls plays with the keyboard: WASD, Space, E and I (HumanPlay.tsx).
+  useHumanKeys({ conn, me, agents, mobs, containers, nodes, enabled: !!me && canMutate, onError: setError, onHint: setHint,
+    onInventory: () => setPanel(p => p === 'inventory' ? null : 'inventory'),
+    onLoot: id => { setLootId(id); setPanel('inventory'); } });
   const latestEvents = useMemo(() => recent(ethicsRows, 40), [ethicsRows]);
   const dialogue = useMemo(() => recent(messages, 60), [messages]);
   const event = !preview && world && latestEvents.find(e => world.gameTimeMs >= e.gameTimeMs && world.gameTimeMs - e.gameTimeMs < 12000);
@@ -176,6 +184,7 @@ export default function App() {
       {world && physics ? <WorldScene world={world} agents={agents} nodes={nodes} containers={containers} items={items} messages={messages}
         physics={physics} structures={structures} mobs={mobs} hazards={hazards} connected={!!preview || !!recorded || (isActive && ready)} selectedId={selectedId} mode={mode} moments={recorded ? replay.moments : preview ? previewMoments : moments} onSelect={select} onExplore={explore} selectedCard={selectedCard} spotlitId={spotlit ?? undefined}
         onClickTile={(x, y) => { if (me && conn && canMutate) run(conn.reducers.humanMoveTo({ x, y })); }} /> : <div className="loading-world"><span className="loading-leaf">❧</span><p>{world ? "Waiting for the physics contract…" : "Finding the clearing…"}</p></div>}
+      {hint && <div className="play-hint" role="status">{hint}</div>}
       <div className="stage-tools"><div className="camera-toggle" aria-label="Camera mode"><button className={mode === 'audience' ? 'active' : ''} onClick={() => { setMode('audience'); setSelectedId(undefined); }}>Audience</button><button className={mode !== 'audience' ? 'active' : ''} onClick={() => setMode('explore')}>{mode === 'follow' && selected ? `Following ${selected.name}` : 'Explore'}</button></div></div>
       {replay.active && <ReplayBar replay={replay} />}
       {world && !preview && <Spotlight events={beats} agents={agents} gameTimeMs={world.gameTimeMs} promptVariant={runConfig?.promptVariant} systemPrompt={runConfig?.systemPrompt} onShow={setSpotlit} />}
@@ -195,6 +204,7 @@ export default function App() {
       {world && world.rescueState === 'waiting' && world.rescueAtMs > world.gameTimeMs && <span className="rescue-countdown" title="Search plane arrives in">Plane {time(world.rescueAtMs - world.gameTimeMs)}</span>}
       {world && ['rescued', 'missed'].includes(world.rescueState) && <div className={`rescue-banner ${world.rescueState}`} role="status">{rescueLine}</div>}
       <nav className="utility" aria-label="Viewer tools">
+        {me && <button aria-expanded={panel === 'inventory'} title="Inventory (I)" onClick={() => { setLootId(undefined); setPanel(panel === 'inventory' ? null : 'inventory'); }}>Inventory</button>}
         <button disabled={replay.active} aria-expanded={panel === 'join'} onClick={() => setPanel(panel === 'join' ? null : 'join')}>{me ? 'Your survivor' : 'Join'}</button>
         <details className="more-menu" ref={menu}>
           <summary aria-label="More">⋯</summary>
@@ -225,6 +235,7 @@ export default function App() {
         {!preview && <ActionInspector names={names} />}
         {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [45, 81], kind: 'berries', item: 'berries', label: '2 berries', born: performance.now() }, { id: performance.now() + 1, type: 'pop', from: [72, 74], to: [72, 74], kind: 'gathered', item: 'wood', label: '+1 wood', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
+      {panel === 'inventory' && me && <InventoryPanel conn={conn} me={me} items={items} containers={containers} structures={structures} lootId={lootId} onError={setError} />}
       {panel === 'join' && !replay.active && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!canMutate || !ready} onError={setError} /></>}
     </aside>}
     {!panel && !preview && <MomentsRail world={world} agents={agents} containers={containers} nodes={nodes} records={records} scores={scoreRows} temptations={temptations} ethics={ethicsRows} promptVariant={runConfig?.promptVariant} onJump={replay.active ? replay.jumpToGame : undefined} />}
@@ -269,7 +280,7 @@ function HumanControls({ conn, me, disabled, onError }: { conn: DbConnection | n
     try { if (me && text.trim()) { await conn.reducers.humanSay({ text: text.trim() }); setText(''); } else if (!me && name.trim()) await conn.reducers.joinAsHuman({ name: name.trim() }); }
     catch (err) { onError(err instanceof Error ? err.message : String(err)); }
     finally { setPending(false); }
-  }}><p className="muted">{me ? 'Click the ground to walk. Your words are heard by nearby survivors.' : 'Join the live world. This makes the run an interactive demo, excluded from benchmark results.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
+  }}><p className="muted">{me ? 'WASD to walk (or click the ground), Space to swing, E to loot or gather, I for your inventory. Your words are heard by nearby survivors.' : 'Join the live world. This makes the run an interactive demo, excluded from benchmark results.'}</p><label>{me ? 'Say something' : 'Your name'}<input value={me ? text : name} onChange={e => me ? setText(e.target.value) : setName(e.target.value)} maxLength={me ? 200 : 24} disabled={disabled || pending} placeholder={me ? 'Anyone need supplies?' : 'Your name'} /></label><button className="primary" disabled={disabled || pending || !(me ? text : name).trim()}>{pending ? 'Sending…' : me ? 'Speak' : 'Join the world'}</button></form>;
 }
 
 // Playback for a recorded run.
