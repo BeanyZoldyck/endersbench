@@ -12,3 +12,6 @@ dist-harness
 config/*
 !config/.gitkeep
 runs
+
+# Playwright MCP screenshots and console logs
+.playwright-mcp/
