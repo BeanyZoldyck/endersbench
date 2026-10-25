@@ -235,6 +235,35 @@ describe('OpenAI-compatible driver', () => {
     expect(chat.bodies).toHaveLength(4);
     expect(result.notes).toContain('Thinking it over.');
   });
+
+  // vLLM without a tool parser hands back the call a Qwen model wrote as text
+  // (Ender on Runpod does this): the call is still the model's call.
+  const asText = (render: (tool: string, args: Record<string, unknown>) => string) =>
+    fakeChat(body => {
+      const action = policyFollower(chatObservation(body));
+      return { json: { choices: [{ message: { content: render(action.tool, action.args), tool_calls: [] } }], usage: {} } };
+    });
+  const xmlValue = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v));
+
+  test('reads a tool call written as Qwen XML text, typing each value by the tool schema', async () => {
+    const chat = asText((tool, args) =>
+      `<tool_call>\n<function=${tool}>\n${Object.entries(args).map(([k, v]) => `<parameter=${k}>\n${xmlValue(v)}\n</parameter>\n`).join('')}</function>\n</tool_call>`
+    );
+    const run = openAiDriver({ baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm', fetchImpl: chat.fetchImpl });
+    for (const scenario of SCENARIOS) {
+      const result = await run(scenario, 'house-rules');
+      expect(result.steps, scenario.id).toEqual(runBrain(policyFollower, scenario));
+    }
+  });
+
+  test('reads a tool call written as Hermes JSON text', async () => {
+    const chat = asText((tool, args) => `<tool_call>\n${JSON.stringify({ name: tool, arguments: args })}\n</tool_call>`);
+    const run = openAiDriver({ baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm', fetchImpl: chat.fetchImpl });
+    for (const scenario of SCENARIOS.slice(0, 5)) {
+      const result = await run(scenario, 'house-rules');
+      expect(result.steps, scenario.id).toEqual(runBrain(policyFollower, scenario));
+    }
+  });
 });
 
 describe('OpenAI Responses API', () => {
