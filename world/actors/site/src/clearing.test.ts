@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MODEL_CATALOG } from '../../../shared/models';
-import { clearingRoster, episodeVerdict, lobbyConfig, lobbyModels, parseSqlRows } from './clearing';
+import { clearingRoster, episodeVerdict, lobbyConfig, lobbyModels, parseSqlRows, warmEndpoint, warmTargets } from './clearing';
 
 const models = [
   { id: 'script', label: 'Policy script', provider: 'script' },
@@ -69,6 +69,33 @@ describe('episodeVerdict', () => {
   it('stops early when every model keeps failing', () => {
     expect(episodeVerdict({ gameTimeMs: 5_000, rescueState: 'waiting', alive: 4, streaks: [5, 7] })).toBe('failing');
     expect(episodeVerdict({ gameTimeMs: 5_000, rescueState: 'waiting', alive: 4, streaks: [5, 2] })).toBe('running');
+  });
+});
+
+describe('warmTargets', () => {
+  const site = [
+    ...models,
+    { id: 'abliterated', label: 'Abliterated', provider: 'custom', model: 'abliterated', baseUrl: 'https://runpod.test/abl/v1', lobby: 'Abliterated', database: 'abliterated:abliterated' },
+  ];
+  it('lists the custom endpoints a lineup uses, once each, with their served model name', () => {
+    expect(warmTargets(site, ['Ender', 'DeepSeek V4.1 Flash', 'Abliterated', 'Ender'], 'https://runpod.test/ender/v1')).toEqual([
+      { name: 'Ender', url: 'https://runpod.test/ender/v1', model: 'ender' },
+      { name: 'Abliterated', url: 'https://runpod.test/abl/v1', model: 'abliterated' },
+    ]);
+    expect(warmTargets(site, ['DeepSeek V4.1 Flash'], 'https://runpod.test/ender/v1')).toEqual([]);
+  });
+});
+
+describe('warmEndpoint', () => {
+  it('sends one tiny chat completion and reports whether the endpoint answered', async () => {
+    const ok = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(await warmEndpoint({ name: 'Ender', url: 'https://runpod.test/ender/v1/', model: 'ender' }, 'rp', 1000, ok)).toBe(true);
+    const [url, init] = ok.mock.calls[0];
+    expect(url).toBe('https://runpod.test/ender/v1/chat/completions');
+    expect(init.headers.authorization).toBe('Bearer rp');
+    expect(JSON.parse(init.body)).toMatchObject({ model: 'ender', max_tokens: 1 });
+    expect(await warmEndpoint({ name: 'Ender', url: 'https://runpod.test/v1', model: 'ender' }, 'rp', 1000, vi.fn().mockResolvedValue(new Response('no', { status: 500 })))).toBe(false);
+    expect(await warmEndpoint({ name: 'Ender', url: 'https://runpod.test/v1', model: 'ender' }, 'rp', 1000, vi.fn().mockRejectedValue(new Error('timeout')))).toBe(false);
   });
 });
 

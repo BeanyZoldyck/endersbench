@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { Actor, log } from 'apify';
 import type { SelectableModel } from '../../../shared/models';
 import { serve } from '../../shared/serve';
-import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, type LineupEntry } from './clearing';
+import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, warmEndpoint, warmTargets, type LineupEntry, type WarmTarget } from './clearing';
 import { historyEntry, type BenchRunInput } from './history';
 import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
 
@@ -216,21 +216,61 @@ async function startClearing(lineup: LineupEntry[]): Promise<LobbyJob> {
     roster: lineup.map(e => ({ ...e, modelId: offered(e.model)!.databaseId })), dbName: cfg.spacetime.database, host: cfg.spacetime.host, viewerHref: '/?legacy=1',
   };
   clearingJob = job;
+  const db = spacetime, where = cfg.spacetime;
+  // begin_run resets the shared world, so never over someone's live episode.
+  const worldIsLive = async () => (await db.sql('SELECT running FROM world'))[0]?.running === true;
   try {
-    // begin_run resets the shared world, so never over someone's live episode.
-    const [world] = await spacetime.sql('SELECT running FROM world');
-    if (world?.running === true) throw new RequestError('The Clearing is live right now. Watch it, or start one when it ends.', 409);
-    await spacetime.call('begin_run', [roster, 'charter', 1, 0, 0, cfg.clearingTimeScale]);
+    if (await worldIsLive()) throw new RequestError('The Clearing is live right now. Watch it, or start one when it ends.', 409);
   } catch (err) {
     job.status = 'failed';
     throw err;
   }
   clearingLimiter.record();
-  job.status = 'running';
   jobs.set(job.id, job);
-  log.info(`Clearing run ${job.id} on ${cfg.spacetime.database}: ${roster.map(r => `${r.name}=${r.model_id}`).join(', ')}`);
-  void watchClearing(job);
+  const targets = runpodTargets(lineup);
+  const begin = async () => {
+    await wakeRunpod(targets, job);
+    if (targets.length && await worldIsLive()) throw new Error('The Clearing went live while the models were waking up. Watch it, or start one when it ends.');
+    await db.call('begin_run', [roster, 'charter', 1, 0, 0, cfg.clearingTimeScale]);
+    job.status = 'running';
+    log.info(`Clearing run ${job.id} on ${where.database}: ${roster.map(r => `${r.name}=${r.model_id}`).join(', ')}`);
+    void watchClearing(job);
+  };
+  if (!targets.length) {
+    try {
+      await begin();
+    } catch (err) {
+      job.status = 'failed';
+      throw err;
+    }
+    return job;
+  }
+  // Waking a cold worker takes minutes: answer now with a starting job, which the setup page polls.
+  void begin().catch(err => failJob(job, err));
   return job;
+}
+
+// Our Runpod endpoints (Ender, Abliterated) in a lineup, to wake before it starts.
+const WARM_MS = 20 * 60_000;
+function runpodTargets(lineup: LineupEntry[]) {
+  const site = cfg.models.map(m => ({ ...m, lobby: [...cfg.lobby.values()].find(l => l.siteId === m.id)?.name }));
+  return warmTargets(site, lineup.map(e => e.model), '');
+}
+
+async function wakeRunpod(targets: WarmTarget[], job: LobbyJob) {
+  if (!targets.length) return;
+  log.info(`Waking ${targets.map(t => t.name).join(' and ')} on Runpod for ${job.id}…`);
+  const started = Date.now();
+  const awake = await Promise.all(targets.map(t => warmEndpoint(t, cfg.keys.custom, WARM_MS)));
+  const cold = targets.filter((_, i) => !awake[i]).map(t => t.name);
+  if (cold.length) throw new Error(`${cold.join(' and ')} didn't wake up on Runpod. Try again in a few minutes.`);
+  log.info(`${targets.map(t => t.name).join(' and ')} awake after ${Math.round((Date.now() - started) / 1000)} s.`);
+}
+
+function failJob(job: LobbyJob, err: unknown) {
+  job.status = 'failed';
+  job.error = err instanceof Error ? err.message : String(err);
+  log.warning(`${job.id}: ${job.error}`);
 }
 
 // Pauses the world when the episode ends, as scripts/db-run.sh does: with no
@@ -300,12 +340,29 @@ async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
   const names = [...new Set(lineup.map(e => e.model))];
   if (names.length !== 1) throw new RequestError('On this site Ledger Street runs one model at a time. Pick a single model.');
   const model = offered(names[0]) ?? (() => { throw new RequestError(`${names[0]} is not offered on this site.`); })();
-  const runId = await startBenchRun(benchInput(cfg, { model: model.siteId, caseSet: 'quick' }));
-  const job: LobbyJob = {
-    id: runId, status: 'running', model: names[0], modelId: model.databaseId, scenario: LEDGER, roster: lineup.map(e => ({ ...e, modelId: model.databaseId })),
-    dbName: 'apify', host: 'apify', viewerHref: `/finance.html?replay=/api/apify/runs/${runId}/replay&live=1`, runId,
-  };
+  const request = benchInput(cfg, { model: model.siteId, caseSet: 'quick' });
+  const base = { model: names[0], modelId: model.databaseId, scenario: LEDGER, roster: lineup.map(e => ({ ...e, modelId: model.databaseId })), dbName: 'apify', host: 'apify' };
+  const watch = (runId: string) => `/finance.html?replay=/api/apify/runs/${runId}/replay&live=1`;
+  const targets = runpodTargets(lineup);
+  if (!targets.length) {
+    const runId = await startBenchRun(request);
+    const job: LobbyJob = { id: runId, status: 'running', ...base, viewerHref: watch(runId), runId };
+    jobs.set(job.id, job);
+    return job;
+  }
+  // Refuse now rather than after minutes of waking the worker.
+  cache.delete('recent');
+  const active = (await recentRuns()).find(r => !DONE.has(r.status));
+  if (active) throw new RequestError(`A run is already going (${active.label}). Watch it, or try again when it ends.`, 409);
+  const limited = limiter.check();
+  if (limited) throw new RequestError(limited, 429);
+  const job: LobbyJob = { id: `ledger-${Date.now().toString(36)}`, status: 'starting', ...base, viewerHref: '/?studio=setup' };
   jobs.set(job.id, job);
+  void (async () => {
+    await wakeRunpod(targets, job);
+    const runId = await startBenchRun(request);
+    Object.assign(job, { status: 'running', runId, viewerHref: watch(runId) });
+  })().catch(err => failJob(job, err));
   return job;
 }
 

@@ -89,6 +89,36 @@ export function parseSqlRows(answer: SqlAnswer): Record<string, unknown>[] {
   return first.rows.map(row => Object.fromEntries(names.map((n, i) => [n, row[i]])));
 }
 
+// Our Runpod workers (Ender, Abliterated) stop after a minute idle and take
+// minutes to start (scripts/warm-runpod.sh), longer than a decision may wait.
+// A run that uses them waits until each answers before it starts.
+export type WarmTarget = { name: string; url: string; model: string };
+
+export function warmTargets(models: SiteModel[], lineup: string[], customBaseUrl: string): WarmTarget[] {
+  const targets: WarmTarget[] = [];
+  for (const name of new Set(lineup)) {
+    const m = models.find(entry => entry.lobby === name && entry.provider === 'custom');
+    const url = m?.baseUrl || customBaseUrl;
+    if (m?.model && url && !targets.some(t => t.url === url && t.model === m.model)) targets.push({ name, url, model: m.model });
+  }
+  return targets;
+}
+
+// One tiny chat completion; Runpod holds it until a worker is up to answer.
+export async function warmEndpoint(target: WarmTarget, key: string, timeoutMs: number, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  try {
+    const response = await fetchImpl(`${target.url.replace(/\/+$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) },
+      body: JSON.stringify({ model: target.model, max_tokens: 1, messages: [{ role: 'user', content: 'ready?' }] }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 // SpacetimeDB's HTTP API with an identity that may run the world.
 export function spacetimeClient(host: string, database: string, token: string, fetchImpl: typeof fetch = fetch) {
   const base = `${host.replace(/\/+$/, '')}/v1/database/${encodeURIComponent(database)}`;
