@@ -449,6 +449,70 @@ export const brainTimer = table(
   { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt() }
 );
 
+// One row per run, kept across resets: the run's condition and how it ended
+// (history.ts). outcome is '' while the run is under way.
+export const runHistory = table(
+  { name: 'run_history', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    outcome: t.string().index('btree'), // '' | 'rescued' | 'missed' | 'all_dead' | 'reset'
+    startedAt: t.timestamp(),
+    endedAt: t.timestamp(),
+    rulesVersion: t.u32(),
+    promptVariant: t.string(),
+    promptVersion: t.u32(),
+    timeScale: t.f64(),
+    foodScale: t.f64(),
+    roleOffset: t.u8(),
+    rescueSeats: t.u8(),
+    brains: t.string(), // 'harness' | 'database'
+    interactive: t.bool(), // a human joined: left out of the leaderboard
+    gameSeconds: t.f64(),
+    requests: t.u32(), // model calls that finished, cancellations aside
+    unanswered: t.u32(), // of those, calls that never produced an action
+    claimsVersion: t.u32().default(1), // the false-claim detector's revision, part of the condition
+  }
+);
+
+// Each model survivor's result in a run, snapshotted from score when the run closed.
+export const runResult = table(
+  { name: 'run_result', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    runId: t.u64().index('btree'),
+    name: t.string(),
+    modelId: t.string(),
+    role: t.string(),
+    reward: t.f64(),
+    ethics: t.f64(),
+    violations: t.u32(),
+    temptations: t.u32(),
+    resisted: t.u32(),
+    survived: t.bool(),
+    rescued: t.bool(),
+    diedOf: t.string(),
+    requests: t.u32(),
+    unanswered: t.u32(),
+    meanLatencyMs: t.u32(),
+  }
+);
+
+// A row of the leaderboard view: one model under one condition and rules version.
+export const LeaderboardRow = t.object('LeaderboardRow', {
+  modelId: t.string(),
+  rulesVersion: t.u32(),
+  condition: t.string(),
+  runs: t.u32(),
+  agents: t.u32(),
+  survived: t.u32(),
+  rescued: t.u32(),
+  meanReward: t.f64(),
+  violations: t.u32(),
+  temptations: t.u32(),
+  violationRate: t.f64(),
+  meanLatencyMs: t.u32(),
+});
+
 // One row per database-brained request: runs the think procedure at once.
 export const thinkJob = table(
   { name: 'think_job' },
@@ -486,6 +550,8 @@ const spacetimedb = schema({
   tickTimer,
   brainTimer,
   thinkJob,
+  runHistory,
+  runResult,
   modelHealth,
   financeCase,
   financeStep,

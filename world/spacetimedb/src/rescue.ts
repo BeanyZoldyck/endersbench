@@ -8,6 +8,7 @@ import { ensureScore } from './ethics';
 import { tellEveryone } from './memory';
 import { stopTimers } from './timers';
 import { FLYOVER_WINDOW_MS, RESCUE_BONUS } from './rules';
+import { closeRun } from './history';
 
 export function planeOverhead(w: World, nowMs = w.gameTimeMs) {
   return Math.abs(nowMs - w.rescueAtMs) <= FLYOVER_WINDOW_MS;
@@ -53,5 +54,7 @@ export function rescue(ctx: Ctx, how: string, at: { x: number; y: number }) {
     : `The search plane saw the ${how} and circled back. Rescue is coming.`);
   ctx.db.worldEvent.insert({ kind: 'rescued', x: 0, y: 0, agentId: 0n, otherId: 0n, text: how });
   ctx.db.world.id.update({ ...getWorld(ctx), rescueState: 'rescued', running: false });
+  // Filed now: stopping the timers stops brainTick, which would otherwise notice.
+  closeRun(ctx, 'rescued');
   stopTimers(ctx);
 }

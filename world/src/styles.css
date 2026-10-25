@@ -636,3 +636,10 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 /* A passing word for a key that found nothing to do; it fades on its own. */
 .app .play-hint { position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:33; padding:7px 14px; border-radius:4px; background:#101010d9; border:1px solid var(--line); color:var(--ink); font-size:.78rem; pointer-events:none; animation:hint-fade 1.6s ease forwards; }
 @keyframes hint-fade { 0% { opacity:0; transform:translate(-50%, 6px); } 12%, 75% { opacity:1; transform:translate(-50%, 0); } 100% { opacity:0; } }
+
+/* Live leaderboard (LiveLeaderboard.tsx) */
+.live-leaderboard h3 { margin:18px 0 6px; font-size:11px; }
+.leaderboard-table { width:100%; border-collapse:collapse; font-size:10px; font-variant-numeric:tabular-nums; }
+.leaderboard-table th { text-align:right; color:var(--muted); font-weight:500; padding:4px 0 4px 8px; border-bottom:1px solid var(--line); }
+.leaderboard-table td { text-align:right; padding:5px 0 5px 8px; border-bottom:1px solid var(--line); }
+.leaderboard-table th:first-child, .leaderboard-table td:first-child { text-align:left; padding-left:0; }
