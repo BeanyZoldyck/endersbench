@@ -30,7 +30,7 @@ We are also developing Ender, our own adapted model: LoRA fine-tuning of Qwen3.8
 
 - **The whole simulation is a SpacetimeDB module.** Movement, hunger, fires, wolves, weather, the plane, and the policy detectors run as reducers on a 20 Hz scheduled tick. Each action commits in the same transaction as its detector record, so every violation points at the exact action that caused it.
 - **The database calls the models.** A scheduled procedure uses `ctx.http.fetch` to send observations to Bitdeer, Anthropic, OpenAI, and our Runpod endpoints, then commits each answer as an action. A `beginRun` reducer starts a run with its roster, prompt, food level, and time scale; provider keys live in the database's environment. No harness process is involved.
-- **It scales on one machine.** Overnight we ran 126 runs in 9 worlds side by side on one laptop: 53,270 model calls made from inside the database. The game clock held 97% of its set speed with every world calling models at once, the same as our single-world runs.
+- **It scales on one machine.** Overnight we ran 126 runs in 9 worlds side by side on one machine: 53,270 model calls made from inside the database. The game clock held 97% of its set speed with every world calling models at once, the same as our single-world runs.
 - **The record lives in the database too.** Run history and a live cross-run leaderboard are tables and a view; Ledger Street's cases, verdicts, and every desk step are tables; the viewer, the replays, and the recorder are subscriptions.
 - **It's deployed on Maincloud.** The hosted database serves the public viewer, adding about 0.02 s per decision. Scheduled reducers and the experiment reset only accept the database's own identity, so visitors can watch and join without tampering.
 
