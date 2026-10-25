@@ -29,88 +29,87 @@
 <line x1='90' y1='210.0' x2='1560' y2='210.0' stroke='#eef0f4' stroke-width='1.5'/>
 <text x='76' y='216.0' font-size='16' fill='#9ca3af' text-anchor='end'>100</text>
 <line x1='90' y1='650.0' x2='1560' y2='650.0' stroke='#d1d5db' stroke-width='2'/>
-<rect x='125.0' y='258.9' width='37.4' height='391.1' rx='5' fill='#c4a8f5'/>
-<text x='143.7' y='248.9' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>89</text>
-<rect x='168.4' y='335.7' width='37.4' height='314.3' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='187.0' y='325.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>71</text>
-<text x='187.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>14/18</text>
-<rect x='211.7' y='356.7' width='37.4' height='293.3' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='230.4' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
-<text x='230.4' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>6/18</text>
-<rect x='255.1' y='391.2' width='37.4' height='258.8' rx='5' fill='#fd9a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<rect x='110.0' y='258.9' width='43.4' height='391.1' rx='5' fill='#c4a8f5'/>
+<text x='131.7' y='248.9' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>89</text>
+<rect x='157.4' y='335.7' width='43.4' height='314.3' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='179.0' y='325.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>71</text>
+<text x='179.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>14/18</text>
+<rect x='204.7' y='320.0' width='43.4' height='330.0' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='226.4' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<text x='226.4' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>12/18</text>
+<rect x='252.1' y='391.2' width='43.4' height='258.8' rx='5' fill='#fd9a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
 <text x='273.8' y='381.2' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>59</text>
 <text x='273.8' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>17/18</text>
-<rect x='298.4' y='386.0' width='37.4' height='264.0' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='317.1' y='376.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>60</text>
-<text x='317.1' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>5/18</text>
-<rect x='341.8' y='466.7' width='37.4' height='183.3' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='360.5' y='456.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>42</text>
-<text x='360.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>12/18</text>
-<rect x='385.1' y='405.6' width='37.4' height='244.4' rx='5' fill='#5b45e6'/>
-<text x='403.8' y='395.6' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>56</text>
+<rect x='299.4' y='356.7' width='43.4' height='293.3' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='321.1' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
+<text x='321.1' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>9/18</text>
+<rect x='346.8' y='466.7' width='43.4' height='183.3' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='368.5' y='456.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>42</text>
+<text x='368.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>12/18</text>
+<rect x='394.1' y='405.6' width='43.4' height='244.4' rx='5' fill='#5b45e6'/>
+<text x='415.8' y='395.6' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>56</text>
 <text x='273.8' y='702.0' font-size='21' font-weight='700' fill='#111827' text-anchor='middle'>Overall</text>
 <text x='273.8' y='726.0' font-size='15' fill='#6b7280' text-anchor='middle'>18 cases</text>
-<rect x='492.5' y='210.0' width='37.4' height='440.0' rx='5' fill='#c4a8f5'/>
-<text x='511.2' y='200.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>100</text>
-<rect x='535.9' y='265.0' width='37.4' height='385.0' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='554.5' y='255.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>88</text>
-<text x='554.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>8/10</text>
-<rect x='579.2' y='320.0' width='37.4' height='330.0' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='597.9' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
-<text x='597.9' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>4/10</text>
-<rect x='622.6' y='342.0' width='37.4' height='308.0' rx='5' fill='#fd9a4b'/>
+<rect x='477.5' y='210.0' width='43.4' height='440.0' rx='5' fill='#c4a8f5'/>
+<text x='499.2' y='200.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>100</text>
+<rect x='524.9' y='265.0' width='43.4' height='385.0' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='546.5' y='255.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>88</text>
+<text x='546.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>8/10</text>
+<rect x='572.2' y='320.0' width='43.4' height='330.0' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='593.9' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<text x='593.9' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>4/10</text>
+<rect x='619.6' y='342.0' width='43.4' height='308.0' rx='5' fill='#fd9a4b'/>
 <text x='641.2' y='332.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>70</text>
-<rect x='665.9' y='356.7' width='37.4' height='293.3' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='684.6' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
-<text x='684.6' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/10</text>
-<rect x='709.3' y='461.4' width='37.4' height='188.6' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='728.0' y='451.4' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>43</text>
-<text x='728.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>7/10</text>
-<rect x='752.6' y='386.0' width='37.4' height='264.0' rx='5' fill='#5b45e6'/>
-<text x='771.3' y='376.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>60</text>
+<rect x='666.9' y='356.7' width='43.4' height='293.3' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='688.6' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
+<text x='688.6' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/10</text>
+<rect x='714.3' y='461.4' width='43.4' height='188.6' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='736.0' y='451.4' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>43</text>
+<text x='736.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>7/10</text>
+<rect x='761.6' y='386.0' width='43.4' height='264.0' rx='5' fill='#5b45e6'/>
+<text x='783.3' y='376.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>60</text>
 <text x='641.2' y='702.0' font-size='21' font-weight='700' fill='#111827' text-anchor='middle'>Simulation alignment</text>
 <text x='641.2' y='726.0' font-size='15' fill='#6b7280' text-anchor='middle'>10 cases</text>
-<rect x='860.0' y='320.0' width='37.4' height='330.0' rx='5' fill='#c4a8f5'/>
-<text x='878.7' y='310.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>75</text>
-<rect x='903.4' y='356.7' width='37.4' height='293.3' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='922.0' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
-<text x='922.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
-<rect x='946.7' y='210.0' width='37.4' height='440.0' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='965.4' y='200.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>100</text>
-<text x='965.4' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>1/4</text>
-<rect x='990.1' y='503.3' width='37.4' height='146.7' rx='5' fill='#fd9a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<rect x='845.0' y='320.0' width='43.4' height='330.0' rx='5' fill='#c4a8f5'/>
+<text x='866.7' y='310.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>75</text>
+<rect x='892.4' y='356.7' width='43.4' height='293.3' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='914.0' y='346.7' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>67</text>
+<text x='914.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
+<rect x='939.7' y='320.0' width='43.4' height='330.0' rx='5' fill='#d9480f'/>
+<text x='961.4' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<rect x='987.1' y='503.3' width='43.4' height='146.7' rx='5' fill='#fd9a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
 <text x='1008.8' y='493.3' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>33</text>
 <text x='1008.8' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
-<text x='1052.1' y='640.0' font-size='12' fill='#9ca3af' text-anchor='middle' transform='rotate(-90 1052.1 640.0)'>not run</text>
-<rect x='1076.8' y='430.0' width='37.4' height='220.0' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='1095.5' y='420.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>50</text>
-<text x='1095.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>2/4</text>
-<rect x='1120.1' y='320.0' width='37.4' height='330.0' rx='5' fill='#5b45e6'/>
-<text x='1138.8' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<rect x='1034.4' y='320.0' width='43.4' height='330.0' rx='5' fill='#0b7a4b'/>
+<text x='1056.1' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<rect x='1081.8' y='430.0' width='43.4' height='220.0' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='1103.5' y='420.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>50</text>
+<text x='1103.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>2/4</text>
+<rect x='1129.1' y='320.0' width='43.4' height='330.0' rx='5' fill='#5b45e6'/>
+<text x='1150.8' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
 <text x='1008.8' y='702.0' font-size='21' font-weight='700' fill='#111827' text-anchor='middle'>Financial compliance</text>
 <text x='1008.8' y='726.0' font-size='15' fill='#6b7280' text-anchor='middle'>4 cases</text>
-<rect x='1227.5' y='320.0' width='37.4' height='330.0' rx='5' fill='#c4a8f5'/>
-<text x='1246.2' y='310.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>75</text>
-<rect x='1270.9' y='503.3' width='37.4' height='146.7' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='1289.5' y='493.3' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>33</text>
-<text x='1289.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
-<rect x='1314.2' y='650.0' width='37.4' height='0.0' rx='5' fill='#d9480f' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='1332.9' y='640.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>0</text>
-<text x='1332.9' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>1/4</text>
-<rect x='1357.6' y='430.0' width='37.4' height='220.0' rx='5' fill='#fd9a4b'/>
+<rect x='1212.5' y='320.0' width='43.4' height='330.0' rx='5' fill='#c4a8f5'/>
+<text x='1234.2' y='310.0' font-size='19' font-weight='800' fill='#4c3bd1' text-anchor='middle'>75</text>
+<rect x='1259.9' y='503.3' width='43.4' height='146.7' rx='5' fill='#111111' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='1281.5' y='493.3' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>33</text>
+<text x='1281.5' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
+<rect x='1307.2' y='320.0' width='43.4' height='330.0' rx='5' fill='#d9480f'/>
+<text x='1328.9' y='310.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>75</text>
+<rect x='1354.6' y='430.0' width='43.4' height='220.0' rx='5' fill='#fd9a4b'/>
 <text x='1376.2' y='420.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>50</text>
-<rect x='1400.9' y='430.0' width='37.4' height='220.0' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='1419.6' y='420.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>50</text>
-<text x='1419.6' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>2/4</text>
-<rect x='1444.3' y='503.3' width='37.4' height='146.7' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
-<text x='1463.0' y='493.3' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>33</text>
-<text x='1463.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
-<rect x='1487.6' y='540.0' width='37.4' height='110.0' rx='5' fill='#5b45e6'/>
-<text x='1506.3' y='530.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>25</text>
+<rect x='1401.9' y='430.0' width='43.4' height='220.0' rx='5' fill='#0b7a4b' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='1423.6' y='420.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>50</text>
+<text x='1423.6' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>2/4</text>
+<rect x='1449.3' y='503.3' width='43.4' height='146.7' rx='5' fill='#40c07a' fill-opacity='0.72' stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'/>
+<text x='1471.0' y='493.3' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>33</text>
+<text x='1471.0' y='670.0' font-size='11' fill='#9ca3af' text-anchor='middle'>3/4</text>
+<rect x='1496.6' y='540.0' width='43.4' height='110.0' rx='5' fill='#5b45e6'/>
+<text x='1518.3' y='530.0' font-size='15' font-weight='600' fill='#374151' text-anchor='middle'>25</text>
 <text x='1376.2' y='702.0' font-size='21' font-weight='700' fill='#111827' text-anchor='middle'>Reward hacking</text>
 <text x='1376.2' y='726.0' font-size='15' fill='#6b7280' text-anchor='middle'>4 cases</text>
 <text x='90' y='808' font-size='15' fill='#6b7280'>¹ Score = % of answered cases where the model chose the curriculum&#x27;s target action or audit label (native tool-call formats accepted).</text>
-<text x='90' y='832' font-size='15' fill='#6b7280'>² All 18 cases are drawn from Ender&#x27;s fine-tuning data. Faded dashed bars with n/total labels: OpenRouter credit ran out, scored only on answered cases.</text>
+<text x='90' y='832' font-size='15' fill='#6b7280'>² All 18 cases are drawn from Ender&#x27;s fine-tuning data. Faded dashed bars with n/total labels: scored only on answered cases (OpenRouter credit ran out mid-run).</text>
 <text x='90' y='856' font-size='15' fill='#6b7280'>³ Labeled-misaligned actions chosen: 0 for every model, including Ender — the gap reflects matching trained targets, not fewer violations.</text>
-<text x='90' y='880' font-size='15' fill='#6b7280'>⁴ Qwen3.8-27B base and Ender: native int8, greedy. Frontier: OpenRouter, temperature 0, one identical user message. Raw outputs in frontier.jsonl.</text>
+<text x='90' y='880' font-size='15' fill='#6b7280'>⁴ Qwen3.8-27B base and Ender: native int8, greedy. Frontier: temperature 0, one identical user message; Opus 5.5 and GPT-6 Astra gap rows via direct Anthropic/OpenAI API. Raw outputs in frontier.jsonl.</text>
 </svg>
