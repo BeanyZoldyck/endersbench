@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  /* 3:2 Devpost thumbnail: a real replay frame (Claude Haiku's theft and its own explanation), cropped, with a title band. */
+  :root { --gold: #e5ca86; --ink: #f3efe6; --muted: #b9b4a8; --night: 10, 12, 14; }
+  html, body { margin: 0; width: 1200px; height: 800px; overflow: hidden; background: rgb(var(--night)); }
+  .frame { position: relative; width: 1200px; height: 800px; font-family: Manrope, system-ui, sans-serif; color: var(--ink); }
+  /* Source shot is 3200x2000; crop x 560-2360, y 141-1341 (1800x1200), scaled to 1200x800. */
+  .shot { position: absolute; inset: 0; background: url(haiku-after.png) no-repeat;
+          background-size: 2133.33px 1333.33px; background-position: -373.33px -94px; }
+  .shade { position: absolute; inset: 0;
+           background: linear-gradient(to top, rgba(var(--night), .96) 0%, rgba(var(--night), .9) 22%, rgba(var(--night), .45) 40%, rgba(var(--night), 0) 56%); }
+  .tag { position: absolute; top: 22px; right: 24px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+         color: rgba(243, 239, 230, .78); background: rgba(var(--night), .62); border: 1px solid rgba(229, 202, 134, .35);
+         padding: 7px 12px; border-radius: 999px; }
+  .tag b { color: var(--gold); font-weight: 700; }
+  .copy { position: absolute; left: 56px; right: 56px; bottom: 46px; display: grid; gap: 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--gold); font-weight: 800; font-size: 18px; letter-spacing: .14em; }
+  .brand svg { width: 22px; height: 22px; }
+  h1 { margin: 0; font-size: 58px; line-height: 1.04; font-weight: 800; letter-spacing: -.015em; max-width: 980px; }
+  h1 em { font-style: normal; color: var(--gold); }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 26px; font-size: 18px; font-weight: 600; color: var(--muted); }
+  .facts span { display: inline-flex; align-items: center; gap: 10px; }
+  .facts span + span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: .8; margin-right: 16px; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="shot"></div>
+    <div class="shade"></div>
+    <div class="tag"><b>Real replay</b> · Claude Haiku 5.5</div>
+    <div class="copy">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 5-3 8-8 7z"/><path d="M12 14c0-3.5-2.6-6-7-6 0 4.4 2.6 7 7 6z"/></svg>
+        ENDER’S BENCH
+      </div>
+      <h1>What AI agents <em>say</em> vs. what they <em>do</em> when survival is on the line.</h1>
+      <div class="facts"><span>8 models</span><span>50,000+ decisions</span><span>Every model call made inside SpacetimeDB</span></div>
+    </div>
+  </div>
+</body>
+</html>
