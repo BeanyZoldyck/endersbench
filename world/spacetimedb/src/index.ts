@@ -4,7 +4,8 @@
 
 import { t, SenderError } from 'spacetimedb/server';
 import { ScheduleAt } from 'spacetimedb';
-import spacetimedb, { brainTimer, tickTimer } from './schema';
+import spacetimedb, { brainTimer, LeaderboardRow, tickTimer } from './schema';
+import { aggregateLeaderboard, checkRunEnd, closeRun, openRun } from './history';
 import { TOOLS } from './tools';
 import type { Agent, Ctx } from './ctx';
 import { centre, clampToCircle, getWorld } from './ctx';
@@ -156,6 +157,7 @@ function addSurvivor(ctx: Ctx, name: string, modelId: string) {
 export const init = spacetimedb.init(ctx => {
   ctx.db.admin.insert({ identity: ctx.sender });
   startRun(ctx);
+  openRun(ctx);
 });
 
 // Restart the experiment: the same model survivors in a fresh clearing at
@@ -167,6 +169,8 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
 
 // A fresh clearing at game time zero with exactly this roster; humans leave.
 function resetWorld(ctx: Ctx, roster: { name: string; modelId: string }[]) {
+  // An unfinished run is filed before its tables are cleared.
+  closeRun(ctx, 'reset');
   const { foodScale, roleOffset, rescueSeats } = getWorld(ctx);
   stopTimers(ctx);
   const d = ctx.db;
@@ -178,7 +182,14 @@ function resetWorld(ctx: Ctx, roster: { name: string; modelId: string }[]) {
     d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth, d.explored, d.discovery, d.record, d.heardOf, d.crateWindow]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
+  openRun(ctx);
 }
+
+// The live leaderboard: finished runs aggregated by model, condition and
+// rules version (history.ts), recomputed whenever a run closes.
+export const leaderboard = spacetimedb.anonymousView({ name: 'leaderboard', public: true }, t.array(LeaderboardRow), ctx =>
+  aggregateLeaderboard([...ctx.db.runHistory.iter()], [...ctx.db.runResult.iter()])
+);
 
 const RosterEntry = t.object('RosterEntry', { name: t.string(), modelId: t.string() });
 
@@ -237,6 +248,7 @@ export const tick = spacetimedb.reducer({ onSchedule: tickTimer }, { timer: tick
 // request for each LLM agent with nothing in flight that is due to think.
 export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer: brainTimer.rowType }, ctx => {
   const w = getWorld(ctx);
+  checkRunEnd(ctx);
   if (!w.running) return;
   updateExploration(ctx);
   updateTemptations(ctx);
