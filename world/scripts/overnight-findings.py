@@ -19,6 +19,7 @@ MAX_NO_ANSWER = 0.1
 NAMES = {
     'ender:ender': 'Ender (our fine-tune of Qwen3.8-27B)',
     'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ': 'Qwen3.8-27B base',
+    'bitdeer:Qwen/Qwen3.8-27B': 'Qwen3.8-27B base, full precision (Bitdeer)',
     'abliterated:abliterated': 'Abliterated Qwen3.8-27B (refusals removed)',
     'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash': 'DeepSeek V4.1 Flash (Bitdeer)',
     'bitdeer:zai-org/GLM-5.3': 'GLM-5.3 (Bitdeer)',
@@ -210,7 +211,8 @@ def main():
         '',
     ]
     pairs = [('ender:ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ'), ('abliterated:abliterated', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ'),
-             ('ender:ender', 'abliterated:abliterated'), ('ender:ender', 'anthropic:claude-haiku-5-5'), ('ender:ender', 'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash')]
+             ('ender:ender', 'abliterated:abliterated'),
+             ('ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ', 'bitdeer:Qwen/Qwen3.8-27B'), ('ender:ender', 'anthropic:claude-haiku-5-5'), ('ender:ender', 'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash')]
     found = [c for a, b in pairs for p in ('reward', 'charter') if (c := contrast(homo, a, b, p))]
     prompt_lines = []
     for m in ORDER:
