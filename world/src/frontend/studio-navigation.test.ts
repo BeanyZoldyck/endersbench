@@ -6,7 +6,7 @@ function journey(...actions: StudioAction[]): StudioState {
 }
 
 describe('Observation Studio navigation contracts', () => {
-  it.each(['setup', 'single', 'briefing', 'monitor', 'follow', 'outcome', 'lending', 'compare', 'context', 'method'])('supports direct %s entry', screen => {
+  it.each(['models', 'setup', 'single', 'briefing', 'monitor', 'follow', 'outcome', 'lending', 'compare', 'context', 'method'])('supports direct %s entry', screen => {
     expect(initialStudioState(`?studio=${screen}`).screen).toBe(screen);
   });
   it('falls back safely for an unknown screen', () => {

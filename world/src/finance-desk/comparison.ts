@@ -30,7 +30,7 @@ export function cohortKey(row: FinanceCase) {
 }
 const replicaKey = (row: FinanceCase) => `${row.scenarioId}|${row.variant}|replicas|${row.benchmarkVersion}`;
 export type ComparisonGroup = { key: string; row: FinanceCase; latest: bigint; models: Set<string>; samples: number[]; replicas: boolean };
-export function cohorts(rows: readonly FinanceCase[]) {
+export function cohorts(rows: readonly FinanceCase[], lineup = false) {
   const groups = new Map<string, ComparisonGroup>();
   const families = new Map<string, FinanceCase[]>();
   for (const row of rows) {
@@ -45,10 +45,11 @@ export function cohorts(rows: readonly FinanceCase[]) {
   // comparisons still match the exact sample, case, policy and version.
   for (const [key, family] of families) {
     const models = new Set(family.map(row => row.modelId)), samples = [...new Set(family.map(row => row.sample))].sort((a, b) => a - b);
-    if (models.size !== 1 || samples.length < 2) continue;
+    if (!lineup && (models.size !== 1 || samples.length < 2)) continue;
     const row = family.reduce((latest, next) => next.queuedAt.microsSinceUnixEpoch > latest.queuedAt.microsSinceUnixEpoch ? next : latest);
     for (const item of family) groups.delete(cohortKey(item));
-    groups.set(key, { key, row, latest: row.queuedAt.microsSinceUnixEpoch, models, samples, replicas: true });
+    const groupKey = lineup ? key.replace('|replicas|', '|lineup|') : key;
+    groups.set(groupKey, { key: groupKey, row, latest: row.queuedAt.microsSinceUnixEpoch, models, samples, replicas: true });
   }
   return [...groups.values()].sort((a, b) => a.latest > b.latest ? -1 : a.latest < b.latest ? 1 : 0);
 }
@@ -62,10 +63,11 @@ export type Office = {
 };
 export function officesFor(key: string | undefined, cases: readonly FinanceCase[], steps: readonly FinanceStep[], verdicts: readonly FinanceVerdict[]): Office[] {
   const latest = new Map<string, FinanceCase>();
-  const replicas = key?.split('|')[2] === 'replicas';
+  const lineup = key?.split('|')[2] === 'lineup';
+  const replicas = lineup || key?.split('|')[2] === 'replicas';
   for (const row of cases) {
-    if ((replicas ? replicaKey(row) : cohortKey(row)) !== key) continue;
-    const identity = replicas ? `${row.modelId}|${row.sample}` : row.modelId;
+    if ((lineup ? replicaKey(row).replace('|replicas|', '|lineup|') : replicas ? replicaKey(row) : cohortKey(row)) !== key) continue;
+    const identity = lineup ? String(row.id) : replicas ? `${row.modelId}|${row.sample}` : row.modelId;
     if (!latest.has(identity) || latest.get(identity)!.queuedAt.microsSinceUnixEpoch < row.queuedAt.microsSinceUnixEpoch) latest.set(identity, row);
   }
   const selected = [...latest.values()].sort((a, b) => replicas ? a.sample - b.sample || a.modelId.localeCompare(b.modelId) : a.modelId.localeCompare(b.modelId)).slice(0, 4);

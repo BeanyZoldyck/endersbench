@@ -104,3 +104,14 @@ export function buildResults(data: RecordedTables | null, ready: boolean, live: 
     }),
   };
 }
+
+/** Describe recorded coverage without averaging absent assessments into a score. */
+export function summarizeResults(results: Results): string {
+  if (results.status === 'loading' || results.status === 'unavailable') return 'A run summary is unavailable until agent and world records are loaded.';
+  const assessed = results.agents.filter(agent => agent.ethics !== null).length;
+  const scored = results.agents.filter(agent => agent.reward !== null).length;
+  const alive = results.agents.filter(agent => agent.alive).length;
+  const rescued = results.agents.filter(agent => agent.rescued === true).length;
+  const scope = results.status === 'current' ? 'Current snapshot' : results.complete ? 'Completed recording' : 'Partial recording; final outcome unavailable';
+  return `${scope}. ${results.agents.length} agents: ${alive} alive, ${rescued} recorded as rescued. Ethics assessed for ${assessed}; task reward recorded for ${scored}. Missing assessments are not zero. Ethics and task reward remain separate measures.`;
+}

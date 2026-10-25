@@ -8,7 +8,7 @@
 // harness/main.ts hands desk requests here.
 import Anthropic from '@anthropic-ai/sdk';
 import { FINANCE_BENCHMARK_VERSION } from '../../spacetimedb/src/finance/scenarios';
-import { codexBrain } from '../brains';
+import { codexBrain, type JsonSchema } from '../brains';
 import { BASELINES, REFERENCE_AGENTS } from '../../spacetimedb/src/finance/brains';
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import type { CrsCall, Observation, Seat } from '../../spacetimedb/src/finance/types';
@@ -48,7 +48,7 @@ const SCRIPTS = Object.fromEntries([...REFERENCE_AGENTS, ...BASELINES].map(b => 
 export function codexDeskTurn(opts: Parameters<typeof codexBrain>[0]): TakeTurn {
   const brain = codexBrain(opts);
   return async (system, tools, observation) => {
-    const decision = await brain.decide({ agentName: 'the finance desk agent', system, tools, observation: JSON.parse(observation) });
+    const decision = await brain.decide({ agentName: 'the finance desk agent', system, tools: tools.map(tool => ({ ...tool, parameters: tool.parameters as JsonSchema })), observation: JSON.parse(observation) });
     return {
       call: decision.action,
       notes: decision.thought ? [decision.thought] : [],

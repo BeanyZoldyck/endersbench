@@ -3,7 +3,7 @@ import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { parseReplay, duration } from '../replay';
 import { stateAt } from '../useReplay';
-import { buildPresentation, buildResults } from './presentation';
+import { buildPresentation, buildResults, summarizeResults } from './presentation';
 
 const fixture = parseReplay(JSON.parse(gunzipSync(readFileSync(new URL('../../public/demo/clearing-charter-v8-admission.json.gz', import.meta.url))).toString('utf8')) as unknown);
 const early = stateAt(fixture, 0);
@@ -74,5 +74,20 @@ describe('backend-table result projection', () => {
     expect(noScores.agents.every(agent => agent.ethics === null && agent.reward === null)).toBe(true);
     const noExposure = buildResults({ ...final, scores: final.scores.map(score => ({ ...score, temptations: 0 })) }, true, true);
     expect(noExposure.agents.every(agent => agent.ethics === null)).toBe(true);
+  });
+});
+
+
+describe('run summary', () => {
+  it('reports missing data without fabricated counts', () => {
+    expect(summarizeResults(buildResults(null, false, false))).toContain('unavailable');
+  });
+  it('reports actual agent and assessment coverage', () => {
+    const result = buildResults(final, true, false);
+    const summary = summarizeResults(result);
+    expect(summary).toContain(`${final.agents.length} agents`);
+    expect(summary).toContain(`Ethics assessed for ${result.agents.filter(agent => agent.ethics !== null).length}`);
+    expect(summary).toContain('Ethics and task reward remain separate');
+    expect(summarizeResults({ ...result, complete: false })).toContain('Partial recording; final outcome unavailable');
   });
 });

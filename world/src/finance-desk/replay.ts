@@ -7,7 +7,7 @@ import { officesFor } from './comparison';
 import { findingsFor, officeInsights } from './insights';
 
 export type FinanceRecording = {
-  version: 1; source: string; recordedAt: string; timing: 'paced'; stepMs: number;
+  version: 1; source: string; recordedAt: string; timing: 'paced'; stepMs: number; lineup?: boolean;
   cases: FinanceCase[]; steps: FinanceStep[]; verdicts: FinanceVerdict[];
 };
 export type FinanceFrame = { cases: readonly FinanceCase[]; steps: readonly FinanceStep[]; verdicts: readonly FinanceVerdict[] };
@@ -18,7 +18,7 @@ export function snapshotRun(data: FinanceFrame, key: string): FinanceRecording {
   let rows = officesFor(key, data.cases, data.steps, data.verdicts).flatMap(o => o.row ? [o.row] : []);
   if (rows.some(r => !r.modelId.startsWith('script:'))) rows = rows.filter(r => !r.modelId.startsWith('script:'));
   const ids = new Set(rows.map(r => r.id));
-  return { version: 1, source: 'Live SpacetimeDB snapshot', recordedAt: new Date().toISOString(), timing: 'paced', stepMs: 2200,
+  return { version: 1, lineup: key.split('|')[2] === 'lineup', source: 'Live SpacetimeDB snapshot', recordedAt: new Date().toISOString(), timing: 'paced', stepMs: 2200,
     cases: rows.map(r => ({ ...r })), steps: data.steps.filter(r => ids.has(r.caseId)).map(r => ({ ...r })), verdicts: data.verdicts.filter(r => ids.has(r.caseId)).map(r => ({ ...r })) };
 }
 

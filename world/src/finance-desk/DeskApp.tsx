@@ -19,24 +19,24 @@ export const REPLAYS = [
   { url: '/replays/finance-reference.json', label: 'Scripted references · v5' },
 ];
 
-export default function DeskApp() {
+export default function DeskApp({ lineup = false }: { lineup?: boolean }) {
   const { isActive } = useSpacetimeDB();
   const [cases, casesReady] = useTable(tables.financeCase);
   const [steps, stepsReady] = useTable(tables.financeStep);
   const [verdicts, verdictsReady] = useTable(tables.financeVerdict);
   const [recording, setRecording] = useState<FinanceRecording>();
   const [returnTo, setReturnTo] = useState('');
-  if (recording) return <ReplayDesk snapshot={recording} onExit={() => setRecording(undefined)} />;
-  return <DeskView cases={cases} steps={steps} verdicts={verdicts} isActive={isActive} ready={casesReady && stepsReady && verdictsReady} initialComparisonKey={returnTo} onReplay={snapshot => { setReturnTo(cohorts(snapshot.cases)[0]?.key ?? ''); setRecording(snapshot); }} />;
+  if (recording) return <ReplayDesk lineup={lineup} snapshot={recording} onExit={() => setRecording(undefined)} />;
+  return <DeskView lineup={lineup} cases={cases} steps={steps} verdicts={verdicts} isActive={isActive} ready={casesReady && stepsReady && verdictsReady} initialComparisonKey={returnTo} onReplay={snapshot => { setReturnTo(cohorts(snapshot.cases, lineup)[0]?.key ?? ''); setRecording(snapshot); }} />;
 }
-export function DeskView({ cases, steps, verdicts, isActive, ready, replay, onReplay, initialComparisonKey }: FinanceFrame & { isActive: boolean; ready: boolean; initialComparisonKey?: string; onReplay?: (recording: FinanceRecording) => void; replay?: { controls: ReactNode; error: string; comparisonKey?: string; url?: string; onExit?: () => void; pause: () => void; onComparisonChange: (key: string) => void } }) {
+export function DeskView({ lineup = false, cases, steps, verdicts, isActive, ready, replay, onReplay, initialComparisonKey }: FinanceFrame & { lineup?: boolean; isActive: boolean; ready: boolean; initialComparisonKey?: string; onReplay?: (recording: FinanceRecording) => void; replay?: { controls: ReactNode; error: string; comparisonKey?: string; url?: string; onExit?: () => void; pause: () => void; onComparisonChange: (key: string) => void } }) {
   const [selection, setSelection] = useState(initialComparisonKey ?? '');
   const [selectedOffice, setSelectedOffice] = useState(0);
   const [ledgerOpen, setLedgerOpen] = useState(false);
   const [mode, setMode] = useState<'case' | 'reports' | 'benchmark'>('case');
   const [viewReset, setViewReset] = useState(0);
   const inspectOffice = (index: number) => { setSelectedOffice(index); setLedgerOpen(true); replay?.pause(); };
-  const groups = useMemo(() => cohorts(cases), [cases]);
+  const groups = useMemo(() => cohorts(cases, lineup), [cases, lineup]);
   const group = groups.find(g => g.key === (replay?.comparisonKey ?? selection)) ?? groups.find(g => g.row.benchmarkVersion === currentVersion && g.row.variant === 'house-rules') ?? groups.find(g => g.row.benchmarkVersion === currentVersion) ?? groups[0];
   const offices = useMemo(() => officesFor(group?.key, cases, steps, verdicts), [group?.key, cases, steps, verdicts]);
   const scenario = group && scenarioFor(group.row);

@@ -346,7 +346,7 @@ const runCodexCli: CodexRun = async ({ instructions, prompt, model, codexHome, s
       ...servers.flatMap(name => ['-c', `mcp_servers.${/^[A-Za-z0-9_-]+$/.test(name) ? name : JSON.stringify(name)}.enabled=false`]),
       '--output-schema', schemaFile, '-o', out, '-'];
     await new Promise<void>((resolve, reject) => {
-      const child = spawn('codex', args, { env: codexHome ? { ...process.env, CODEX_HOME: codexHome } : process.env, stdio: ['pipe', 'ignore', 'pipe'] });
+      const child = spawn(process.env.CODEX_BIN ?? 'codex', args, { env: codexHome ? { ...process.env, CODEX_HOME: codexHome } : process.env, stdio: ['pipe', 'ignore', 'pipe'] });
       let stderr = '';
       child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8000); });
       const timer = setTimeout(() => child.kill('SIGTERM'), CODEX_TIMEOUT_MS);

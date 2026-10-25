@@ -6,7 +6,7 @@ import { financeDuration, financeFrameAt, financeMoments, nextReplayMoment, pars
 import { Scrubber, groupMoments } from './Scrubber';
 
 const SPEEDS = [.5, 1, 2, 4];
-export default function ReplayDesk({ url, snapshot, onExit }: { url?: string; snapshot?: FinanceRecording; onExit?: () => void }) {
+export default function ReplayDesk({ url, snapshot, onExit, lineup = false }: { lineup?: boolean; url?: string; snapshot?: FinanceRecording; onExit?: () => void }) {
   const [recording, setRecording] = useState<FinanceRecording | undefined>(snapshot);
   const [error, setError] = useState('');
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(true), [speed, setSpeed] = useState(1);
@@ -26,7 +26,7 @@ export default function ReplayDesk({ url, snapshot, onExit }: { url?: string; sn
       .catch(err => { if (!abort.signal.aborted) setError(String(err.message ?? err)); });
     return () => abort.abort();
   }, [url, snapshot, seek]);
-  const groups = useMemo(() => recording ? cohorts(recording.cases) : [], [recording]);
+  const groups = useMemo(() => recording ? cohorts(recording.cases, lineup || recording.lineup === true) : [], [recording, lineup]);
   const comparisonKey = groups.find(g => g.key === selection)?.key ?? groups.find(g => g.row.benchmarkVersion === currentVersion && g.row.variant === 'house-rules')?.key ?? groups.find(g => g.models.size > 1)?.key ?? groups[0]?.key;
   const moments = useMemo(() => recording && comparisonKey ? financeMoments(recording, comparisonKey) : [], [recording, comparisonKey]);
   const marks = useMemo(() => groupMoments(moments), [moments]);
@@ -77,5 +77,5 @@ export default function ReplayDesk({ url, snapshot, onExit }: { url?: string; sn
     : !recording ? <div className="scrubber scrubber-state" role="status">Loading the recording…</div>
     : <Scrubber time={time} duration={duration} groups={marks} playing={playing} speed={speed} loop={loop} stopAtFindings={pauseOnViolation}
         onSeek={jump} onPlay={toggle} onSpeed={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])} onLoop={() => setLoop(!loop)} onStopAtFindings={() => setPauseOnViolation(!pauseOnViolation)} />;
-  return <DeskView {...data} isActive={false} ready={!!recording} replay={{ controls, error, comparisonKey, url, onExit, pause: () => setPlaying(false), onComparisonChange: key => { setSelection(key); restart(); } }} />;
+  return <DeskView lineup={lineup || recording?.lineup === true} {...data} isActive={false} ready={!!recording} replay={{ controls, error, comparisonKey, url, onExit, pause: () => setPlaying(false), onComparisonChange: key => { setSelection(key); restart(); } }} />;
 }

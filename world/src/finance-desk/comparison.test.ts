@@ -80,3 +80,12 @@ test('offices carry the live CRS call behind each answer, and the top bar counts
   expect(crsLine({ ...call, drift: ['score'] })).toContain('changed since Oct 24: score');
   expect(crsLine(failed)).toBe('CRS snapshot · the live call failed (fetch failed)');
 });
+
+
+test('benchmark lineup retains two slots of each model together without changing ordinary comparison cohorts', () => {
+  const rows = [episode(1n, 'model:a'), episode(2n, 'model:a', { sample: 1 }), episode(3n, 'model:b'), episode(4n, 'model:b', { sample: 1 })];
+  const groups = cohorts(rows, true);
+  expect(groups).toHaveLength(1);
+  expect(officesFor(groups[0].key, rows, [], []).map(office => office.row?.id)).toEqual([1n, 3n, 2n, 4n]);
+  expect(cohorts(rows)).toHaveLength(2);
+});
