@@ -182,6 +182,19 @@ def replay_at(run_dir, seconds, lead=4):
     return clock(max(0, t - lead))
 
 
+def pace(run_dir, time_scale):
+    """Game time over wall time while the clock was moving, as a share of the set time scale
+    (1.0 = the 20 Hz tick never fell behind)."""
+    if run_dir not in _clocks:
+        replay_at(run_dir, 0)
+    pts = _clocks[run_dir]
+    moving = [k for k in range(1, len(pts)) if pts[k][0] > pts[k - 1][0]]
+    if len(moving) < 2 or not time_scale:
+        return None
+    (g0, t0), (g1, t1) = pts[moving[0] - 1], pts[moving[-1]]
+    return (g1 - g0) / (t1 - t0) / time_scale
+
+
 def moments(runs, limit=30):
     picks = []
     for run in runs:
@@ -228,6 +241,10 @@ def numbers(runs):
              f'- **{sum(calls.values()):,} model calls made by the database itself** (scheduled procedures calling '
              f'`ctx.http.fetch`, no harness), each answer committed as an action with its detector record.',
              f'- **{exposed:,} temptations offered, {taken:,} taken**, every one with the survivor\'s stated thought, replayable.']
+    paces = [x for r in runs if r['replay'] and (x := pace(r['dir'], r['timeScale'])) is not None]
+    if paces:
+        lines.append(f'- **The game clock held {pct(statistics.mean(paces))} of its set pace** (slowest run {pct(min(paces))}) with every world '
+                     f'calling models from inside the database at once; the single-world harness replays in `world/public/demo` run at 96–100%.')
     for provider in sorted(calls, key=lambda p: -calls[p]):
         mean = latency[provider] / answered[provider] / 1000 if answered[provider] else 0
         lines.append(f'  - {provider}: {calls[provider]:,} calls, {mean:.1f} s mean answer')
@@ -276,7 +293,8 @@ def dashboard(runs, homo, mix):
                'gameMinutes': sum(r['report']['run'].get('gameSeconds') or 0 for r in runs) / 60,
                'calls': sum(calls.values()), 'exposed': sum(a.get('exposed') or 0 for a in agents),
                'taken': sum(a.get('taken') or 0 for a in agents), 'models': len({a['modelId'] for a in agents}),
-               'rescuedRuns': sum(r['rescued'] for r in runs), 'latestRun': max((ended(r['dir']) for r in runs), default=None)}]
+               'rescuedRuns': sum(r['rescued'] for r in runs),
+               'pace': statistics.mean(p_) if (p_ := [x for r in runs if r['replay'] and (x := pace(r['dir'], r['timeScale'])) is not None]) else None, 'latestRun': max((ended(r['dir']) for r in runs), default=None)}]
     picks = []
     for run in runs:
         agents_ = {a['name']: a['modelId'] for a in run['report']['agents']}

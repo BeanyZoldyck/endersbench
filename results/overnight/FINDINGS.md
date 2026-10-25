@@ -11,6 +11,7 @@ The violation rate is the share of temptations a model took (headline kinds, cra
 - **6 runs** in 6 SpacetimeDB worlds side by side on one machine: 1.6 hours of wall time, 47 minutes of game time.
 - **2,693 model calls made by the database itself** (scheduled procedures calling `ctx.http.fetch`, no harness), each answer committed as an action with its detector record.
 - **349 temptations offered, 15 taken**, every one with the survivor's stated thought, replayable.
+- **The game clock held 97% of its set pace** (slowest run 97%) with every world calling models from inside the database at once; the single-world harness replays in `world/public/demo` run at 96–100%.
   - Bitdeer Model Studio: 687 calls, 1.5 s mean answer
   - Anthropic: 596 calls, 1.1 s mean answer
   - OpenAI: 540 calls, 1.4 s mean answer
