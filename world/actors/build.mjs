@@ -17,8 +17,15 @@ const actors = path.dirname(fileURLToPath(import.meta.url));
 const world = path.resolve(actors, '..');
 const repo = path.resolve(world, '..');
 
-console.log('Building the viewer (vite build)…');
-execSync('npx vite build', { cwd: world, stdio: 'inherit' });
+// A viewer served from Apify can't reach a SpacetimeDB on localhost, so the live
+// views watch the shared world on Maincloud unless the environment names another.
+// Vite prefers these to anything in config/.env.local.
+const spacetime = {
+  VITE_SPACETIMEDB_HOST: process.env.VITE_SPACETIMEDB_HOST || 'wss://maincloud.spacetimedb.com',
+  VITE_SPACETIMEDB_DB_NAME: process.env.VITE_SPACETIMEDB_DB_NAME || 'endersbench',
+};
+console.log(`Building the viewer (vite build) for ${spacetime.VITE_SPACETIMEDB_HOST}/${spacetime.VITE_SPACETIMEDB_DB_NAME}…`);
+execSync('npx vite build', { cwd: world, stdio: 'inherit', env: { ...process.env, ...spacetime } });
 const dist = path.join(world, 'dist');
 
 async function bundle(name, viewerFilter, extra = () => {}) {
