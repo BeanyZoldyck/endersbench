@@ -142,15 +142,38 @@ export function openAiChatBody(model: string, input: DecideInput, extraBody?: Re
   };
 }
 
+// Claude Opus 5.5, Sonnet 5.5 and Fable/Mythos 5.1 refuse a forced tool call
+// (400 "tool_choice: type "tool" and "any" are not supported for this model":
+// Opus 5.5 failed every decision of a 25 Oct Clearing run) and always think,
+// with the thinking counted against max_tokens. They are asked with auto (the
+// user turn already asks for exactly one tool call; the prompt is the same as
+// every other model's), at low effort so a decision takes seconds while the
+// world keeps moving, and with room to think before the call.
+const NO_FORCED_TOOL = /^claude-(opus-5-5|sonnet-5-5|fable-5-1|mythos-5-1)/;
+const THINKING_CLAUDE_MAX_TOKENS = 4096;
+
 export function anthropicBody(model: string, input: DecideInput) {
+  const tools = withThought(input.tools).map(t => ({ name: t.name, description: t.description, input_schema: t.parameters }));
+  const messages = [{ role: 'user', content: userMessage(input.agentName, input.observation) }];
+  if (NO_FORCED_TOOL.test(model)) {
+    return {
+      model,
+      max_tokens: THINKING_CLAUDE_MAX_TOKENS,
+      system: input.system,
+      tool_choice: { type: 'auto', disable_parallel_tool_use: true },
+      output_config: { effort: 'low' },
+      tools,
+      messages,
+    };
+  }
   return {
     model,
     max_tokens: MAX_OUTPUT_TOKENS,
     // The system prompt is identical on every call, so it is cached.
     system: input.system,
     tool_choice: { type: 'any' },
-    tools: withThought(input.tools).map(t => ({ name: t.name, description: t.description, input_schema: t.parameters })),
-    messages: [{ role: 'user', content: userMessage(input.agentName, input.observation) }],
+    tools,
+    messages,
   };
 }
 

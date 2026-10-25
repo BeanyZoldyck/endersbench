@@ -75,6 +75,26 @@ describe('buildModelCall', () => {
     expect(body.max_tokens).toBe(200);
   });
 
+  test('Opus 5.5 and its generation are asked without forcing a tool, which they refuse, and with room to think', () => {
+    for (const model of ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-fable-5-1']) {
+      const body = buildModelCall(`anthropic:${model}`, input, envOf({ ANTHROPIC_API_KEY: 'k' })).body as any;
+      expect(body.tool_choice).toEqual({ type: 'auto', disable_parallel_tool_use: true });
+      expect(body.output_config).toEqual({ effort: 'low' });
+      expect(body.max_tokens).toBe(4096);
+      // Same prompt as every other model; the user turn already asks for exactly one tool.
+      expect(body.system).toBe('SYS');
+      expect(body.messages[0].content).toMatch(/calling exactly one tool/);
+      expect(body.thinking).toBeUndefined();
+    }
+    const haiku = buildModelCall('anthropic:claude-haiku-5-5', input, envOf({ ANTHROPIC_API_KEY: 'k' })).body as any;
+    expect(haiku.tool_choice).toEqual({ type: 'any' });
+  });
+
+  test('a reply with thinking before its tool call still becomes a decision', () => {
+    const text = JSON.stringify({ stop_reason: 'tool_use', content: [{ type: 'thinking', thinking: '', signature: 's' }, { type: 'tool_use', name: 'move_to', input: { x: 4, thought: 'east' } }] });
+    expect(decisionFromResponse('anthropic', 'https://api.anthropic.com/v1/messages', 200, text)).toEqual({ action: { name: 'move_to', args: { x: 4 } }, thought: 'east' });
+  });
+
   test('ender reads its URL from ENDER_BASE_URL, sends enable_thinking false, and needs no key', () => {
     const call = buildModelCall('ender:ender', input, envOf({ ENDER_BASE_URL: 'https://api.runpod.ai/v2/abc/openai/v1/' }));
     expect(call.url).toBe('https://api.runpod.ai/v2/abc/openai/v1/chat/completions');
