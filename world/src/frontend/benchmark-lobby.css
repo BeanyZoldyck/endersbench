@@ -1,7 +1,8 @@
 .studio .benchmark-lobby .setup-grid { grid-template-columns: minmax(340px, 1.1fr) minmax(0, 1fr); }
 .studio .lineup-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .studio .lineup-heading strong { color: var(--gold); font-size: .875rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.studio .lineup-models { margin-bottom: 16px; }
+.studio .lineup-models { margin-bottom: 16px; max-height: clamp(220px, 40dvh, 380px); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--gold) var(--surface); }
+.studio .lineup-models:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .studio .lineup-model { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 14px 12px; border-bottom: 1px solid var(--line); }
 .studio .lineup-model.selected { background: var(--surface); }
 .studio .lineup-model .model-buddy { width: 40px; height: 40px; min-width: 40px; }
@@ -34,3 +35,17 @@
 .studio .lobby-scenario-art { margin: 0 0 20px; }
 .studio .lobby-scenario-art img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: contain; border-radius: 6px; }
 .studio .lobby-scenario-art figcaption { margin-top: 8px; color: var(--muted); font-size: .75rem; }
+
+@media (min-width: 801px) {
+  .studio .benchmark-lobby { padding-top: 20px; padding-bottom: 20px; }
+  .studio .benchmark-lobby .page-head { margin-bottom: 20px; }
+  .studio .benchmark-lobby .setup-grid h2 { margin: 0 0 10px; }
+  .studio .benchmark-lobby .setup-grid > section > p, .studio .lobby-scenario-preview > p { margin-top: 8px; margin-bottom: 8px; }
+  .studio .lineup-models { max-height: clamp(180px, calc(100dvh - 450px), 380px); }
+  .studio .lobby-scenario-preview { margin-top: 12px; }
+  .studio .lobby-scenario-art { margin-bottom: 10px; }
+  .studio .lobby-scenario-art img { max-height: clamp(80px, 14dvh, 150px); }
+  .studio .benchmark-lobby .benchmark-start { margin-top: 16px; }
+}
+
+@media (min-width: 801px) { .studio .lobby-scenario-preview h3 { margin: 8px 0; } }

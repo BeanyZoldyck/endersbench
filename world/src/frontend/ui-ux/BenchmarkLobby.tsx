@@ -34,7 +34,7 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, activ
       <section aria-labelledby="lineup-heading">
         <div className="lineup-heading"><h2 id="lineup-heading">Your lineup</h2><strong role="status" aria-live="polite" aria-atomic="true">{total}/4 selected</strong></div>
         <p className="small muted" id="lineup-help">Four agents maximum across all models. Remove an agent to make room for another model.</p>
-        <div className="lineup-models" aria-describedby="lineup-help">{BENCHMARK_MODELS.map(model => {
+        <div className="lineup-models" role="region" aria-label="Select agents" tabIndex={0} aria-describedby="lineup-help">{BENCHMARK_MODELS.map(model => {
           const connection = config?.models.find(option => option.id === model);
           const count = state.draftRoster[model] ?? 0;
           return <div key={model} className={`lineup-model ${count > 0 ? 'selected' : ''}`}>

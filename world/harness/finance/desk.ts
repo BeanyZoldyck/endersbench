@@ -23,7 +23,7 @@ export const DESK_TIMEOUT_MS = 270_000;
 // once the bindings include the desk's tables.
 export interface DeskConnection {
   db: {
-    meta: { key: { find(key: string): { value: string } | undefined } };
+    meta: { key: { find(key: string): { value: string } | null | undefined } };
     financeCase: { iter(): Iterable<{ pendingRequestId: bigint; status: string; variant: string; benchmarkVersion?: number }> };
   };
   reducers: {
