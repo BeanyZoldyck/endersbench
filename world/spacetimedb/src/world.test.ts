@@ -14,6 +14,7 @@ import { reachFor } from './actions';
 import { hitWolf } from './threats';
 import { TOOLS } from './tools';
 import { settleThought } from './decisions';
+import { systemPrompt } from './brain/prompt';
 
 const {
   init,
@@ -32,6 +33,7 @@ const {
   resetExperiment,
   setRunInfo,
   configureScenario,
+  beginRun,
 } = moduleExports;
 
 // Game times on the default day: the run starts mid-morning, night is 90-162 s.
@@ -4409,5 +4411,44 @@ describe('database brains', () => {
     });
     expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('failed');
     expect(t.db.modelHealth.modelId.find('bitdeer:m')!.lastError).toBe('bitdeer models need BITDEER_API_KEY');
+  });
+});
+
+describe('beginRun', () => {
+  const roster = [{ name: 'Ivy', modelId: 'bitdeer:m' }, { name: 'Rook', modelId: 'bitdeer:m' }];
+  const args = { roster, promptVariant: 'reward', foodScale: 1, roleOffset: 0, rescueSeats: 0, timeScale: 0.5 };
+
+  test('beginRun replaces the roster and starts a database run at time zero', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    spawn(t, 'Bo');
+    t.withReducerTx(stranger, ctx => joinAsHuman(ctx, { name: 'Mason' }));
+    run(t, 2000);
+    t.withReducerTx(publisher, ctx => beginRun(ctx, args));
+    expect([...t.db.agent.iter()].map((a: any) => `${a.kind}:${a.name}:${a.modelId}`).sort()).toEqual(['llm:Ivy:bitdeer:m', 'llm:Rook:bitdeer:m']);
+    const w = t.db.world.id.find(0)!;
+    expect(w.gameTimeMs).toBe(0);
+    expect(w.timeScale).toBe(0.5);
+    expect(w.running).toBe(true);
+    const info = JSON.parse(t.db.meta.key.find('run')!.value);
+    expect(info.brains).toBe('database');
+    expect(info.promptVariant).toBe('reward');
+    expect(info.systemPrompt).toBe(systemPrompt('reward'));
+    expect(info.roster).toEqual(roster);
+  });
+
+  test('beginRun refuses harness-only models', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(publisher, ctx => beginRun(ctx, { ...args, roster: [{ name: 'Ivy', modelId: 'codex:gpt-6-sol' }] }))).toThrow(/codex:gpt-6-sol/);
+  });
+
+  test('beginRun refuses an unknown prompt variant', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(publisher, ctx => beginRun(ctx, { ...args, promptVariant: 'nope' }))).toThrow(/unknown prompt variant/);
+  });
+
+  test('beginRun refuses a stranger', () => {
+    const t = freshWorld();
+    expect(() => t.withReducerTx(stranger, ctx => beginRun(ctx, args))).toThrow(/not authorised/);
   });
 });

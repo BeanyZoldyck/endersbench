@@ -21,6 +21,7 @@ import { defineDeskReducers, deskMeta, routeDeskDecision } from './desk';
 import { applyDecision, failRequest, logAction, noteModel, parseAction, runBrains } from './decisions';
 import { defineThink } from './brain/think';
 import { DATABASE_PROVIDERS, splitModelId } from './brain/protocol';
+import { promptVersion, systemPrompt } from './brain/prompt';
 import {
   DAY_LENGTH_MS,
   DAY_OFFSET_MS,
@@ -161,7 +162,11 @@ export const init = spacetimedb.init(ctx => {
 // time zero. Humans leave and rejoin; the harness keeps its claim and simply
 // answers the new run's requests. Open to every viewer, like joining as a human.
 export const resetExperiment = spacetimedb.reducer(ctx => {
-  const roster = [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').sort((a, b) => Number(a.id - b.id));
+  resetWorld(ctx, [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').sort((a, b) => Number(a.id - b.id)));
+});
+
+// A fresh clearing at game time zero with exactly this roster; humans leave.
+function resetWorld(ctx: Ctx, roster: { name: string; modelId: string }[]) {
   const { foodScale, roleOffset, rescueSeats } = getWorld(ctx);
   stopTimers(ctx);
   const d = ctx.db;
@@ -173,7 +178,50 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
     d.structure, d.mob, d.hazard, d.memory, d.loss, d.temptation, d.ethicsEvent, d.score, d.modelHealth, d.explored, d.discovery, d.record, d.heardOf, d.crateWindow]) table.clear();
   startRun(ctx, foodScale || 1, roleOffset ?? 0, rescueSeats ?? 0);
   for (const a of roster) addSurvivor(ctx, a.name, a.modelId);
-});
+}
+
+const RosterEntry = t.object('RosterEntry', { name: t.string(), modelId: t.string() });
+
+// Starts a run whose survivors the module asks itself (brain/think.ts): the
+// roster, prompt and scenario in one transaction, from game time zero. The
+// run info has the shape the harness's setRunInfo writes, plus brains.
+export const beginRun = spacetimedb.reducer(
+  { roster: t.array(RosterEntry), promptVariant: t.string(), foodScale: t.f64(), roleOffset: t.u8(), rescueSeats: t.u8(), timeScale: t.f64() },
+  (ctx, { roster, promptVariant, foodScale, roleOffset, rescueSeats, timeScale }) => {
+    requireWorkerOrAdmin(ctx);
+    if (roster.length === 0) throw new SenderError('the roster is empty');
+    for (const r of roster) {
+      if (!DATABASE_PROVIDERS.includes(splitModelId(r.modelId).provider)) {
+        throw new SenderError(`${r.modelId} cannot be asked by the database; use ${DATABASE_PROVIDERS.join(', ')}`);
+      }
+    }
+    let system: string;
+    try {
+      system = systemPrompt(promptVariant, { rescueSeats });
+    } catch (err) {
+      throw new SenderError(err instanceof Error ? err.message : String(err));
+    }
+    const food = Math.min(Math.max(foodScale, 0.2), 5);
+    ctx.db.world.id.update({ ...getWorld(ctx), foodScale: food, roleOffset: roleOffset % 4, rescueSeats });
+    resetWorld(ctx, roster);
+    const scale = Math.min(Math.max(timeScale, 0.05), 4);
+    ctx.db.world.id.update({ ...getWorld(ctx), timeScale: scale });
+    const info = JSON.stringify({
+      promptVariant,
+      promptVersion: promptVersion({ rescueSeats }),
+      systemPrompt: system,
+      roster: roster.map(r => ({ name: r.name, modelId: r.modelId })),
+      timeScale: scale,
+      foodScale: food,
+      roleOffset: roleOffset % 4,
+      rescueSeats,
+      startedAt: new Date(Number(ctx.timestamp.microsSinceUnixEpoch / 1000n)).toISOString(),
+      brains: 'database',
+    });
+    if (ctx.db.meta.key.find('run')) ctx.db.meta.key.update({ key: 'run', value: info });
+    else ctx.db.meta.insert({ key: 'run', value: info });
+  }
+);
 
 // Advances the world by real elapsed time × timeScale. This is the fast body.
 export const tick = spacetimedb.reducer({ onSchedule: tickTimer }, { timer: tickTimer.rowType }, ctx => {
