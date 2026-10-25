@@ -1,3 +1,4 @@
+import { markWorker } from './worker-lifecycle.js';
 import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -15,9 +16,9 @@ function boundedRuntime(value: string | undefined): number {
   return Number.isFinite(number) ? Math.max(60_000, Math.min(maxRuntimeMs, number)) : 45 * 60_000;
 }
 
-function run(command: string, args: string[], timeoutMs: number, onLine?: (line: string) => void): Promise<void> {
+function run(command: string, args: string[], timeoutMs: number, onLine?: (line: string) => void, workerDirectory?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: worldDir, env: process.env, stdio: ['ignore', 'pipe', 'ignore'], shell: false });
+    const child = spawn(command, args, { cwd: worldDir, env: process.env, stdio: workerDirectory ? ['ignore', 'pipe', 'ignore', 'ipc'] : ['ignore', 'pipe', 'ignore'], shell: false });
     let settled = false;
     let timedOut = false;
     let output = '';
@@ -34,7 +35,11 @@ function run(command: string, args: string[], timeoutMs: number, onLine?: (line:
       const force = setTimeout(() => child.kill('SIGKILL'), 5_000);
       child.once('close', () => clearTimeout(force));
     }, timeoutMs);
-    child.stdout.on('data', (chunk: Buffer) => {
+    if (workerDirectory && child.pid) {
+      try { markWorker(workerDirectory, child.pid); }
+      catch { child.kill('SIGTERM'); finish(new Error('Worker ownership could not be saved.')); }
+    }
+    child.stdout?.on('data', (chunk: Buffer) => {
       output = (output + chunk.toString('utf8')).slice(-4096);
       const lines = output.split('\n');
       output = lines.pop() ?? '';
@@ -55,9 +60,9 @@ export const executeBenchmark: Executor = async (job, onRunning) => {
   // The random database name is never supplied by the client. Never republish with data deletion.
   await run(bin, ['publish', job.dbName, '--module-path', modulePath, '--server', 'http://127.0.0.1:3000', '--anonymous', '--no-config', '--delete-data=never', '--yes'], startupTimeoutMs);
   const worker = path.join(worldDir, 'dist-harness', 'benchmark-worker.js');
-  await run(process.execPath, [worker, job.id, job.dbName, job.modelId], boundedRuntime(process.env.BENCHMARK_RUNTIME_TIMEOUT_MS), line => {
+  await run(process.execPath, [worker, job.id, job.dbName, JSON.stringify({ roster: job.roster ?? [{ model: job.model, modelId: job.modelId, count: 4 }], scenario: job.scenario })], boundedRuntime(process.env.BENCHMARK_RUNTIME_TIMEOUT_MS), line => {
     if (line === 'BENCHMARK_RUNNING') onRunning();
-  });
+  }, path.join(worldDir, 'runs', job.id));
   const file = path.join(worldDir, 'runs', job.id, 'report.json');
   return JSON.parse(await readFile(file, 'utf8')) as unknown;
 };

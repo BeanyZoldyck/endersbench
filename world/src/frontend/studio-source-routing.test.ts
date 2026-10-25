@@ -3,7 +3,7 @@ import { initialStudioState, recordedStudioHref, requiresRecordedSource, transit
 import { recordedStartMs } from './data';
 
 describe('buttons crossing live and recorded sources', () => {
-  it.each<StudioScreen>(['landing', 'setup', 'single', 'briefing', 'lending'])('%s opens the recorded catalog rather than showing live rows as recordings', screen => {
+  it.each<StudioScreen>(['landing', 'models', 'setup', 'single', 'briefing', 'lending'])('%s opens the recorded catalog rather than showing live rows as recordings', screen => {
     expect(requiresRecordedSource(screen)).toBe(true);
   });
   it.each<StudioScreen>(['monitor', 'follow', 'outcome', 'context', 'method', 'compare'])('%s can retain current-world observation', screen => {

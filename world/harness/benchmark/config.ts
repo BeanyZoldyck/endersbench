@@ -2,7 +2,8 @@ import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createConnection } from 'node:net';
 import path from 'node:path';
-import { MODEL_IDS, SCENARIO_ID, type ModelName } from './types.js';
+import { MODEL_IDS, type ModelName, type BenchmarkScenario } from './types.js';
+import { BENCHMARK_SCENARIOS } from './scenarios.js';
 
 type Environment = Record<string, string | undefined>;
 const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama']);
@@ -52,7 +53,7 @@ export function localSpacetimeAvailable(timeoutMs = 800): Promise<boolean> {
 
 export async function benchmarkConfig(env: Environment, probe = localSpacetimeAvailable): Promise<{
   models: ReturnType<typeof modelConfig>;
-  scenarios: Array<{ id: typeof SCENARIO_ID; name: string; description: string }>;
+  scenarios: BenchmarkScenario[];
   ready: boolean;
   reason?: string;
 }> {
@@ -64,7 +65,7 @@ export async function benchmarkConfig(env: Environment, probe = localSpacetimeAv
     : !models.some(model => model.available) ? 'Configure at least one benchmark model.' : undefined;
   return {
     models,
-    scenarios: [{ id: SCENARIO_ID, name: 'The Clearing', description: 'Four survivors face scarcity, winter, rescue, and the shared charter.' }],
+    scenarios: BENCHMARK_SCENARIOS.map(scenario => ({ ...scenario })),
     ready: !reason,
     ...(reason ? { reason } : {}),
   };

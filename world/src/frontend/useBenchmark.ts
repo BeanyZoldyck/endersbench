@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { benchmarkRequest, benchmarkViewerHref, launchBenchmark, type BenchmarkConfig, type BenchmarkJob } from './benchmark-client';
-import type { StudioModel } from './model';
+import { benchmarkBlocker, benchmarkRequest, benchmarkViewerHref, launchBenchmark, rosterEntries, type BenchmarkConfig, type BenchmarkJob } from './benchmark-client';
+import type { BenchmarkRoster } from './model';
 
 export function useBenchmark(enabled: boolean) {
   const [config, setConfig] = useState<BenchmarkConfig | null>(null);
@@ -50,10 +50,12 @@ export function useBenchmark(enabled: boolean) {
     void poll();
     return () => { cancelled = true; clearTimeout(timer); };
   }, [id, activeId]);
-  const start = async (model: StudioModel) => {
+  const start = async (roster: BenchmarkRoster, scenario: string) => {
     if (launching.current) return;
+    const blocker = benchmarkBlocker(config, roster, scenario);
+    if (blocker) { setError(blocker); return; }
     launching.current = true; setStarting(true); setError('');
-    try { setJob(await launchBenchmark(model, 'clearing-charter')); }
+    try { setJob(await launchBenchmark(rosterEntries(roster), scenario)); }
     catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Benchmark could not start.');
       setStarting(false); launching.current = false;

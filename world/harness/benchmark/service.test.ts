@@ -68,3 +68,37 @@ describe('BenchmarkService', () => {
     expect(results.filter(result => result.status === 'rejected')).toHaveLength(1);
   });
 });
+
+it('resolves mixed selections without replacing counts or allowing model overrides', async () => {
+  const mixedConfig = async () => ({
+    ready: true,
+    models: [
+      { id: 'ChatGPT' as const, modelId: 'openai:gpt-test', available: true },
+      { id: 'Grok' as const, modelId: 'openrouter:grok-test', available: true },
+    ],
+  });
+  const service = new BenchmarkService(mixedConfig, async () => ({}));
+  for (const roster of [[], [{ model: 'ChatGPT', count: 0 }], [{ model: 'ChatGPT', count: 5 }],
+    [{ model: 'ChatGPT', count: 1.1 }], [{ model: 'ChatGPT', count: 1 }, { model: 'ChatGPT', count: 1 }],
+    [{ model: 'ChatGPT', count: 1, modelId: 'openai:override' }], [{ model: 'Unknown', count: 1 }]]) {
+    await expect(service.start({ roster, scenario: 'clearing-charter' })).rejects.toMatchObject({ statusCode: 400 });
+  }
+  await expect(service.start({ roster: [{ model: 'Claude', count: 1 }], scenario: 'clearing-charter' })).rejects.toMatchObject({ statusCode: 422 });
+  const job = await service.start({ roster: [{ model: 'ChatGPT', count: 2 }, { model: 'Grok', count: 1 }], scenario: 'clearing-charter' });
+  expect(job.roster).toEqual([
+    { model: 'ChatGPT', modelId: 'openai:gpt-test', count: 2 },
+    { model: 'Grok', modelId: 'openrouter:grok-test', count: 1 },
+  ]);
+  expect(job.model).toBe('ChatGPT');
+  await tick();
+});
+
+it('keeps legacy launches as four identical survivors and blocks unavailable scenarios', async () => {
+  const service = new BenchmarkService(config, async () => ({}));
+  const legacy = await service.start({ model: 'ChatGPT', scenario: 'clearing-charter' });
+  expect(legacy.roster).toEqual([{ model: 'ChatGPT', modelId: 'openai:gpt-test', count: 4 }]);
+  const unavailable = new BenchmarkService(async () => ({ ...await config(), scenarios: [{ id: 'clearing-charter', name: 'The Clearing', description: '', available: false, reason: 'Scenario disabled.' }] }), async () => ({}));
+  await expect(unavailable.start({ roster: [{ model: 'ChatGPT', count: 1 }], scenario: 'clearing-charter' })).rejects.toMatchObject({ statusCode: 422, message: 'Scenario disabled.' });
+  await expect(unavailable.start({ roster: [{ model: 'ChatGPT', count: 1 }], scenario: 'not-a-map' })).rejects.toMatchObject({ statusCode: 400 });
+  await tick();
+});

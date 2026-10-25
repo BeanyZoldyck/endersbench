@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import { BenchmarkRunStatus } from './BenchmarkRunStatus';
 import Studio from './frontend/ui-ux/Studio.tsx';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection } from './module_bindings/index.ts';
@@ -26,14 +27,14 @@ const connectionBuilder = DbConnection.builder()
   .onConnectError((_ctx, err) => console.error('Error connecting to SpacetimeDB:', err));
 
 if (legacy) document.title = 'The Clearing — Ender’s Bench';
-const viewer = legacy ? <App /> : <Studio />;
+const viewer = legacy ? <><App />{params.has('benchmark') && <BenchmarkRunStatus />}</> : <Studio />;
 const root = createRoot(document.getElementById('root')!);
 async function mount(): Promise<void> {
   if (params.has('benchmark')) {
     try {
       const job = await benchmarkRequest<BenchmarkJob>(`/api/benchmarks/${encodeURIComponent(params.get('benchmark') ?? '')}`);
       benchmarkViewerHref(job);
-      if (!liveStudio || job.dbName !== requestedDb || job.id !== params.get('benchmark')) throw new Error('Mismatched run.');
+      if ((!liveStudio && !legacy) || job.scenario !== 'clearing-charter' || job.dbName !== requestedDb || job.id !== params.get('benchmark')) throw new Error('Mismatched run.');
     } catch {
       root.render(<main><h1>Benchmark unavailable</h1><p>The runner could not verify this run. Reconnect to the local runner and reload.</p><a href="/?studio=setup">Back to models</a></main>);
       return;

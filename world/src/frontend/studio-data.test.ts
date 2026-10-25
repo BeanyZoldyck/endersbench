@@ -50,9 +50,8 @@ describe('studio run allowlist', () => {
   test('an unrecognized run id cannot escape the committed replay allowlist', () => {
     const path = replayPath('../../private/secret');
 
-    expect(RUNS.some(run => path === `/demo/${run.id}.json.gz`)).toBe(true);
-    expect(path).not.toContain('..');
-    expect(runInfo('../../private/secret').id).toBe(DEFAULT_RUN);
+    expect(path).toBeNull();
+    expect(runInfo('../../private/secret').label).toBe('Saved benchmark');
   });
 });
 

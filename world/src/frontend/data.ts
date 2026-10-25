@@ -5,11 +5,21 @@ import type { Agent, EthicsEvent, Message, Score } from '../module_bindings/type
 import type { StudioState } from './model';
 
 import { RUNS } from './catalog';
+import { isSavedRunId, recordingIdentity, type SavedRecording } from './run-history';
 export { RUNS } from './catalog';
 export type RunId = typeof RUNS[number]['id'];
 export const DEFAULT_RUN = RUNS[0].id;
-export const runInfo = (id: string) => RUNS.find(run => run.id === id) ?? RUNS[0];
-export const replayPath = (id: string) => `/demo/${runInfo(id).id}.json.gz`;
+export function runInfo(id: string, saved: readonly SavedRecording[] = []) {
+  const packaged = RUNS.find(run => run.id === id);
+  if (packaged) return packaged;
+  const recording = saved.find(run => run.id === id);
+  const identity = recording ? recordingIdentity(recording) : null;
+  return { id, label: recording?.label ?? 'Saved benchmark', model: recording && (!recording.roster || recording.roster.length === 1) ? recording.model : null,
+    modelId: identity?.modelIds ?? 'Model not recorded', condition: recording ? recording.scenario === 'ledger' ? 'House rules' : 'Charter' : 'Condition not recorded', start: 0 };
+}
+export const replayPath = (id: string): string | null => isSavedRunId(id)
+  ? `/api/benchmarks/${id}/replay`
+  : RUNS.some(run => run.id === id) ? `/demo/${id}.json.gz` : null;
 
 export function recordedStartMs(
   state: Pick<StudioState, 'runId' | 'replayTimeMs' | 'previous'>,

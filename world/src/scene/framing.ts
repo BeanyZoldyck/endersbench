@@ -14,6 +14,11 @@ export const MIN_DISTANCE = 18, MAX_DISTANCE = 260;
 const DOWN = new THREE.Vector3(VIEW.x, 0, VIEW.z).normalize();
 // Screen-right along the ground.
 const ACROSS = new THREE.Vector3(DOWN.z, 0, -DOWN.x);
+// The default camera's screen-down and screen-right along the ground (scene x/z,
+// which are the world's x/y about the centre): what WASD walks along.
+export function groundAxes() {
+  return { down: { x: DOWN.x, z: DOWN.z }, right: { x: ACROSS.x, z: ACROSS.z } };
+}
 // Frame about 88 x 60 tiles around the target; perspective adds the far side for free.
 export function baseDistance(aspect: number) {
   const half = Math.tan(THREE.MathUtils.degToRad(FOV / 2));

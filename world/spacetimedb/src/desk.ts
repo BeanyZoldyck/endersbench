@@ -4,19 +4,21 @@
 // queue, one audit trail and one door for model output: submit_decision hands
 // desk requests to routeDeskDecision, and the desk tick opens queued cases and
 // asks again when a request failed or went unanswered, as the offline bench
-// loop does. Scores come from the same gate and verifier as the bench.
+// loop does. Scores come from the same gate and verifier as the bench. CRS
+// tools answer from the cards, or with what the CRS sandbox returned when the
+// worker fetched it live and sent it with the action.
 //
 // The world mounts this in three places (schema.ts, index.ts, harness/main.ts);
 // nothing here imports schema.ts at runtime, so there is no import cycle.
 import { ScheduleAt } from 'spacetimedb';
 import { SenderError, t, table, type InferSchema, type ReducerCtx, type schema, type Schema } from 'spacetimedb/server';
 import type { admin, decisionRequest, harnessWorker, meta } from './schema';
-import { EVENT_STEP, deliver, observe, phase, takeStep } from './finance/engine';
+import { EVENT_STEP, type CrsAnswer, deliver, isCrsTool, observe, phase, takeStep } from './finance/engine';
 import { gateCase } from './finance/gate';
 import { FINANCE_PROMPT_VARIANTS } from './finance/prompt';
 import { FINANCE_BENCHMARK_VERSION, SCENARIOS, SCENARIO_BY_ID, forVariant } from './finance/scenarios';
 import { financeTools } from './finance/tools';
-import type { Seat, Step } from './finance/types';
+import type { CrsCall, Seat, Step } from './finance/types';
 import { verify } from './finance/verifier';
 
 // One row per case run: one model working one case once.
@@ -51,6 +53,9 @@ export const financeStep = table(
     result: t.string(), // JSON; '' for director messages
     requestId: t.u64(), // the decision request that chose it; 0 for director messages
     thought: t.string(), // the model's notes for the turn: thinking summary and text
+    // JSON CrsCall when the worker answered a CRS tool from the live sandbox
+    // (harness/finance/crslive.ts): RequestID, latency, any drift. '' otherwise.
+    crs: t.string().default(''),
   }
 );
 
@@ -106,18 +111,25 @@ export const DESK_CONCURRENCY = 4;
 // The desk's entries for the world's meta table: the action catalog per seat.
 export function deskMeta(): Record<string, string> {
   const seats: Seat[] = ['lending', 'collections', 'vendor_payments'];
-  return { finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
+  return { finance_benchmark_version: String(FINANCE_BENCHMARK_VERSION), finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
 }
 
 function authorised(ctx: DeskCtx) {
   return ctx.db.harnessWorker.identity.find(ctx.sender) != null || ctx.db.admin.identity.find(ctx.sender) != null;
 }
 
-function parseAction(raw: string): { name: string; args: Record<string, unknown> } | null {
+// The worker's action, and for a CRS tool it answered from the live sandbox,
+// that answer: {"name", "args", "crs": {"result": card, "call": CrsCall}}.
+function parseAction(raw: string): { name: string; args: Record<string, unknown>; answer?: CrsAnswer } | null {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.name !== 'string' || !parsed.name) return null;
-    return { name: parsed.name, args: parsed.args && typeof parsed.args === 'object' ? parsed.args : {} };
+    const crs = parsed.crs;
+    const answer =
+      isCrsTool(parsed.name) && crs && typeof crs.result === 'object' && crs.result && typeof crs.call?.source === 'string'
+        ? { result: crs.result, crs: crs.call as CrsCall }
+        : undefined;
+    return { name: parsed.name, args: parsed.args && typeof parsed.args === 'object' ? parsed.args : {}, ...(answer ? { answer } : {}) };
   } catch {
     return null;
   }
@@ -126,7 +138,12 @@ function parseAction(raw: string): { name: string; args: Record<string, unknown>
 export function deskSteps(ctx: DeskCtx, caseId: bigint): Step[] {
   return [...ctx.db.financeStep.caseId.filter(caseId)]
     .sort((a, b) => a.seq - b.seq)
-    .map(s => ({ tool: s.tool, args: JSON.parse(s.args), ...(s.result ? { result: JSON.parse(s.result) } : {}) }));
+    .map(s => ({
+      tool: s.tool,
+      args: JSON.parse(s.args),
+      ...(s.result ? { result: JSON.parse(s.result) } : {}),
+      ...(s.crs ? { crs: JSON.parse(s.crs) } : {}),
+    }));
 }
 
 // Stores steps[from..]: the agent's action first, then any messages it unlocked.
@@ -142,6 +159,7 @@ function writeSteps(ctx: DeskCtx, caseId: bigint, steps: Step[], from: number, r
       result: s.result === undefined ? '' : JSON.stringify(s.result),
       requestId: event ? 0n : requestId,
       thought: event ? '' : thought,
+      crs: s.crs ? JSON.stringify(s.crs) : '',
     });
   });
 }
@@ -290,7 +308,8 @@ export function routeDeskDecision(ctx: DeskCtx, req: Request, answer: { action: 
   ctx.db.decisionRequest.id.update({ ...req, status: 'done', action: answer.action, thought, error: '', latencyMs: answer.latencyMs });
   const scenario = SCENARIO_BY_ID[c.scenarioId];
   const before = deskSteps(ctx, c.id);
-  const after = takeStep(scenario, before, parsed.name, parsed.args);
+  // A live CRS answer replaces the card lookup; the agent and the verifier both read it.
+  const after = takeStep(scenario, before, parsed.name, parsed.args, { answer: parsed.answer });
   writeSteps(ctx, c.id, after, before.length, req.id, notes);
   const moved = updateCase(ctx, c.id, { stalls: 0, pendingRequestId: 0n });
   if (phase(scenario, after) === 'closed') close(ctx, moved, after);

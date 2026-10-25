@@ -4,10 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { parseReplay, duration } from '../replay';
 import { stateAt } from '../useReplay';
 import { RUNS, benchmarkRuns } from './catalog';
+import metadata from './recording-metadata.json';
 
 describe('benchmark model attribution', () => {
   it.each(RUNS)('$id matches its recorded model', run => {
     const replay = parseReplay(JSON.parse(gunzipSync(readFileSync(new URL(`../../public/demo/${run.id}.json.gz`, import.meta.url))).toString()) as unknown);
+    expect(metadata[run.id].recordedAt).toBe(replay.recordedAt);
+    expect(metadata[run.id].durationMs).toBeCloseTo(duration(replay));
     const agents = stateAt(replay, duration(replay)).agents;
     expect(agents.length).toBeGreaterThan(0);
     expect([...new Set(agents.map(agent => agent.modelId))]).toEqual([run.modelId]);

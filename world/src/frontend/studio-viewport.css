@@ -1,0 +1,59 @@
+/* Keep the simulation, playback controls, and agent selection in one desktop view.
+   Supporting details continue down the document; the inspector has its own scroll area. */
+@media (min-width: 1101px) and (min-height: 700px) {
+  .studio .observation-page { padding-top: 24px; }
+  .studio .observation-heading { margin-bottom: 24px; }
+  .studio .observation-page .main-scene { height: clamp(360px, calc(100svh - 381px), 550px); }
+  .studio[data-studio-screen="follow"] .observation-page .main-scene { height: clamp(350px, calc(100svh - 418px), 520px); }
+  .studio .observation-page .scene-caption { padding-block: 12px; }
+  .studio .observation-page .agent-cards { margin-top: 8px; }
+  .studio .observation-page .agent-cards button { padding-block: 5px; }
+  .studio .observation-page .follow-agent-switch { margin: 10px 0 14px; padding-top: 8px; }
+  .studio .observation-page .follow-agent-switch > div { margin-top: 8px; }
+  .studio .inspector-column {
+    align-self: start;
+    max-height: calc(100svh - 248px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+  }
+  .studio .inspector-column:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+}
+
+/* The model findings are read as a pair, with their context above them. */
+@media (min-width: 1101px) and (min-height: 700px) {
+  .studio .models-page .page-head { margin-bottom: 20px; }
+  .studio .models-page .observed-comparison { margin-top: 16px; padding-top: 18px; }
+  .studio .observed-comparison header p { margin-bottom: 8px; }
+  .studio .observed-comparison .comparison-selection { margin: 8px 0; }
+  .studio .observed-comparison .tab-row { margin: 8px 0 12px; }
+  .studio .observed-charts { margin-top: 16px; }
+  .studio .observed-charts figcaption { margin-bottom: 12px; }
+  .studio .observed-charts .observation-bar-row { margin: 8px 0; }
+}
+
+/* Preserve the selected evidence as the related event list moves. */
+@media (min-width: 1101px) and (min-height: 700px) {
+  .studio .context-grid > aside {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100svh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .studio .context-grid > aside:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+}
+
+/* The landing chapter keeps its full scene and explanation in laptop windows. */
+@media (min-width: 1101px) and (min-height: 700px) {
+  .studio .landing-content > .landing-hero { padding-block: 32px; }
+  .studio .landing-content > #scenarios { padding-block: 24px; }
+  .studio .landing-content #scenarios .scenario-illustration { width: min(100%, 960px, 110svh); }
+}
+
+/* Short windows have one natural page scroll and no landing snap stops. */
+@media (max-height: 699px) {
+  html:has(.studio[data-studio-screen="landing"]) { scroll-snap-type: none; }
+  .studio .landing-content > section { scroll-snap-align: none; }
+}

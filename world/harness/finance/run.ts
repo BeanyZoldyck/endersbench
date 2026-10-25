@@ -16,7 +16,11 @@
 // responses), --repeat N (runs per case, 3 by
 // default as the spec asks; --repeat 1 for a quick check), --concurrency N,
 // --raw-crs (CRS tools answer with the full saved CRS response instead of the
-// compact card; a separate format on the leaderboard). Keys come from
+// compact card; a separate format on the leaderboard), --live-crs (every CRS
+// tool the agent calls goes to the CRS sandbox as the persona's exact request,
+// and the agent and the verifier get what CRS returns now; see crslive.ts).
+// --held-out runs live unless --snapshot-crs is given: the held-out test is
+// scored on live CRS data. Keys come from
 // the environment or a .env file. Managed runs create or update one agent
 // per seat and prompt variant and record their ids in runs/managed.json.
 import Anthropic from '@anthropic-ai/sdk';
@@ -29,7 +33,8 @@ import type { Scenario, Verdict, Violation } from '../../spacetimedb/src/finance
 import { type Gate, compliantByRun, gateCase, gateScore, passAllRuns } from '../../spacetimedb/src/finance/gate';
 import { checkTools, toolScore } from '../../spacetimedb/src/finance/toolcheck';
 import { ethicsScore, verify, verifyPair } from '../../spacetimedb/src/finance/verifier';
-import { type CaseRun, type Effort, type ManagedSetup, type RunCase, managedDriver, messagesDriver, openAiDriver, setupManaged } from './drivers';
+import { type CaseRun, type Effort, type ManagedSetup, type RunCase, managedDriver, messagesDriver, openAiDriver, scriptDriver, setupManaged } from './drivers';
+import { type CrsClient, type LiveCrs, crsClientFromEnv, crsSummary, liveCrs } from './crslive';
 import { OPENAI_COMPATIBLE, envValue, trustSystemCertificates } from './providers';
 import { TEST_CASES } from './labels';
 import { rawCrs } from './rawcrs';
@@ -82,6 +87,8 @@ function parseArgs(argv: string[]) {
     // Runs per case. The design spec asks for 3, reported as mean and range.
     repeat: Math.max(1, Number(flags.get('repeat') ?? 3)),
     raw: flags.has('raw-crs'),
+    // The held-out test is the live one: its CRS data comes from the sandbox.
+    live: flags.has('live-crs') || (flags.has('held-out') && !flags.has('snapshot-crs')),
   };
 }
 
@@ -114,7 +121,7 @@ interface Scored {
 }
 
 // Same numbers as the desk viewer's scoreboard.
-function summarize(scored: Scored[], model: string) {
+function summarize(scored: Scored[], model: string, live: boolean) {
   const all = (c: Scored) => [...c.verdict.violations, ...c.pair];
   const violations = scored.flatMap(all);
   const usage = scored.reduce(
@@ -152,6 +159,8 @@ function summarize(scored: Scored[], model: string) {
     stopped: scored.filter(c => c.run.stopped).map(c => `${c.scenario.id}: ${c.run.stopped}`),
     usage,
     costUsd: usage.listCostUsd > 0 ? usage.listCostUsd : estimatedUsd,
+    // Live runs: the CRS calls behind the cases, and any drift from the snapshot.
+    ...(live ? { crs: crsSummary(scored.map(c => c.run.steps)) } : {}),
   };
 }
 
@@ -163,17 +172,21 @@ function printCase(driver: Driver, c: Scored) {
   console.log(`[${driver}] #${c.sample + 1} ${c.scenario.id.padEnd(28)} ${decision.padEnd(22)} ${flags}${tiers}`);
 }
 
-async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, client: Anthropic | null) {
+async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, client: Anthropic | null, crs: CrsClient | null) {
   let runCase: RunCase;
+  const raw = opts.raw ? rawCrs : undefined;
+  const live: LiveCrs | undefined = crs ? liveCrs(crs, { raw: opts.raw }) : undefined;
   if (driver === 'script') {
-    runCase = async scenario => ({ steps: runBrain(policyFollower, scenario, { raw: opts.raw ? rawCrs : undefined }), notes: [], stalls: 0, usage: { calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+    runCase = live
+      ? scriptDriver(policyFollower, { raw, live })
+      : async scenario => ({ steps: runBrain(policyFollower, scenario, { raw }), notes: [], stalls: 0, usage: { calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
   } else if (driver === 'messages' && opts.provider !== 'anthropic') {
     const spec = OPENAI_COMPATIBLE[opts.provider];
     const baseUrl = spec.baseUrl() ?? fail(`${opts.provider} models need ${spec.needs} in endersbench/.env`);
     const apiKey = spec.key() ?? fail(`${opts.provider} models need ${spec.needs} in endersbench/.env`);
-    runCase = openAiDriver({ baseUrl, apiKey, model: opts.model, api: spec.api, reasoningEffort: opts.effort, raw: opts.raw ? rawCrs : undefined });
+    runCase = openAiDriver({ baseUrl, apiKey, model: opts.model, api: spec.api, reasoningEffort: opts.effort, raw, live });
   } else if (driver === 'messages') {
-    runCase = messagesDriver(client!, { model: opts.model, effort: opts.effort, raw: opts.raw ? rawCrs : undefined });
+    runCase = messagesDriver(client!, { model: opts.model, effort: opts.effort, raw, live });
   } else {
     // Sync the agents every run so they always carry the current prompt and
     // tools; an update that changes nothing keeps the agent's version.
@@ -184,7 +197,7 @@ async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, cli
       existing
     );
     fs.writeFileSync(SETUP_FILE, JSON.stringify(setup, null, 2));
-    runCase = managedDriver(client!, setup);
+    runCase = managedDriver(client!, setup, { live });
   }
 
   // Scored as this prompt variant sees the case (v6, forVariant).
@@ -209,7 +222,7 @@ async function runDriver(driver: Driver, opts: ReturnType<typeof parseArgs>, cli
     if (twin) c.pair = verifyPair({ scenario: twin.scenario, steps: twin.run.steps }, { scenario: c.scenario, steps: c.run.steps });
   });
   runs.forEach(c => printCase(driver, c));
-  const summary = summarize(runs, opts.model);
+  const summary = summarize(runs, opts.model, opts.live);
   return { driver, summary, runs };
 }
 
@@ -221,11 +234,17 @@ async function main() {
   fs.mkdirSync(RUNS_DIR, { recursive: true });
   const effort = opts.effort ?? 'default';
   if (opts.raw && opts.drivers.includes('managed')) fail('--raw-crs runs the benchmark loop only, not --driver managed');
-  console.log(`Finance benchmark v${FINANCE_BENCHMARK_VERSION} · ${opts.cases.length} cases · prompt: ${opts.variant} · ${opts.provider}:${opts.model} · effort: ${effort} · CRS: ${opts.raw ? 'full responses' : 'cards'}`);
+  // Log in before any case starts: a live run without CRS stops here instead
+  // of quietly answering from the snapshot.
+  const crs = opts.live ? crsClientFromEnv() : null;
+  if (crs) await crs.login();
+  console.log(
+    `Finance benchmark v${FINANCE_BENCHMARK_VERSION} · ${opts.cases.length} cases · prompt: ${opts.variant} · ${opts.provider}:${opts.model} · effort: ${effort} · CRS: ${opts.raw ? 'full responses' : 'cards'}, ${opts.live ? 'live sandbox' : 'Oct 24 snapshot'}`
+  );
 
   const results = [];
   for (const driver of opts.drivers) {
-    const result = await runDriver(driver, opts, client);
+    const result = await runDriver(driver, opts, client, crs);
     results.push(result);
     const s = result.summary;
     const pct = (x: number) => `${Math.round(100 * x)}%`;
@@ -238,11 +257,19 @@ async function main() {
       `[${driver}] correct ${s.correct}/${s.cases} · ethics ${s.ethics?.toFixed(1) ?? '-'} · violations by tier ${s.byTier.join('/')} · caved ${s.caved} · updated ${s.updated} · honest reports ${s.honestReports} · stalls ${s.stalls}` +
         (s.costUsd != null ? ` · ~$${s.costUsd.toFixed(2)}` : '')
     );
+    if (s.crs) {
+      const c = s.crs;
+      console.log(
+        `[${driver}] CRS live: ${c.calls} calls, ${c.live} answered by the sandbox (median ${c.medianMs ?? '-'} ms, p95 ${c.p95Ms ?? '-'} ms), ${c.fellBack} fell back to the snapshot, ${c.drifted} differed from it` +
+          (c.driftFields.length ? ` (${c.driftFields.join(', ')})` : '') +
+          (c.errors.length ? ` · errors: ${c.errors.join('; ')}` : '')
+      );
+    }
   }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const name = `${opts.provider}-${opts.model}`.replace(/[^\w.-]+/g, '_');
-  const file = path.join(RUNS_DIR, `${stamp}-v${FINANCE_BENCHMARK_VERSION}-${opts.drivers.join('+')}-${opts.variant}${opts.raw ? '-raw' : ''}-${name}.json`);
+  const file = path.join(RUNS_DIR, `${stamp}-v${FINANCE_BENCHMARK_VERSION}-${opts.drivers.join('+')}-${opts.variant}${opts.raw ? '-raw' : ''}${opts.live ? '-live' : ''}-${name}.json`);
   const record = {
     config: {
       benchmarkVersion: FINANCE_BENCHMARK_VERSION,
@@ -251,6 +278,7 @@ async function main() {
       effort,
       variant: opts.variant,
       crsFormat: opts.raw ? 'raw' : 'card',
+      crsSource: opts.live ? 'live' : 'snapshot',
       cases: opts.cases.map(c => c.id),
       repeat: opts.repeat,
     },

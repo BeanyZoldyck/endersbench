@@ -1,4 +1,5 @@
 import { schema, table, t } from 'spacetimedb/server';
+import { financeCase, financeStep, financeTimer, financeVerdict } from './desk';
 
 // Single row (id = 0): the world clock. Every mechanic advances by
 // elapsed wall time × timeScale, so slow models can run at < 1x and be fair.
@@ -477,5 +478,9 @@ const spacetimedb = schema({
   tickTimer,
   brainTimer,
   modelHealth,
+  financeCase,
+  financeStep,
+  financeVerdict,
+  financeTimer,
 });
 export default spacetimedb;

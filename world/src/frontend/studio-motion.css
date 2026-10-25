@@ -1,0 +1,102 @@
+/* Small glass lens: a fixed blur, with only transform/opacity in motion. */
+.frosted-cursor { position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 10000; pointer-events: none; opacity: 0; }
+.frosted-cursor[data-visible="true"] { opacity: 1; }
+.frosted-cursor-orb { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.07); backdrop-filter: blur(3px) saturate(.85); -webkit-backdrop-filter: blur(3px) saturate(.85); box-shadow: 0 0 0 1px rgba(0,0,0,.65); transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+.frosted-cursor[data-interactive="true"] .frosted-cursor-orb { transform: scale(1.22); }
+.frosted-cursor[data-pressed="true"] .frosted-cursor-orb { transform: scale(.85); }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .studio.has-frosted-cursor, .studio.has-frosted-cursor * { cursor: none; }
+}
+
+.landing-content figure img { transition: opacity 600ms cubic-bezier(.23,1,.32,1), transform 800ms cubic-bezier(.23,1,.32,1); }
+.landing-content figure img[data-image-ready="false"] { opacity: 0; transform: translateY(10px) scale(.985); }
+.landing-content figure img[data-image-ready="true"] { opacity: 1; transform: none; }
+.landing-content [data-revealed] { transition: opacity 600ms cubic-bezier(.23,1,.32,1), transform 700ms cubic-bezier(.23,1,.32,1); }
+.landing-content [data-revealed="false"] { opacity: 0; transform: translateY(24px); }
+.landing-content [data-revealed="true"], .landing-content [data-revealed="false"]:focus-within { opacity: 1; transform: none; }
+@keyframes studio-arrive { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-copy > .eyebrow { animation: studio-arrive 550ms cubic-bezier(.23,1,.32,1) both; }
+  .hero-copy h1 { animation: studio-arrive 650ms 60ms cubic-bezier(.23,1,.32,1) both; }
+  .hero-intro { animation: studio-arrive 650ms 120ms cubic-bezier(.23,1,.32,1) both; }
+  .hero-illustration figcaption { animation: studio-arrive 600ms 180ms cubic-bezier(.23,1,.32,1) both; }
+  .landing-content button { transition: transform 160ms cubic-bezier(.23,1,.32,1); }
+  .landing-content button:active:not(:disabled) { transform: scale(.97); }
+  .landing-content button:focus-visible { animation: none; transition: none; }
+  .hero-actions button span { display: inline-block; transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hero-actions button:hover span { transform: translate(2px,-2px); }
+  .agent-intros button:hover { transform: translateY(-3px); }
+  .agent-intros button:active { transform: scale(.97); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frosted-cursor { display: none; }
+  .landing-content figure img, .landing-content [data-revealed] { transition: none; transform: none; opacity: 1; }
+  .landing-content figure img[data-image-ready="false"], .landing-content [data-revealed="false"] { opacity: 1; transform: none; }
+}
+
+/* Let each section tell its story in short beats instead of moving as one slab. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-illustration { transition: transform 500ms cubic-bezier(.23,1,.32,1); }
+  .landing-content .section-grid > :nth-child(2) { transition-delay: 80ms; }
+  .landing-content .agent-intros > :nth-child(2), .landing-content .landing-case-facts > :nth-child(2), .landing-end > :nth-child(2) { transition-delay: 55ms; }
+  .landing-content .agent-intros > :nth-child(3), .landing-content .landing-case-facts > :nth-child(3), .landing-end > :nth-child(3) { transition-delay: 110ms; }
+  .landing-content .agent-intros > :nth-child(4) { transition-delay: 165ms; }
+  .landing-content [data-revealed]:focus-within { transition: none; opacity: 1; transform: none; }
+  .landing-content .text-link { text-decoration: none; }
+  .landing-content .text-link::after { content: ''; display: block; height: 1px; background: currentColor; transform: scaleX(.3); transform-origin: left; transition: transform 220ms cubic-bezier(.23,1,.32,1); }
+  .landing-content .tab-row button { position: relative; border-bottom-color: transparent; }
+  .landing-content .tab-row button::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform 220ms cubic-bezier(.23,1,.32,1); }
+  .landing-content .tab-row button.active::after { transform: scaleX(1); }
+  .landing-content .tab-row button:focus-visible::after { transition: none; }
+  .agent-intros .avatar { transition: transform 280ms cubic-bezier(.23,1,.32,1); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-content .text-link:hover::after { transform: scaleX(1); }
+  .landing-content .agent-intros button[data-revealed="true"]:hover { transform: translateY(-3px); transition-delay: 0ms; }
+  .agent-intros button:hover .avatar { transform: translateY(-4px) rotate(-5deg); }
+  .agent-intros button:active .avatar { transform: scale(.96); }
+  .landing-content .button:hover:not(:disabled), .landing-content .outline-button:hover:not(:disabled) { transform: translateY(-2px); }
+  .landing-content .button:active:not(:disabled), .landing-content .outline-button:active:not(:disabled) { transform: scale(.97); }
+}
+
+/* Overlapping pigment washes bloom and drift, then dissolve at rest. */
+.cursor-trail-wisp {
+  position: fixed; top: 0; left: 0; width: 60px; height: 28px;
+  /* Long, feathered washes overlap without circular edges or bright centers. */
+  background: radial-gradient(ellipse at 46% 48%, #eed28466 0%, #e6c56b45 20%, #d8b55324 40%, #d8b5530a 60%, #d8b55300 75%);
+  filter: blur(2px); opacity: 0; pointer-events: none; z-index: 9999;
+}
+@media (prefers-reduced-motion: reduce), (forced-colors: active), (pointer: coarse) {
+  .cursor-trail-wisp { display: none; }
+}
+.hero-illustration { position: relative; isolation: isolate; }
+.hero-illustration > img, .hero-illustration > figcaption { position: relative; z-index: 2; }
+.hero-corner-ripple {
+  position: absolute; left: 0; width: 44px; height: 44px;
+  border: .5px solid #e8c85a; border-radius: 50%; filter: blur(.6px);
+  opacity: 0; pointer-events: none; z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active), (pointer: coarse) {
+  .hero-corner-ripple { display: none; }
+}
+
+/* Ripple accents follow the button surface, without per-pointer style reads. */
+.studio[data-studio-screen="landing"] .hero-actions > .gold { --button-ripple-color: #e6b65f; }
+.studio[data-studio-screen="landing"] .header-cta { --button-ripple-color: #b6cbe5; }
+.studio[data-studio-screen="landing"] :is(.hero-actions > .outline-button, .hero-illustration figcaption > button) { --button-ripple-color: #f0dca5; }
+
+/* Ripples originate at the pointer's entry point, not the button outline. */
+.studio[data-studio-screen="landing"] :is(.hero-actions > button, .header-cta, .hero-illustration figcaption > button) {
+  position: relative; isolation: isolate;
+}
+.button-touch-ripple {
+  position: absolute; width: 24px; height: 24px; margin: 0 !important;
+  border: .6px solid var(--button-ripple-color, #e5ce8e); border-radius: 50%;
+  pointer-events: none; opacity: 0; z-index: -1;
+}
+@media (prefers-reduced-motion: reduce), (forced-colors: active), (pointer: coarse) {
+  .button-touch-ripple { display: none; }
+}

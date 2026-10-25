@@ -1,10 +1,10 @@
 // Runs a finance case: answers the agent's tools from the saved CRS cards,
 // delivers the director's events, and builds what the model sees. It never
-// calls the real CRS API; live pulls are the module's job, and only for the
-// exact persona requests.
+// calls the real CRS API itself; live runs fetch from the sandbox in the
+// harness (harness/finance/crslive.ts) and hand the answer to takeStep.
 import { CARDS } from './cards';
 import { CRS_TOOLS, DECISIONS, type Facts } from './policy';
-import type { Bureau, CaseEvent, CrsTool, Observation, Scenario, Step } from './types';
+import type { Bureau, CaseEvent, CrsCall, CrsTool, Observation, Scenario, Step } from './types';
 
 // A marker step: the director delivered scenario.events[args.index].
 export const EVENT_STEP = '__event';
@@ -134,8 +134,27 @@ export function observe(scenario: Scenario, steps: Step[], format: 'as-seen' | '
 // responses instead of cards. The core reads no files; the harness supplies it.
 export type RawCrs = (tool: CrsTool, args: Record<string, unknown>) => unknown | undefined;
 
+// A CRS answer the harness already fetched from the live sandbox: the card it
+// reads to, the full response when the agent is shown those, and the call.
+export interface CrsAnswer {
+  result: unknown;
+  raw?: unknown;
+  crs: CrsCall;
+}
+
 // One agent action: run it, record it, then deliver any events it unlocked.
-export function takeStep(scenario: Scenario, steps: Step[], tool: string, args: Record<string, unknown>, opts: { raw?: RawCrs } = {}): Step[] {
+// With `answer`, a CRS tool answers with what CRS returned instead of the card.
+export function takeStep(
+  scenario: Scenario,
+  steps: Step[],
+  tool: string,
+  args: Record<string, unknown>,
+  opts: { raw?: RawCrs; answer?: CrsAnswer } = {}
+): Step[] {
+  if (opts.answer && isCrsTool(tool)) {
+    const { result, raw, crs } = opts.answer;
+    return deliver(scenario, [...steps, { tool, args, result, ...(raw !== undefined ? { raw } : {}), crs }]);
+  }
   const result = execute(scenario, tool, args);
   const ok = !(result && typeof result === 'object' && 'error' in result);
   const raw = ok && opts.raw && isCrsTool(tool) ? opts.raw(tool, args) : undefined;
