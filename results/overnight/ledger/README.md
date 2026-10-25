@@ -6,6 +6,8 @@ Ender v1.1 is the Runpod endpoint's `ender` (4-bit `soyrsoyr/Qwen3.8-27B-W4A16-A
 | --- | --- | --- | --- | --- | --- |
 | `ls-ender11.json.gz` | house rules | the 7 demo cases | 4 | 1 | 1 |
 | `lsnc-ender11.json.gz` | no rules (`no-charter`) | all 70 | 37 | 8 | 13 |
+| `ls-base4.json.gz` | house rules, **4-bit base, no LoRA** (same Runpod endpoint) | the 7 demo cases | 7 | 0 | 2 |
+| `lsnc-base4.json.gz` | no rules, **4-bit base, no LoRA** | all 70 | 40 | 7 | 18 |
 
 ## House rules, the 7 demo cases
 
@@ -16,6 +18,7 @@ Ender v1.0 passed 5 with 1 harm. Six cases came out the same. `collect-chapter13
 | Model | All 70 | The 34 cases Ender v1.0 finished |
 | --- | --- | --- |
 | **Ender v1.1** | 37 passed, **8 harm**, 13 abstained | 18 passed, 4 harm |
+| Qwen3.8-27B 4-bit, Ender's own base on the same endpoint, no LoRA | 40 passed, 7 harm, 18 abstained | |
 | Ender v1.0 | stopped at 34 | 19 passed, 3 harm |
 | Qwen3.8-27B (Bitdeer, full precision) | 47 passed, 5 harm, 21 abstained | 23 passed, 1 harm |
 | Claude Haiku 5.5 | 50 passed, 0 harm, 28 abstained | 25 passed, 0 harm |
@@ -26,6 +29,18 @@ The other models' rows are the v1.0-night runs (`results/v15-2026-10-25/ledger/l
 
 By desk, v1.1 passes 30 of 48 lending cases, 6 of 9 vendor-payment cases and **1 of 13 collections cases**. In collections it contacts the debtor in 9 of 13 cases, including a discharged debt, a false legal citation and a third party. Its harms: contacting during bankruptcy (3), pulling credit with no permissible purpose (3), approving a loan, ignoring a fraud alert.
 
+## The fine-tune against the 4-bit base it sits on
+
+Ender is served as a LoRA on a 4-bit GPTQ copy of Qwen3.8-27B, so its fair baseline is that same 4-bit model, run here on the same endpoint without the adapter.
+
+| | House rules, 7 cases | No rules, 70 cases | Lending | Collections | Vendor payments |
+| --- | --- | --- | --- | --- | --- |
+| Qwen3.8-27B, full precision (Bitdeer) | 7/7 | 47 passed, 5 harm | | | |
+| Qwen3.8-27B, 4-bit, no LoRA | 7/7, 0 harm | 40 passed, 7 harm | 28/48 | 6/13 | 6/9 |
+| Ender v1.1 (the 4-bit base + LoRA) | 4/7, 1 harm | 37 passed, 8 harm | 30/48 | 1/13 | 6/9 |
+
+Two separate costs. **Quantization:** the base drops from 47 to 40 passed and 5 to 7 harm going from full precision to 4-bit. **The v1.1 fine-tune:** on the 4-bit base it turns 7/7 house-rules passes into 4/7, and in collections takes passes from 6 of 13 to 1 (contacting the debtor in 9 cases instead of 6), while lending gains two. Case by case on the 70: v1.1 passes 8 the base fails and fails 11 the base passes; 3 harms are v1.1's alone, 2 the base's alone, 5 shared.
+
 ## What this suggests
 
-v1.1's Ledger Street training rows were house-rules prompts (`ENDER11_RUN.md`); without the rules in the prompt it falls to a default action per desk, and in collections that default is to contact the debtor. The training rows are not in the repo, so their label mix for collections could not be checked. The base comparison is with the full-precision model; Ender is served 4-bit, which may cost some quality of its own.
+v1.1's Ledger Street training rows were house-rules prompts (`ENDER11_RUN.md`); without the rules in the prompt it falls to a default action per desk, and in collections that default is to contact the debtor. The training rows are not in the repo, so their label mix for collections could not be checked. Serving 4-bit costs quality on its own (above), so a v1.2 is better judged against the 4-bit base, or served on a higher-precision base.
