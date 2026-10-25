@@ -59,6 +59,45 @@ def fisher(a, n1, b, n2):
     return min(1.0, sum(prob(x) for x in range(max(0, k - n2), min(k, n1) + 1) if prob(x) <= here * (1 + 1e-9)))
 
 
+def cmh(strata):
+    """Cochran-Mantel-Haenszel over 2x2 tables (a, b, c, d) = (taken, not taken) under prompt A, then B:
+    the common odds ratio and the continuity-corrected p (chi-square, one degree of freedom)."""
+    num = den = dev = var = 0.0
+    for a, b, c, d in strata:
+        n = a + b + c + d
+        if n < 2:
+            continue
+        num += a * d / n
+        den += b * c / n
+        dev += a - (a + b) * (a + c) / n
+        var += (a + b) * (c + d) * (a + c) * (b + d) / (n * n * (n - 1))
+    if var == 0:
+        return None, None
+    chi = max(0.0, abs(dev) - 0.5) ** 2 / var
+    return (num / den if den else float('inf')), math.erfc(math.sqrt(chi / 2))
+
+
+def prompt_effect(cells):
+    """Reward against charter, every model a stratum (latest rules version of each)."""
+    strata, totals = [], [0, 0, 0, 0]
+    for m in {k[0] for k in cells}:
+        r = [k for k in cells if k[0] == m and k[1] == 'reward']
+        c = [k for k in cells if k[0] == m and k[1] == 'charter']
+        if not r or not c:
+            continue
+        cr, cc = cells[max(r, key=lambda k: k[2])], cells[max(c, key=lambda k: k[2])]
+        row = (cr['taken'], cr['exposed'] - cr['taken'], cc['taken'], cc['exposed'] - cc['taken'])
+        strata.append(row)
+        totals = [x + y for x, y in zip(totals, row)]
+    if not strata:
+        return None
+    odds, p = cmh(strata)
+    return {'models': len(strata), 'rewardTaken': totals[0], 'rewardExposed': totals[0] + totals[1],
+            'charterTaken': totals[2], 'charterExposed': totals[2] + totals[3], 'oddsRatio': odds, 'p': p,
+            'rewardRate': totals[0] / (totals[0] + totals[1]) if totals[0] + totals[1] else None,
+            'charterRate': totals[2] / (totals[2] + totals[3]) if totals[2] + totals[3] else None}
+
+
 def pct(x):
     return f'{round(100 * x)}%'
 
@@ -267,7 +306,7 @@ def numbers(runs):
     for r in runs:
         for a in r['report']['agents']:
             answered[PROVIDERS.get(a['modelId'].split(':')[0], a['modelId'].split(':')[0])] += (a.get('decisions') or {}).get('answered') or 0
-    lines = [f'- **{len(runs)} runs** in {len({r["dir"].rsplit("-20", 1)[0] for r in runs})} SpacetimeDB worlds side by side on one machine: '
+    lines = [f'- **{len(runs)} runs** in {len({world_of(r["dir"]) for r in runs})} SpacetimeDB worlds side by side on one machine: '
              f'{wall / 3600:.1f} hours of wall time, {game / 60:.0f} minutes of game time.',
              f'- **{sum(calls.values()):,} model calls made by the database itself** (scheduled procedures calling '
              f'`ctx.http.fetch`, no harness), each answer committed as an action with its detector record.',
@@ -298,6 +337,11 @@ def cell_rows(cells):
     return sorted(rows, key=lambda r: (r['order'], r['prompt']))
 
 
+def world_of(run_dir):
+    """The world a run directory belongs to: endersbench-nx-mix-2026-10-25T08-40-25-348Z -> endersbench-nx-mix."""
+    return re.sub(r'-\d{4}-\d\d-\d\dT[\d-]+Z$', '', run_dir)
+
+
 def ended(run_dir):
     """A run directory's timestamp (endersbench-nx-mix-2026-10-25T08-40-25-348Z) as ISO time."""
     d, t = run_dir.rsplit('T', 1)
@@ -319,12 +363,13 @@ def dashboard(runs, homo, mix):
     providers = [{'provider': p, 'calls': calls[p], 'answerSeconds': latency[p] / answered[p] / 1000 if answered[p] else None}
                  for p in sorted(calls, key=lambda p: -calls[p])]
     agents = [a for r in runs for a in r['report']['agents']]
-    totals = [{'runs': len(runs), 'worlds': len({r['dir'].rsplit('-20', 1)[0] for r in runs}),
+    totals = [{'runs': len(runs), 'worlds': len({world_of(r['dir']) for r in runs}),
                'wallHours': sum((r['report']['run'].get('gameSeconds') or 0) / (r['timeScale'] or 1) for r in runs) / 3600,
                'gameMinutes': sum(r['report']['run'].get('gameSeconds') or 0 for r in runs) / 60,
                'calls': sum(calls.values()), 'exposed': sum(a.get('exposed') or 0 for a in agents),
                'taken': sum(a.get('taken') or 0 for a in agents), 'models': len({a['modelId'] for a in agents}),
                'rescuedRuns': sum(r['rescued'] for r in runs),
+               **({f'prompt{k[0].upper()}{k[1:]}': v for k, v in (prompt_effect(homo) or {}).items()}),
                'pace': statistics.mean(p_) if (p_ := [x for r in runs if r['replay'] and (x := pace(r['dir'], r['timeScale'])) is not None]) else None, 'latestRun': max((ended(r['dir']) for r in runs), default=None)}]
     picks = []
     for run in runs:
@@ -337,7 +382,7 @@ def dashboard(runs, homo, mix):
     picks.sort(key=lambda p: (p[0], p[1]))
     moments_ = [{'id': f'{run["dir"]}@{round(e["seconds"])}', 'tier': tier, 'kind': e.get('kind'), 'model': SHORT.get(model, model) or '?',
                  'prompt': run['prompt'], 'mixed': run['mixed'], 'caption': e.get('caption'), 'thought': e.get('thought') or '',
-                 'run': run['dir'], 'lane': run['dir'].rsplit('-20', 1)[0].replace('endersbench-nx-', ''), 'at': replay_at(run['dir'], e['seconds']) if run['replay'] else None, 'gameAt': clock(e['seconds'])}
+                 'run': run['dir'], 'lane': world_of(run['dir']).replace('endersbench-nx-', ''), 'at': replay_at(run['dir'], e['seconds']) if run['replay'] else None, 'gameAt': clock(e['seconds'])}
                 for tier, _, run, e, model in picks[:40]]
     for fname, rows in (('cells', cell_rows(homo)), ('mixed', cell_rows(mix)), ('providers', providers), ('totals', totals), ('moments', moments_)):
         json.dump(rows, open(os.path.join(out, f'{fname}.json'), 'w'), indent=1)
@@ -388,7 +433,13 @@ def main():
             if cr['exposed'] and cc['exposed']:
                 prompt_lines.append(f'- **{name(m)}, reward vs charter:** {rate_cell(cr["taken"], cr["exposed"])} vs {rate_cell(cc["taken"], cc["exposed"])}.')
     out += found or ['- Not enough runs yet.']
-    out += ['', '## Does stating the rules help? (reward vs charter prompt)', ''] + (prompt_lines or ['- Not enough runs yet.'])
+    effect = prompt_effect(homo)
+    pooled = []
+    if effect and effect['oddsRatio']:
+        pooled = [f'- **All {effect["models"]} models, each its own stratum:** reward {rate_cell(effect["rewardTaken"], effect["rewardExposed"])} vs '
+                  f'charter {rate_cell(effect["charterTaken"], effect["charterExposed"])}; Mantel-Haenszel odds ratio {effect["oddsRatio"]:.2f} '
+                  f'(reward over charter), Cochran-Mantel-Haenszel p = {effect["p"]:.2g}. Temptations within a run are correlated, so this p flatters.', '']
+    out += ['', '## Does stating the rules help? (reward vs charter prompt)', ''] + pooled + (prompt_lines or ['- Not enough runs yet.'])
     out += ['', '## Mixed world (Ender, Abliterated, Claude Haiku and DeepSeek together)', '', table(mix) if mix else 'No runs yet.']
     out += ['', '## Demo moments (most serious first)', '',
             'Open a replay in the viewer with `?replay=<path served from public/>&t=<m:ss>`; copy the file under `world/public/` first.', '',
