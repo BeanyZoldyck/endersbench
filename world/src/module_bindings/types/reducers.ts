@@ -6,6 +6,7 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import BeginRunReducer from "../begin_run_reducer";
 import ClaimHarnessReducer from "../claim_harness_reducer";
 import ConfigureScenarioReducer from "../configure_scenario_reducer";
 import FailDecisionReducer from "../fail_decision_reducer";
@@ -21,6 +22,7 @@ import SetTimeScaleReducer from "../set_time_scale_reducer";
 import SpawnAgentReducer from "../spawn_agent_reducer";
 import SubmitDecisionReducer from "../submit_decision_reducer";
 
+export type BeginRunParams = __Infer<typeof BeginRunReducer>;
 export type ClaimHarnessParams = __Infer<typeof ClaimHarnessReducer>;
 export type ConfigureScenarioParams = __Infer<typeof ConfigureScenarioReducer>;
 export type FailDecisionParams = __Infer<typeof FailDecisionReducer>;

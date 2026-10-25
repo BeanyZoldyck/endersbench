@@ -20,6 +20,7 @@ import { describeDeath, intentLabel } from './moments';
 import { narrate } from './narrator';
 import { Intro } from './Intro';
 import { InventoryPanel, useHumanKeys } from './HumanPlay';
+import { LiveLeaderboard } from './LiveLeaderboard';
 
 // A replay doesn't show the live world, so it doesn't subscribe to it: the live
 // world's 20 Hz updates would otherwise re-render the page for nothing.
@@ -87,7 +88,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<bigint>();
   const [mode, setMode] = useState<CameraMode>('audience');
   const explore = useCallback(() => setMode('explore'), []);
-  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | 'inventory' | null>(null);
+  const [panel, setPanel] = useState<'exhibits' | 'journal' | 'inspector' | 'join' | 'inventory' | 'leaderboard' | null>(null);
   const [lootId, setLootId] = useState<bigint>();
   const [hint, setHint] = useState('');
   useEffect(() => { if (!hint) return; const t = window.setTimeout(() => setHint(''), 1600); return () => window.clearTimeout(t); }, [hint]);
@@ -213,6 +214,7 @@ export default function App() {
             <button aria-expanded={panel === 'exhibits'} onClick={() => setPanel(panel === 'exhibits' ? null : 'exhibits')}>Exhibits</button>
             <button aria-expanded={panel === 'journal'} onClick={() => setPanel(panel === 'journal' ? null : 'journal')}>Journal</button>
             <button aria-expanded={panel === 'inspector'} onClick={() => setPanel(panel === 'inspector' ? null : 'inspector')}>Inspector</button>
+            <button aria-expanded={panel === 'leaderboard'} onClick={() => setPanel(panel === 'leaderboard' ? null : 'leaderboard')}>Leaderboard</button>
             <a href="/results.html" target="_blank" rel="noreferrer">Results ↗</a>
             <a href="/finance.html">Ledger Street ↗</a>
             <a href="/">Observation Studio ↗</a>
@@ -236,6 +238,7 @@ export default function App() {
         {!preview && <ActionInspector names={names} />}
         {import.meta.env.DEV && <div className="preview-controls"><h3>Development art checks</h3><label><input type="checkbox" checked={staged} onChange={e => { setStaged(e.target.checked); setMode('audience'); }} /> Staged scene (local only)</label>{staged && <><label><input type="checkbox" checked={survivalPreview} onChange={e => setSurvivalPreview(e.target.checked)} /> Staged survival states</label><label><input type="checkbox" checked={winterPreview} onChange={e => setWinterPreview(e.target.checked)} /> Winter palette</label><label><input type="checkbox" checked={depleted} onChange={e => setDepleted(e.target.checked)} /> Empty supplies & resources</label><div className="preview-actions"><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'transfer', from: [57, 70], to: [45, 81], kind: 'berries', item: 'berries', label: '2 berries', born: performance.now() }, { id: performance.now() + 1, type: 'pop', from: [72, 74], to: [72, 74], kind: 'gathered', item: 'wood', label: '+1 wood', born: performance.now() }])}>Stage berry transfer</button><button onClick={() => setPreviewMoments([{ id: performance.now(), type: 'hit', from: [57, 70], to: [62, 74], kind: '', born: performance.now() }])}>Stage hit pulse</button>{['flyover', 'flare'].map(kind => <button key={kind} onClick={() => setPreviewMoments([{ id: performance.now(), type: 'world', from: [64, 64], to: [64, 64], kind, born: performance.now() }])}>Stage {kind}</button>)}</div></>}</div>}
       </>}
+      {panel === 'leaderboard' && <><span className="eyebrow">EVERY RUN, KEPT</span><h2>Leaderboard</h2><LiveLeaderboard /></>}
       {panel === 'inventory' && me && <InventoryPanel conn={conn} me={me} items={items} containers={containers} structures={structures} lootId={lootId} onError={setError} />}
       {panel === 'join' && !replay.active && <><span className="eyebrow">STEP INTO THE STORY</span><h2>{me ? `Hello, ${me.name}` : 'Join the survivors'}</h2><HumanControls conn={conn} me={me} disabled={!canMutate || !ready} onError={setError} /></>}
     </aside>}

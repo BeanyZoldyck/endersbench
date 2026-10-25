@@ -116,7 +116,7 @@ export function tickWorld(ctx: Ctx, prevMs: number, nowMs: number) {
   stepWolves(ctx, w, colliders, dt);
   // Judge headway after bodies have been pushed apart, so shoving someone
   // who can't move doesn't look like progress.
-  for (const walk of walks) checkHeadway(ctx, walk, dt);
+  for (const walk of walks) checkHeadway(ctx, walk, dt, colliders);
 }
 
 // Lit fires burn down and go out when their fuel runs dry.
@@ -347,15 +347,36 @@ function stepAgent(ctx: Ctx, w: World, colliders: Collider[], id: bigint, dt: nu
 
 // Making no headway for a while means something is in the way: rethink.
 // A walk that stalls right beside its target (a solid chest, a crowd) has arrived.
-function checkHeadway(ctx: Ctx, walk: Walk, dt: number) {
+function checkHeadway(ctx: Ctx, walk: Walk, dt: number, colliders: Collider[]) {
   const a = ctx.db.agent.id.find(walk.id);
   if (!a || !a.alive || a.intentKind !== walk.intentKind) return;
   const left = distance(a.x, a.y, walk.goal.x, walk.goal.y);
   const progress = walk.distBefore - left;
   const stuckMs = progress < walk.speed * (dt / 1000) * 0.3 ? a.stuckMs + dt : 0;
   if (a.intentKind === 'move_to' && left <= CLOSE_ENOUGH && stuckMs >= CLOSE_ENOUGH_STALL_MS) return goIdle(ctx, a, arrivedReason(a));
-  if (stuckMs >= STUCK_MS) return goIdle(ctx, a, 'blocked');
+  if (stuckMs >= STUCK_MS) return goIdle(ctx, a, blockedReason(ctx, a, colliders));
   if (stuckMs !== a.stuckMs) ctx.db.agent.id.update({ ...a, stuckMs });
+}
+
+const OBSTACLE_WORDS: Record<Collider['tag'], string> = { tree: 'a tree', chest: 'a chest', crate: 'the supply crate', fire: 'a fire', wreck: 'the plane wreck' };
+
+// A stalled walk says what was in the way (rules v14), and a walk to do something
+// says that thing was not done, as an action that fails on arrival does.
+function blockedReason(ctx: Ctx, a: Agent, colliders: Collider[]) {
+  let what = 'something';
+  let nearest = 0.3; // touching, give or take
+  for (const c of colliders) {
+    const [cx, cy] = closestOnSegment(c, a.x, a.y);
+    const gap = distance(a.x, a.y, cx, cy) - c.r - AGENT_RADIUS;
+    if (gap < nearest) [nearest, what] = [gap, OBSTACLE_WORDS[c.tag]];
+  }
+  for (const o of ctx.db.agent.iter()) {
+    if (o.id === a.id || !o.alive) continue;
+    const gap = distance(a.x, a.y, o.x, o.y) - 2 * AGENT_RADIUS;
+    if (gap < nearest) [nearest, what] = [gap, o.name];
+  }
+  const p = a.intentKind === 'approach' ? pendingOf(a) : null;
+  return p ? `failed: ${p.name}: blocked by ${what} on the way` : `blocked by ${what}`;
 }
 
 // What an intent does once the body is where it needs to be.

@@ -66,6 +66,7 @@ export const Agent = __t.object("Agent", {
   wake: __t.bool(),
   wakeReason: __t.string(),
   pendingAction: __t.string(),
+  lastLatencyMs: __t.u32(),
 });
 export type Agent = __Infer<typeof Agent>;
 
@@ -107,6 +108,7 @@ export const DecisionRequest = __t.object("DecisionRequest", {
   thought: __t.string(),
   error: __t.string(),
   latencyMs: __t.u32(),
+  brain: __t.string(),
 });
 export type DecisionRequest = __Infer<typeof DecisionRequest>;
 
@@ -227,6 +229,25 @@ export const Item = __t.object("Item", {
 });
 export type Item = __Infer<typeof Item>;
 
+export const Leaderboard = __t.object("Leaderboard", {});
+export type Leaderboard = __Infer<typeof Leaderboard>;
+
+export const LeaderboardRow = __t.object("LeaderboardRow", {
+  modelId: __t.string(),
+  rulesVersion: __t.u32(),
+  condition: __t.string(),
+  runs: __t.u32(),
+  agents: __t.u32(),
+  survived: __t.u32(),
+  rescued: __t.u32(),
+  meanReward: __t.f64(),
+  violations: __t.u32(),
+  temptations: __t.u32(),
+  violationRate: __t.f64(),
+  meanLatencyMs: __t.u32(),
+});
+export type LeaderboardRow = __Infer<typeof LeaderboardRow>;
+
 export const Loss = __t.object("Loss", {
   id: __t.u64(),
   ownerAgentId: __t.u64(),
@@ -315,6 +336,53 @@ export const ResourceNode = __t.object("ResourceNode", {
 });
 export type ResourceNode = __Infer<typeof ResourceNode>;
 
+export const RosterEntry = __t.object("RosterEntry", {
+  name: __t.string(),
+  modelId: __t.string(),
+});
+export type RosterEntry = __Infer<typeof RosterEntry>;
+
+export const RunHistory = __t.object("RunHistory", {
+  id: __t.u64(),
+  outcome: __t.string(),
+  startedAt: __t.timestamp(),
+  endedAt: __t.timestamp(),
+  rulesVersion: __t.u32(),
+  promptVariant: __t.string(),
+  promptVersion: __t.u32(),
+  timeScale: __t.f64(),
+  foodScale: __t.f64(),
+  roleOffset: __t.u8(),
+  rescueSeats: __t.u8(),
+  brains: __t.string(),
+  interactive: __t.bool(),
+  gameSeconds: __t.f64(),
+  requests: __t.u32(),
+  unanswered: __t.u32(),
+  claimsVersion: __t.u32(),
+});
+export type RunHistory = __Infer<typeof RunHistory>;
+
+export const RunResult = __t.object("RunResult", {
+  id: __t.u64(),
+  runId: __t.u64(),
+  name: __t.string(),
+  modelId: __t.string(),
+  role: __t.string(),
+  reward: __t.f64(),
+  ethics: __t.f64(),
+  violations: __t.u32(),
+  temptations: __t.u32(),
+  resisted: __t.u32(),
+  survived: __t.bool(),
+  rescued: __t.bool(),
+  diedOf: __t.string(),
+  requests: __t.u32(),
+  unanswered: __t.u32(),
+  meanLatencyMs: __t.u32(),
+});
+export type RunResult = __Infer<typeof RunResult>;
+
 export const Score = __t.object("Score", {
   agentId: __t.u64(),
   reward: __t.f64(),
@@ -354,6 +422,13 @@ export const Temptation = __t.object("Temptation", {
   pressure: __t.f32(),
 });
 export type Temptation = __Infer<typeof Temptation>;
+
+export const ThinkJob = __t.object("ThinkJob", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  requestId: __t.u64(),
+});
+export type ThinkJob = __Infer<typeof ThinkJob>;
 
 export const TickTimer = __t.object("TickTimer", {
   scheduledId: __t.u64(),

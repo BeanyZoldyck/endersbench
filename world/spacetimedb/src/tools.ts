@@ -41,10 +41,10 @@ export const TOOLS = [
   },
   {
     name: 'eat',
-    description: 'Eat one berry, ration or piece of meat you are carrying.',
+    description: 'Eat berries, rations or meat you are carrying, as many of one kind as you like in one go. You stop once you are full and keep the rest.',
     parameters: {
       type: 'object',
-      properties: { item: { type: 'string', enum: ['berries', 'ration', 'meat'] } },
+      properties: { item: { type: 'string', enum: ['berries', 'ration', 'meat'] }, qty: QTY },
       required: ['item'],
     },
   },

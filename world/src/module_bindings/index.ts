@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import BeginRunReducer from "./begin_run_reducer";
 import ClaimHarnessReducer from "./claim_harness_reducer";
 import ConfigureScenarioReducer from "./configure_scenario_reducer";
 import FailDecisionReducer from "./fail_decision_reducer";
@@ -67,6 +68,7 @@ import HazardRow from "./hazard_table";
 import HeardOfRow from "./heard_of_table";
 import HitEventRow from "./hit_event_table";
 import ItemRow from "./item_table";
+import LeaderboardRow from "./leaderboard_table";
 import MemoryRow from "./memory_table";
 import MessageRow from "./message_table";
 import MetaRow from "./meta_table";
@@ -74,6 +76,8 @@ import MobRow from "./mob_table";
 import ModelHealthRow from "./model_health_table";
 import RecordRow from "./record_table";
 import ResourceNodeRow from "./resource_node_table";
+import RunHistoryRow from "./run_history_table";
+import RunResultRow from "./run_result_table";
 import ScoreRow from "./score_table";
 import StructureRow from "./structure_table";
 import TemptationRow from "./temptation_table";
@@ -363,6 +367,34 @@ const tablesSchema = __schema({
       { name: 'resource_node_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ResourceNodeRow),
+  runHistory: __table({
+    name: 'run_history',
+    indexes: [
+      { accessor: 'id', name: 'run_history_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'outcome', name: 'run_history_outcome_idx_btree', algorithm: 'btree', columns: [
+        'outcome',
+      ] },
+    ],
+    constraints: [
+      { name: 'run_history_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RunHistoryRow),
+  runResult: __table({
+    name: 'run_result',
+    indexes: [
+      { accessor: 'id', name: 'run_result_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'runId', name: 'run_result_run_id_idx_btree', algorithm: 'btree', columns: [
+        'runId',
+      ] },
+    ],
+    constraints: [
+      { name: 'run_result_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RunResultRow),
   score: __table({
     name: 'score',
     indexes: [
@@ -426,10 +458,18 @@ const tablesSchema = __schema({
     ],
     event: true,
   }, WorldEventRow),
+  leaderboard: __table({
+    name: 'leaderboard',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, LeaderboardRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("begin_run", BeginRunReducer),
   __reducerSchema("claim_harness", ClaimHarnessReducer),
   __reducerSchema("configure_scenario", ConfigureScenarioReducer),
   __reducerSchema("fail_decision", FailDecisionReducer),
