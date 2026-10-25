@@ -207,6 +207,44 @@ export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs; live?: LiveCr
   return benchLoop(openAiTurn(opts), opts.raw, opts.live);
 }
 
+// A tool call a model wrote as text, which vLLM hands back as content when it runs
+// without a tool parser (Ender on Runpod): Qwen's XML form
+// <tool_call><function=name><parameter=k>v</parameter></function></tool_call>, or
+// Hermes JSON <tool_call>{"name", "arguments"}</tool_call>. XML values are text, so
+// each is typed by the tool's schema.
+const TOOL_CALL_BLOCK = /<tool_call>[\s\S]*?(?:<\/tool_call>|$)/;
+
+export function textToolCall(content: string, tools: DeskTool[]): { name: string; arguments: string } | null {
+  const block = content.match(TOOL_CALL_BLOCK)?.[0];
+  if (!block) return null;
+  const xml = block.match(/<function=([\w.-]+)>([\s\S]*?)(?:<\/function>|$)/);
+  if (xml) {
+    const props: Record<string, any> = tools.find(t => t.name === xml[1])?.parameters?.properties ?? {};
+    const args: Record<string, unknown> = {};
+    for (const [, key, raw] of xml[2].matchAll(/<parameter=([\w.-]+)>\s*([\s\S]*?)\s*<\/parameter>/g)) {
+      const type = props[key]?.type;
+      if (type === 'number' || type === 'integer') args[key] = Number.isFinite(Number(raw)) ? Number(raw) : raw;
+      else if (type === 'boolean') args[key] = raw === 'true' ? true : raw === 'false' ? false : raw;
+      else if (type === 'object' || type === 'array') {
+        try {
+          args[key] = JSON.parse(raw);
+        } catch {
+          args[key] = raw;
+        }
+      } else args[key] = raw;
+    }
+    return { name: xml[1], arguments: JSON.stringify(args) };
+  }
+  try {
+    const json = JSON.parse(block.replace(/<\/?tool_call>/g, '').trim());
+    if (typeof json?.name !== 'string') return null;
+    const args = typeof json.arguments === 'string' ? json.arguments : JSON.stringify(json.arguments ?? {});
+    return { name: json.name, arguments: args };
+  } catch {
+    return null;
+  }
+}
+
 export function openAiTurn(opts: OpenAiOptions): TakeTurn {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const api = opts.api ?? 'chat';
@@ -244,9 +282,12 @@ export function openAiTurn(opts: OpenAiOptions): TakeTurn {
       ],
     });
     const message = reply.choices?.[0]?.message ?? {};
-    const call = message.tool_calls?.[0]?.function;
+    const content = typeof message.content === 'string' ? message.content.trim() : '';
+    const written = message.tool_calls?.[0]?.function?.name ? null : textToolCall(content, tools);
+    const call = written ?? message.tool_calls?.[0]?.function;
+    const text = written ? content.replace(TOOL_CALL_BLOCK, '').trim() : content;
     return {
-      text: typeof message.content === 'string' && message.content.trim() ? [message.content.trim()] : [],
+      text: text ? [text] : [],
       ...(call?.name ? { call: { name: call.name, arguments: call.arguments ?? '' } } : {}),
       ...(message.refusal ? { refusal: message.refusal } : {}),
       usage: { input: reply.usage?.prompt_tokens ?? 0, cached: reply.usage?.prompt_tokens_details?.cached_tokens ?? 0, output: reply.usage?.completion_tokens ?? 0 },
