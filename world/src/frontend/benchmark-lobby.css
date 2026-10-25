@@ -18,7 +18,6 @@
 .studio .scenario-label { display: block; font-size: .875rem; margin-bottom: 8px; }
 .studio .scenario-select { display: block; width: 100%; min-height: 48px; padding: 10px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; font-size: 1rem; }
 .studio .lobby-scenario-preview { margin-top: 20px; }
-.studio .lobby-scenario-preview img { width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; margin-bottom: 16px; border-radius: 6px; }
 .studio .lobby-scenario-preview h3 { margin-bottom: 10px; }
 .studio .lobby-scenario-preview p { overflow-wrap: anywhere; }
 .studio .benchmark-lobby .benchmark-start strong { overflow-wrap: anywhere; }

@@ -12,11 +12,10 @@ type LobbyProps = {
   starting: boolean;
   onStart: () => void;
   onRetry: () => void;
-  onCompare: () => void;
   onDetails: () => void;
 };
 
-export function BenchmarkLobby({ state, dispatch, config, error, starting, onStart, onRetry, onCompare, onDetails }: LobbyProps) {
+export function BenchmarkLobby({ state, dispatch, config, error, starting, onStart, onRetry, onDetails }: LobbyProps) {
   const total = rosterSize(state.draftRoster);
   const entries = rosterEntries(state.draftRoster);
   const scenario = config?.scenarios.find(option => option.id === state.draftScenario);
@@ -41,7 +40,6 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, onSta
             <p className={`lineup-connection small ${connection?.available ? 'muted' : 'unavailable'}`}>{!config ? 'Checking connection' : connection?.available ? 'Ready' : 'Not connected'}</p>
           </div>;
         })}</div>
-        <button className="text-link" onClick={onCompare}>Compare observed model results ↗</button>
       </section>
       <section aria-labelledby="scenario-heading">
         <h2 id="scenario-heading">Choose a scenario</h2>
@@ -51,7 +49,6 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, onSta
           {config?.scenarios.map(option => <option key={option.id} value={option.id} disabled={option.available === false}>{option.name}{option.available === false ? ' · Unavailable' : ''}</option>)}
         </select>
         <article className="lobby-scenario-preview">
-          {scenario?.id.startsWith('clearing-') && <img src="/studio/clearing-mascots-concept.png" alt="Illustration of model agents sharing supplies in The Clearing" />}
           <h3>{scenario?.name ?? 'Scenario preview'}</h3>
           <p id="scenario-description">{scenario?.description ?? 'Connect to the benchmark runner to see supported scenarios and their rules.'}</p>
           {scenario?.available === false && <p className="small unavailable">{scenario.reason || 'This scenario is unavailable.'}</p>}

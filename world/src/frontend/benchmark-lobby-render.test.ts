@@ -13,7 +13,7 @@ const config: BenchmarkConfig = {
 function render(state: StudioState = initialStudioState(''), currentConfig: BenchmarkConfig | null = config): string {
   return renderToStaticMarkup(createElement(BenchmarkLobby, {
     state, dispatch: vi.fn(), config: currentConfig, error: '', starting: false,
-    onStart: vi.fn(), onRetry: vi.fn(), onCompare: vi.fn(), onDetails: vi.fn(),
+    onStart: vi.fn(), onRetry: vi.fn(), onDetails: vi.fn(),
   }));
 }
 function button(markup: string, label: string): string {
