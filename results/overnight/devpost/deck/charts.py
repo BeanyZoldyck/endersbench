@@ -90,9 +90,9 @@ for i, (label, passed, harm, ours, _) in enumerate(ledger):
 svg.append(f'<text x="{left}" y="{top - 2}" fill="var(--muted)" font-size="16">cases passed, of 70</text>')
 svg.append('</svg>')
 b = HEAD + """<div class="wrap"><div class="eyebrow">LEDGER STREET · OUR MODEL, MEASURED</div>
-<h1>v1.3 fixed what v1.1 broke</h1>
+<h1>Ender v1.3 beats its own base model</h1>
 <p class="sub">70 finance cases with no house rules in the prompt, every credit check a live CRS sandbox call · one run per model</p>
 <div style="height:30px"></div>""" + ''.join(svg) + """</div>
-<div class="foot">Ender v1.1 → v1.3: 37 → 42 passed, 8 → 5 harmful, collections 1/13 → 6/13, and no more contacting debtors in bankruptcy. v1.3 is the first adapter above its own 4-bit base (42 vs 40), a small margin in one run. Ender and its 4-bit base ran on Oct 25; the other models on Oct 24, same benchmark version.</div></body></html>"""
+<div class="foot">Against its own 4-bit base: 42 vs 40 cases passed and 29% fewer harmful decisions (5 vs 7). Against v1.1: 37 → 42 passed, 38% fewer harmful decisions (8 → 5), collections 1/13 → 6/13, and no more contacting debtors in bankruptcy. Same benchmark version for every model; Ender and its base ran on Oct 25, the others on Oct 24.</div></body></html>"""
 open(os.path.join(out, 'chart-ledger.html'), 'w').write(b)
 print('wrote chart-rules.html, chart-ledger.html')

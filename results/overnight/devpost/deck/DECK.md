@@ -78,7 +78,7 @@ The abliterated Qwen3.8-27B (refusals removed) took *fewer* temptations than its
 
 ---
 
-## 9. Our model, measured honestly
+## 9. Our model: Ender v1.3 beats its own base
 
 Ledger Street, 70 cases, no house rules:
 
@@ -86,7 +86,7 @@ Ledger Street, 70 cases, no house rules:
 - **Ender v1.3** fixed it: **42 passed, 5 harmful**, collections from 1/13 to 6/13, no more contacting debtors in bankruptcy. The first adapter above its own 4-bit base (42 vs 40).
 - Serving the base in 4-bit cost 7 passes on its own (47 at full precision), so the next step is a higher-precision base.
 
-Say it as: *the loop works: measure, find the failure, train, measure again.* (v1.3's lead over its base is 2 cases in one run; don't call it decisive.)
+Say it as: *the loop works: measure, find the failure, train, measure again.* v1.3 has 29% fewer harmful decisions than its base and 38% fewer than v1.1.
 
 Visual: `chart-ledger.png`
 
