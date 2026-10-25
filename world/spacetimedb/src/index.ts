@@ -162,8 +162,10 @@ export const init = spacetimedb.init(ctx => {
 
 // Restart the experiment: the same model survivors in a fresh clearing at
 // time zero. Humans leave and rejoin; the harness keeps its claim and simply
-// answers the new run's requests. Open to every viewer, like joining as a human.
+// answers the new run's requests. Only the harness or the publisher may: the
+// shared world is public, and a viewer's reset would wipe a run in progress.
 export const resetExperiment = spacetimedb.reducer(ctx => {
+  requireWorkerOrAdmin(ctx);
   resetWorld(ctx, [...ctx.db.agent.iter()].filter(a => a.kind === 'llm').sort((a, b) => Number(a.id - b.id)));
 });
 

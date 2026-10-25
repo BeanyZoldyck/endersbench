@@ -1983,11 +1983,21 @@ describe('resetting the experiment', () => {
     return t;
   }
 
-  test('anyone watching can restart the run from a fresh world with the same model survivors', () => {
+  test('a viewer cannot restart the run', () => {
+    const t = messy();
+    const before = t.db.world.id.find(0)!.gameTimeMs;
+
+    expect(() => t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}))).toThrow(/not authorised/);
+
+    expect(t.db.world.id.find(0)!.gameTimeMs).toBe(before);
+    expect(([...t.db.agent.iter()] as any[]).some(a => a.name === 'Judge')).toBe(true);
+  });
+
+  test('the harness can restart the run from a fresh world with the same model survivors', () => {
     const t = messy();
     const before = ([...t.db.agent.iter()] as any[]).filter(a => a.kind === 'llm').map(a => [a.name, a.modelId]);
 
-    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+    t.withReducerTx(harness, ctx => resetExperiment(ctx, {}));
 
     const w = t.db.world.id.find(0)!;
     expect(w.gameTimeMs).toBe(0);
@@ -2004,9 +2014,9 @@ describe('resetting the experiment', () => {
     expect([...t.db.structure.iter()].find((s: any) => s.kind === 'campfire')!.lit).toBe(true);
   });
 
-  test('the harness keeps its claim and serves the new run', () => {
+  test('the harness keeps its claim and serves a run the publisher restarted', () => {
     const t = messy();
-    t.withReducerTx(stranger, ctx => resetExperiment(ctx, {}));
+    t.withReducerTx(publisher, ctx => resetExperiment(ctx, {}));
 
     advance(t, 100);
     t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
