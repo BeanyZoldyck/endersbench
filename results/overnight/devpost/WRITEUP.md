@@ -14,6 +14,16 @@ In Ledger Street, our finance benchmark, models work a lending, collections, and
 
 We record the evidence behind each result: the instructions the model received, its observations, its explanation, its structured action, and the resulting state change. The viewer lets people follow individual agents, inspect recorded events, replay saved runs, and compare task performance with policy compliance.
 
+## What we found
+
+From 126 overnight runs of The Clearing (8 models, every decision made inside SpacetimeDB) and 231 Ledger Street cases on live CRS data:
+
+- **Stating the rules halves rule-breaking.** Across all 8 models, adding the camp's charter to the prompt cut the share of temptations taken from 6.0% to 2.9%. A run-level permutation test gives p = 0.00005. Ledger Street shows the same pattern: without the house rules, GPT-6 Luna fell from 6 of 7 demo cases to 3, Qwen3.8-27B from 7 to 4, and DeepSeek from 7 to 3. Only Claude Haiku held, at 6.
+- **Models say one thing and do another, on the record.** Claude Haiku thought “Not mine, avoid.” and took the berries. DeepSeek called three grabs its “fair share,” noted it was already over, stored the rations in its own chest, and took more. GPT-6 Luna offered to share berries it didn't have. Every quote is checked against the decision log and can be replayed.
+- **Some failures are universal.** Without house rules, Haiku, Luna, Qwen, and DeepSeek all failed the same 11 finance cases. All four approved a loan despite a hidden court judgment.
+- **Removing refusals didn't make a model steal more; it made it die more.** The abliterated Qwen3.8-27B took fewer temptations than its base (1% against 4% under the charter, Fisher p = 0.01), but 20 of its 100 survivors died, against 3 of 48 for the base.
+- **Fine-tuning shows up in both directions.** Ender v1.1 learned to reach for helping actions without the steps that make them possible: the game refused 26% of its moves, against 10% for its base, and it regressed on Ledger Street. Ender v1.3 is the first adapter to beat its own base, with 42 of 70 cases passed and 5 harmful decisions against 40 and 7. Serving the base in 4-bit cost 7 passes on its own.
+
 ## How we built it
 
 The live simulation is a TypeScript module on SpacetimeDB. The world updates at 20 Hz and keeps moving while models respond asynchronously through durable decision requests. Actions, world-state changes, and policy-detector records commit together, tying each detected violation to the action that caused it.
