@@ -19,6 +19,7 @@ export interface SiteInput {
   anthropicApiKey?: string;
   openaiApiKey?: string;
   openrouterApiKey?: string;
+  bitdeerApiKey?: string;
   customApiKey?: string;
   customBaseUrl?: string;
   caseSets?: string[];
@@ -46,6 +47,7 @@ export function siteConfig(raw: unknown) {
     anthropic: text(input.anthropicApiKey),
     openai: text(input.openaiApiKey),
     openrouter: text(input.openrouterApiKey),
+    bitdeer: text(input.bitdeerApiKey),
     custom: text(input.customApiKey),
   };
   const listed = Array.isArray(input.models) && input.models.length ? input.models : [POLICY_SCRIPT];

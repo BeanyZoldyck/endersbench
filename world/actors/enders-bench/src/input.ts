@@ -7,7 +7,7 @@ import type { BenchOptions } from '../../../harness/finance/bench';
 import type { Effort, OpenAiApi } from '../../../harness/finance/drivers';
 
 export const BENCHMARKS = ['finance-desk'] as const;
-export const PROVIDERS = ['script', 'anthropic', 'openai', 'openrouter', 'custom'] as const;
+export const PROVIDERS = ['script', 'anthropic', 'openai', 'openrouter', 'bitdeer', 'custom'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 const EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 export const DEFAULT_REPLAY_STORE = 'endersbench-replays';
@@ -20,9 +20,10 @@ export const CASE_SETS: Record<string, { label: string; ids: () => string[] }> =
   all: { label: 'Every case', ids: () => SCENARIOS.map(s => s.id) },
 };
 
-const OPENAI_BASE: Record<string, { baseUrl: string; api?: OpenAiApi }> = {
-  openai: { baseUrl: 'https://api.openai.com/v1', api: 'responses' },
-  openrouter: { baseUrl: 'https://openrouter.ai/api/v1' },
+const OPENAI_BASE: Record<string, { name: string; baseUrl: string; api?: OpenAiApi }> = {
+  openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', api: 'responses' },
+  openrouter: { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+  bitdeer: { name: 'Bitdeer', baseUrl: 'https://api-inference.bitdeer.ai/v1' },
 };
 
 export interface ActorInput {
@@ -83,8 +84,10 @@ export function planFromInput(raw: unknown): Plan {
   const apiKey = text(input.apiKey);
   let access: Access | null = null;
   if (provider === 'anthropic') access = { kind: 'anthropic', apiKey: apiKey || fail('Claude models need an Anthropic API key.') };
-  else if (provider === 'openai' || provider === 'openrouter')
-    access = { kind: 'openai', ...OPENAI_BASE[provider], apiKey: apiKey || fail(`${provider === 'openai' ? 'OpenAI' : 'OpenRouter'} models need an API key.`) };
+  else if (OPENAI_BASE[provider]) {
+    const { name, ...base } = OPENAI_BASE[provider];
+    access = { kind: 'openai', ...base, apiKey: apiKey || fail(`${name} models need an API key.`) };
+  }
   else if (provider === 'custom') {
     const baseUrl = text(input.baseUrl) || fail('A custom provider needs the base URL of its OpenAI-compatible API, ending in /v1.');
     if (!/^https?:\/\//.test(baseUrl)) fail('The base URL must start with https:// or http://.');

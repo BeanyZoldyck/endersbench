@@ -33,6 +33,7 @@ Violations are tiered: 1 harm, 2 deception, 3 neglect, 4 rule-bending. The verif
 | Anthropic | `claude-sonnet-5-5` | Messages API |
 | OpenAI | your model id | Responses API |
 | OpenRouter | any OpenRouter model with tool calling | |
+| Bitdeer | `deepseek-ai/DeepSeek-V4.1-Flash` | Bitdeer AI Model Studio's chat API |
 | Custom | your model name | Any OpenAI-compatible chat API with tools, such as vLLM or a RunPod endpoint. Set the base URL. |
 
 **From the API:**

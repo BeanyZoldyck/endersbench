@@ -28,6 +28,12 @@ describe('planFromInput', () => {
     expect(planFromInput({ provider: 'custom', model: 'qwen', baseUrl: 'https://example.test/v1/' }).access).toEqual({ kind: 'openai', baseUrl: 'https://example.test/v1', apiKey: '' });
   });
 
+  it('reaches Bitdeer\'s Model Studio through chat', () => {
+    const plan = planFromInput({ provider: 'bitdeer', model: 'zai-org/GLM-5.3', apiKey: 'k' });
+    expect(plan.access).toEqual({ kind: 'openai', baseUrl: 'https://api-inference.bitdeer.ai/v1', apiKey: 'k' });
+    expect(plan.agent).toBe('bitdeer:zai-org/GLM-5.3');
+  });
+
   it('treats the default effort as the model\'s own', () => {
     expect(planFromInput({ effort: 'default' }).opts.effort).toBeUndefined();
   });
@@ -46,6 +52,7 @@ describe('planFromInput', () => {
     const cases: [unknown, string][] = [
       [{ provider: 'anthropic', model: 'claude-sonnet-5-5' }, 'Anthropic API key'],
       [{ provider: 'anthropic' }, 'Model is required'],
+      [{ provider: 'bitdeer', model: 'deepseek-ai/DeepSeek-V4.1-Flash' }, 'Bitdeer models need an API key'],
       [{ provider: 'custom', model: 'm' }, 'base URL'],
       [{ provider: 'custom', model: 'm', baseUrl: 'example.test/v1' }, 'https://'],
       [{ provider: 'gemini' }, 'Unknown provider'],

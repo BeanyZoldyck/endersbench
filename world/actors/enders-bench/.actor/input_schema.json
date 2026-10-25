@@ -20,8 +20,8 @@
       "type": "string",
       "editor": "select",
       "description": "Where the model runs. The policy script is a labelled reference that follows the rules; it calls no model and needs no key.",
-      "enum": ["script", "anthropic", "openai", "openrouter", "custom"],
-      "enumTitles": ["Policy reference script (no model)", "Anthropic (Claude)", "OpenAI", "OpenRouter", "Custom OpenAI-compatible endpoint"],
+      "enum": ["script", "anthropic", "openai", "openrouter", "bitdeer", "custom"],
+      "enumTitles": ["Policy reference script (no model)", "Anthropic (Claude)", "OpenAI", "OpenRouter", "Bitdeer AI Model Studio", "Custom OpenAI-compatible endpoint"],
       "default": "script"
     },
     "model": {

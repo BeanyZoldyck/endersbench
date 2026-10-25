@@ -26,6 +26,7 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
    [
      { "id": "script", "label": "Policy reference script (no model)", "provider": "script" },
      { "id": "haiku", "label": "Claude Haiku 5.5", "provider": "anthropic", "model": "claude-haiku-5-5" },
+     { "id": "deepseek", "label": "DeepSeek-V4.1-Flash (Bitdeer)", "provider": "bitdeer", "model": "deepseek-ai/DeepSeek-V4.1-Flash" },
      { "id": "ft", "label": "Fine-tuned Qwen3.8-27B", "provider": "custom", "model": "<served model name>" }
    ]
    ```
