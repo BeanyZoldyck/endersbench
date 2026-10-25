@@ -59,8 +59,8 @@
       "description": "Runs started here send each CRS check to the sandbox with the login below. Off: the saved Oct 24 responses.",
       "default": false
     },
-    "crsUsername": { "title": "CRS sandbox username", "type": "string", "editor": "textfield", "isSecret": true },
-    "crsPassword": { "title": "CRS sandbox password", "type": "string", "editor": "textfield", "isSecret": true },
+    "crsUsername": { "title": "CRS sandbox username", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS. Passed to each run as encrypted input." },
+    "crsPassword": { "title": "CRS sandbox password", "type": "string", "editor": "textfield", "isSecret": true, "description": "Only for live CRS." },
     "benchActor": {
       "sectionCaption": "Advanced",
       "title": "Benchmark Actor",
@@ -68,8 +68,8 @@
       "editor": "textfield",
       "description": "Which Actor the Run button starts, as username/actor-name. Empty means your own enders-bench."
     },
-    "benchMemoryMbytes": { "title": "Memory per benchmark run (MB)", "type": "integer", "editor": "number", "minimum": 256, "maximum": 4096, "default": 512 },
-    "benchTimeoutSecs": { "title": "Timeout per benchmark run (seconds)", "type": "integer", "editor": "number", "minimum": 60, "maximum": 86400, "default": 3600 }
+    "benchMemoryMbytes": { "title": "Memory per benchmark run (MB)", "type": "integer", "editor": "number", "description": "Memory for each run the site starts.", "minimum": 256, "maximum": 4096, "default": 512 },
+    "benchTimeoutSecs": { "title": "Timeout per benchmark run (seconds)", "type": "integer", "editor": "number", "description": "A run that takes longer is stopped.", "minimum": 60, "maximum": 86400, "default": 3600 }
   },
   "required": []
 }
