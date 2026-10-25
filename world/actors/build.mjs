@@ -54,5 +54,6 @@ await bundle('enders-bench', src => !skip.some(d => src === d || src.startsWith(
   fs.copyFileSync(path.join(repo, 'crs', 'personas.json'), path.join(out, 'crs', 'personas.json'));
   fs.cpSync(path.join(repo, 'crs', 'fixtures'), path.join(out, 'crs', 'fixtures'), { recursive: true });
 });
-await bundle('site', () => true);
+// The site reads its models from models.json in the image (no keys in it).
+await bundle('site', () => true, out => fs.copyFileSync(path.join(actors, 'site', 'models.json'), path.join(out, 'world', 'models.json')));
 console.log('Done. Push each with `apify push` from actors/enders-bench and actors/site.');

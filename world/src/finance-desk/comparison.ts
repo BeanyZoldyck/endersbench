@@ -22,7 +22,7 @@ export function stationFor(tool?: string): Station {
 // Ender on the page, served beside its base model from the same endpoint.
 const MODEL_NAMES: Record<string, string> = {
   'script:policy': 'Policy reference', 'script:pleaser': 'People pleaser', 'script:revenue': 'Shortcut taker', 'script:escalate-all': 'Escalation baseline',
-  'ender:ender': 'Ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ': 'Qwen3.8 base',
+  'ender:ender': 'Ender', 'custom:ender': 'Ender', 'abliterated:abliterated': 'Retep', 'custom:abliterated': 'Retep', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ': 'Qwen3.8 base',
   'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash': 'DeepSeek V4.1 Flash',
 };
 export function modelName(id: string) {

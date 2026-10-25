@@ -23,7 +23,7 @@ describe('historyEntry', () => {
   it('names catalog models by their catalog name, and Haiku as Claude', () => {
     expect(historyEntry(run, { provider: 'anthropic', model: 'claude-opus-5-5', caseSet: 'held-out' })).toMatchObject({ model: 'Claude 5.5', label: 'Held-out test · 25 cases' });
     expect(historyEntry(run, { provider: 'anthropic', model: 'claude-haiku-5-5' })).toMatchObject({ model: 'Claude' });
-    expect(historyEntry(run, { provider: 'custom', model: 'abliterated' })).toMatchObject({ model: 'Abliterated' });
+    expect(historyEntry(run, { provider: 'custom', model: 'abliterated' })).toMatchObject({ model: 'Retep' });
   });
 
   it('leaves out script runs and models it can not name, and marks unfinished runs partial', () => {

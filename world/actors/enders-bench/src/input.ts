@@ -7,7 +7,7 @@ import type { BenchOptions } from '../../../harness/finance/bench';
 import type { Effort, OpenAiApi } from '../../../harness/finance/drivers';
 
 export const BENCHMARKS = ['finance-desk'] as const;
-export const PROVIDERS = ['script', 'anthropic', 'openai', 'openrouter', 'bitdeer', 'featherless', 'custom'] as const;
+export const PROVIDERS = ['script', 'anthropic', 'openai', 'xai', 'openrouter', 'bitdeer', 'featherless', 'custom'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 const EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 export const DEFAULT_REPLAY_STORE = 'endersbench-replays';
@@ -22,6 +22,7 @@ export const CASE_SETS: Record<string, { label: string; ids: () => string[] }> =
 
 const OPENAI_BASE: Record<string, { name: string; baseUrl: string; api?: OpenAiApi }> = {
   openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', api: 'responses' },
+  xai: { name: 'xAI', baseUrl: 'https://api.x.ai/v1' },
   openrouter: { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
   bitdeer: { name: 'Bitdeer', baseUrl: 'https://api-inference.bitdeer.ai/v1' },
   featherless: { name: 'Featherless', baseUrl: 'https://api.featherless.ai/v1' },

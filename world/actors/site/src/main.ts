@@ -14,6 +14,7 @@
 //   GET  /api/benchmarks/config       the lobby models on offer and the two scenarios
 //   POST /api/benchmarks              { roster, scenario }: a Clearing run on Maincloud, or Ledger Street Actor runs (one per agent)
 //   GET  /api/benchmarks/:id          that run's status and where to watch it
+import fs from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,7 +35,9 @@ const FALLBACK_REPLAY = '/replays/finance-v6-live-crs-script.json';
 await Actor.init();
 let cfg: ReturnType<typeof siteConfig>;
 try {
-  cfg = siteConfig(await Actor.getInput());
+  const bundledModels = path.join(here, 'models.json');
+  cfg = siteConfig(await Actor.getInput(), fs.existsSync(bundledModels) ? JSON.parse(fs.readFileSync(bundledModels, 'utf-8')) : []);
+  if (cfg.skipped.length) log.warning(`Not offering ${cfg.skipped.join(', ')}.`);
 } catch (err) {
   await Actor.fail(`Site input: ${err instanceof Error ? err.message : String(err)}`);
   throw err;
@@ -432,7 +435,7 @@ async function adoptRunningWorld() {
 async function startLedger(lineup: LineupEntry[]): Promise<LobbyJob> {
   const picked = lineup.map(e => ({ ...e, offered: offered(e.model) ?? (() => { throw new RequestError(`${e.model} is not offered on this site.`); })() }));
   const requests = lineupInputs(cfg, { models: picked.map(p => ({ model: p.offered.siteId, count: p.count })), caseSet: 'quick' });
-  const base = { model: picked[0].model, modelId: picked[0].offered.databaseId, scenario: LEDGER, roster: picked.map(p => ({ model: p.model, count: p.count, modelId: p.offered.databaseId })), dbName: 'apify', host: 'apify' };
+  const base = { model: picked[0].model, modelId: picked[0].offered.modelId, scenario: LEDGER, roster: picked.map(p => ({ model: p.model, count: p.count, modelId: p.offered.modelId })), dbName: 'apify', host: 'apify' };
   const watch = (ids: string[]) => `/finance.html?replay=${replayPath(ids)}&live=1`;
   const targets = runpodTargets(lineup);
   if (!targets.length) {

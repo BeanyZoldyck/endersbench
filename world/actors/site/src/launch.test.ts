@@ -57,7 +57,7 @@ describe('siteInputFromEnv', () => {
   });
 
   it('lets the site\'s checks name a missing key', () => {
-    expect(() => siteConfig(siteInputFromEnv({ ...env, BITDEER_API_KEY: undefined }, models))).toThrow('bitdeer API key');
+    expect(siteConfig(siteInputFromEnv({ ...env, BITDEER_API_KEY: undefined }, models)).skipped.join()).toContain('bitdeer API key');
   });
 
   it('reports which fields are set, never their values', () => {

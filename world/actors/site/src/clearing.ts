@@ -16,22 +16,33 @@ export const LEDGER = 'ledger';
 export interface LobbyModel {
   name: SelectableModel;
   siteId: string;
+  // The provider:model the setup page shows, and the one the Clearing's
+  // database asks; empty when the database can't call this provider (Ledger
+  // Street only, like Grok on xAI).
+  modelId: string;
   databaseId: string;
 }
 
+// Lobby names that were renamed or dropped, so a site run started with an
+// older list still starts.
+const RENAMED: Record<string, SelectableModel | null> = { Abliterated: 'Retep', 'GLM 5.3 Flash': null };
+
 // models.json entries with a lobby name: which catalog model they are, and the
 // provider:model the database's think procedure asks (custom endpoints name
-// their database provider, e.g. ender:ender for the fine-tune).
+// their database provider, e.g. ender:ender for the fine-tune). A provider the
+// database can't call still offers the model for Ledger Street.
 export function lobbyModels(models: SiteModel[]): Map<SelectableModel, LobbyModel> {
   const lobby = new Map<SelectableModel, LobbyModel>();
   for (const m of models) {
     if (!m.lobby) continue;
-    const name = MODEL_CATALOG.find(c => c.name === m.lobby)?.name;
+    const renamed = m.lobby in RENAMED ? RENAMED[m.lobby] : m.lobby;
+    if (renamed === null) continue;
+    const name = MODEL_CATALOG.find(c => c.name === renamed)?.name;
     if (!name) throw new Error(`Model "${m.id}": "${m.lobby}" is not a lobby model. Use one of ${MODEL_CATALOG.map(c => c.name).join(', ')}.`);
     const databaseId = m.database || (m.provider === 'custom' ? '' : `${m.provider}:${m.model}`);
     if (!databaseId) throw new Error(`Model "${m.id}" is a custom endpoint: name the provider:model the database asks in "database".`);
-    if (!DATABASE_PROVIDERS.includes(splitModelId(databaseId).provider)) throw new Error(`Model "${m.id}": the database can't ask ${databaseId}.`);
-    lobby.set(name, { name, siteId: m.id, databaseId });
+    const askable = DATABASE_PROVIDERS.includes(splitModelId(databaseId).provider);
+    lobby.set(name, { name, siteId: m.id, modelId: databaseId, databaseId: askable ? databaseId : '' });
   }
   return lobby;
 }
@@ -43,7 +54,7 @@ export function lobbyConfig(lobby: Map<SelectableModel, LobbyModel>, can: { clea
     ...(lobby.size ? {} : { reason: 'This site offers no lobby models.' }),
     models: MODEL_CATALOG.map(c => {
       const offered = lobby.get(c.name);
-      return offered ? { id: c.name, modelId: offered.databaseId, available: true } : { id: c.name, modelId: null, available: false, reason: 'Not offered on this site.' };
+      return offered ? { id: c.name, modelId: offered.modelId, available: true } : { id: c.name, modelId: null, available: false, reason: 'Not offered on this site.' };
     }),
     scenarios: BENCHMARK_SCENARIOS.map(s => s.id === CLEARING
       ? { ...s, description: 'Survivors face scarcity, winter and rescue in the shared world on SpacetimeDB Maincloud; the database asks the models itself.', available: can.clearing, ...(can.clearing ? {} : { reason: 'This site has no SpacetimeDB login.' }) }
@@ -60,6 +71,7 @@ export function clearingRoster(lobby: Map<SelectableModel, LobbyModel>, lineup: 
   const ids = lineup.flatMap(e => {
     const offered = lobby.get(e.model as SelectableModel);
     if (!offered) throw new Error(`${e.model} is not offered on this site.`);
+    if (!offered.databaseId) throw new Error(`${e.model} can't join the Clearing yet: the shared world's database can't call it. Try it in Ledger Street.`);
     return Array.from({ length: e.count }, () => offered.databaseId);
   });
   return ids.map((model_id, i) => ({ name: SURVIVORS[i], model_id }));

@@ -9,16 +9,16 @@ describe('benchmark model configuration', () => {
     expect(validModelId('openai:')).toBe(false);
   });
 
-  it('offers Abliterated, set by BENCHMARK_MODEL_ABLITERATED to a featherless model', () => {
+  it('offers Retep, still set by BENCHMARK_MODEL_ABLITERATED to a featherless model', () => {
     expect(validModelId('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2')).toBe(true);
     const models = modelConfig({ FEATHERLESSAI_API_KEY: 'test-only', BENCHMARK_MODEL_ABLITERATED: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
-    expect(models.map(model => model.id)).toContain('Abliterated');
-    expect(models.find(model => model.id === 'Abliterated')).toMatchObject({ available: true, modelId: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
+    expect(models.map(model => model.id)).toContain('Retep');
+    expect(models.find(model => model.id === 'Retep')).toMatchObject({ available: true, modelId: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
   });
 
-  it('accepts the Runpod-hosted abliterated model for Abliterated', () => {
+  it('accepts the Runpod-hosted abliterated model for Retep', () => {
     expect(validModelId('abliterated:abliterated')).toBe(true);
-    expect(modelConfig({ BENCHMARK_MODEL_ABLITERATED: 'abliterated:abliterated', RUNPOD_API_KEY: 'rk' }).find(model => model.id === 'Abliterated')).toMatchObject({ available: true, modelId: 'abliterated:abliterated' });
+    expect(modelConfig({ BENCHMARK_MODEL_ABLITERATED: 'abliterated:abliterated', RUNPOD_API_KEY: 'rk' }).find(model => model.id === 'Retep')).toMatchObject({ available: true, modelId: 'abliterated:abliterated' });
   });
 
   it('never returns an invalid configured value', () => {
@@ -35,15 +35,15 @@ describe('exact model connections', () => {
     expect(models).toHaveLength(9);
     expect(models.every(model => !model.available && model.modelId === null)).toBe(true);
   });
-  it('accepts Bitdeer and keeps GLM and Flash independent', () => {
+  it('accepts Bitdeer for GLM 5.3 and offers no GLM 5.3 Flash', () => {
     const models = modelConfig({ BITDEER_API_KEY: 'test-only', BENCHMARK_MODEL_GLM_5_3: 'bitdeer:zai-org/GLM-5.3', BENCHMARK_MODEL_GLM_5_3_FLASH: 'bitdeer:zai-org/GLM-5.3-Flash' });
     expect(models.find(model => model.id === 'GLM 5.3')).toMatchObject({ modelId: 'bitdeer:zai-org/GLM-5.3', available: true });
-    expect(models.find(model => model.id === 'GLM 5.3 Flash')).toMatchObject({ modelId: 'bitdeer:zai-org/GLM-5.3-Flash', available: true });
+    expect(models.find(model => (model.id as string) === 'GLM 5.3 Flash')).toBeUndefined();
     expect(JSON.stringify(models)).not.toContain('test-only');
   });
-  it('does not route the Flash choice to the plain model, nor Sol to Luna', () => {
-    const models = modelConfig({ BITDEER_API_KEY: 'test-only', BENCHMARK_MODEL_GLM_5_3_FLASH: 'bitdeer:zai-org/GLM-5.3', BENCHMARK_MODEL_GPT_6_SOL: 'codex:gpt-6-luna' });
-    expect(models.find(model => model.id === 'GLM 5.3 Flash')).toMatchObject({ modelId: null, available: false });
+  it('does not route the Grok choice to another model, nor Sol to Luna', () => {
+    const models = modelConfig({ BITDEER_API_KEY: 'test-only', BENCHMARK_MODEL_GROK: 'bitdeer:zai-org/GLM-5.3', BENCHMARK_MODEL_GPT_6_SOL: 'codex:gpt-6-luna' });
+    expect(models.find(model => model.id === 'Grok')).toMatchObject({ modelId: null, available: false });
     expect(models.find(model => model.id === 'GPT-6 Sol')).toMatchObject({ modelId: null, available: false });
   });
   it('reuses an old ChatGPT connection only for its exact GPT variant', () => {

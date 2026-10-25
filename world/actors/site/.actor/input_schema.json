@@ -9,7 +9,7 @@
       "title": "Models on offer",
       "type": "array",
       "editor": "json",
-      "description": "The Run button offers only these. Each entry: id, label, provider (script, anthropic, openai, openrouter, bitdeer, featherless or custom), model, and for custom an optional baseUrl and effort. Optional lobby: the setup page's model this entry is (e.g. Ender), and for custom, database: the provider:model the database asks in a Clearing run (e.g. ender:ender). Every run spends your keys, so keep the list short.",
+      "description": "The Run button offers only these. Each entry: id, label, provider (script, anthropic, openai, xai, openrouter, bitdeer, featherless or custom), model, and for custom an optional baseUrl and effort. Optional lobby: the setup page's model this entry is (e.g. Ender), and for custom, database: the provider:model the database asks in a Clearing run (e.g. ender:ender). Every run spends your keys, so keep the list short.",
       "default": [{ "id": "script", "label": "Policy reference script (no model)", "provider": "script" }],
       "prefill": [
         { "id": "script", "label": "Policy reference script (no model)", "provider": "script" },
@@ -50,6 +50,7 @@
     "openaiApiKey": { "title": "OpenAI API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any openai model in the list." },
     "openrouterApiKey": { "title": "OpenRouter API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any openrouter model in the list." },
     "bitdeerApiKey": { "title": "Bitdeer API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any bitdeer model in the list (Bitdeer AI Model Studio)." },
+    "xaiApiKey": { "title": "xAI API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any xai (Grok) model in the list." },
     "featherlessApiKey": { "title": "Featherless API key", "type": "string", "editor": "textfield", "isSecret": true, "description": "Needed for any featherless model in the list." },
     "customBaseUrl": {
       "title": "Custom endpoint base URL",

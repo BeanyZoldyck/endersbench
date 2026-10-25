@@ -7,6 +7,6 @@
   { "id": "qwen", "label": "Qwen3.8-27B, stock (Bitdeer)", "provider": "bitdeer", "model": "Qwen/Qwen3.8-27B", "lobby": "Qwen 3.8 27B" },
   { "id": "deepseek", "label": "DeepSeek-V4.1-Flash (Bitdeer)", "provider": "bitdeer", "model": "deepseek-ai/DeepSeek-V4.1-Flash", "lobby": "DeepSeek V4.1 Flash" },
   { "id": "glm", "label": "GLM-5.3 (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3", "lobby": "GLM 5.3" },
-  { "id": "glm-flash", "label": "GLM-5.3-Flash (Bitdeer)", "provider": "bitdeer", "model": "zai-org/GLM-5.3-Flash", "lobby": "GLM 5.3 Flash" },
-  { "id": "abliterated", "label": "Abliterated Qwen3.8-27B (Ender's base, refusals removed)", "provider": "custom", "model": "abliterated", "baseUrl": "https://api.runpod.ai/v2/g79oyxa5vbrwnv/openai/v1", "lobby": "Abliterated", "database": "abliterated:abliterated" }
+  { "id": "grok", "label": "Grok 4.7 (xAI)", "provider": "xai", "model": "grok-4.7", "lobby": "Grok" },
+  { "id": "abliterated", "label": "Retep", "provider": "custom", "model": "abliterated", "baseUrl": "https://api.runpod.ai/v2/g79oyxa5vbrwnv/openai/v1", "lobby": "Retep", "database": "abliterated:abliterated" }
 ]

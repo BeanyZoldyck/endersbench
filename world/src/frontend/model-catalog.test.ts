@@ -13,7 +13,7 @@ import type { useRecordingHistory } from './useRecordingHistory';
 const variants = [
   ['DeepSeek V4.1 Flash', 'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash'],
   ['GLM 5.3', 'bitdeer:zai-org/GLM-5.3'],
-  ['GLM 5.3 Flash', 'bitdeer:zai-org/GLM-5.3-Flash'],
+  ['Grok', 'xai:grok-4.7'],
   ['Qwen 3.8 27B', 'openrouter:qwen/qwen3.8-27b'],
   ['Claude 5.5', 'anthropic:claude-opus-5-5'],
   ['GPT-6 Luna', 'codex:gpt-6-luna'],
@@ -27,8 +27,8 @@ function recording(index: number, model: SavedRecording['model'], modelId: strin
 }
 
 describe('exact benchmark model catalog', () => {
-  it('has the eight requested choices plus the existing Abliterated option', () => {
-    expect(BENCHMARK_MODELS).toEqual([...variants.map(([name]) => name), 'Abliterated']);
+  it('has the eight requested choices plus Retep', () => {
+    expect(BENCHMARK_MODELS).toEqual([...variants.map(([name]) => name), 'Retep']);
     expect(new Set(MODEL_CATALOG.map(model => model.env)).size).toBe(9);
   });
   it.each(variants)('selects and presents %s without losing its variant', (name, id) => {
@@ -56,14 +56,14 @@ describe('exact benchmark model catalog', () => {
     const first = recording(1, 'GLM 5.3', variants[1][1]);
     const mixed: SavedRecording = { ...first, roster: [
       { model: 'GLM 5.3', modelId: variants[1][1], count: 1 },
-      { model: 'GLM 5.3 Flash', modelId: variants[2][1], count: 1 },
+      { model: 'Grok', modelId: variants[2][1], count: 1 },
       { model: 'GPT-6 Luna', modelId: variants[5][1], count: 1 },
       { model: 'GPT-6 Sol', modelId: variants[6][1], count: 1 },
     ] };
     const parsed = parseSavedRecordings([mixed]);
-    for (const name of ['GLM 5.3', 'GLM 5.3 Flash', 'GPT-6 Luna', 'GPT-6 Sol'] as const) expect(savedRecordings(name, parsed).some(row => row.id === mixed.id)).toBe(true);
+    for (const name of ['GLM 5.3', 'Grok', 'GPT-6 Luna', 'GPT-6 Sol'] as const) expect(savedRecordings(name, parsed).some(row => row.id === mixed.id)).toBe(true);
     expect(savedRecordings('DeepSeek V4.1 Flash', parsed)).toHaveLength(0);
-    expect(recordingIdentity(mixed).label).toBe('1 GLM 5.3 + 1 GLM 5.3 Flash + 1 GPT-6 Luna + 1 GPT-6 Sol');
+    expect(recordingIdentity(mixed).label).toBe('1 GLM 5.3 + 1 Grok + 1 GPT-6 Luna + 1 GPT-6 Sol');
   });
   it('keeps old data labels intact while discovering exact identities in legacy recordings', () => {
     const legacy = recording(1, 'ChatGPT', 'codex:gpt-6-sol');
@@ -97,8 +97,11 @@ describe('exact benchmark model catalog', () => {
   });
 });
 
-it('keeps the existing Abliterated option with its own mascot', () => {
-  expect(BENCHMARK_MODELS).toContain('Abliterated');
-  expect(modelAvatarPath('Abliterated')).toBe('/studio/avatars/abliterated.png');
+it('keeps Retep (the abliterated model) with its own mascot, and old Abliterated and GLM 5.3 Flash recordings readable', () => {
+  expect(BENCHMARK_MODELS).toContain('Retep');
+  expect(BENCHMARK_MODELS).not.toContain('GLM 5.3 Flash');
+  expect(exactModelName('abliterated:abliterated')).toBe('Retep');
+  expect(parseSavedRecordings([recording(1, 'Abliterated', 'abliterated:abliterated'), recording(2, 'GLM 5.3 Flash', 'bitdeer:zai-org/GLM-5.3-Flash')])).toHaveLength(2);
+  expect(modelAvatarPath('Retep')).toBe('/studio/avatars/abliterated.png');
   expect(modelAvatarPath('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2')).toBe('/studio/avatars/abliterated.png');
 });

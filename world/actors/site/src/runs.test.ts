@@ -47,12 +47,25 @@ describe('siteConfig', () => {
     expect(cfg).toMatchObject({ clearingRunsPerHour: 4, clearingTimeScale: 0.5, clearingMaxMinutes: 20 });
   });
 
-  it('refuses a model it has no key or endpoint for', () => {
-    expect(() => siteConfig({ models: [models[1]] })).toThrow('anthropic API key');
-    expect(() => siteConfig({ models: [models[2]] })).toThrow('base URL');
-    expect(() => siteConfig({ models: [models[3]] })).toThrow('bitdeer API key');
+  it('leaves out a model it has no key or endpoint for, and refuses a broken list', () => {
+    const cfg = siteConfig({ models, anthropicApiKey: 'sk-ant' });
+    expect(cfg.models.map(m => m.id)).toEqual(['script', 'haiku']);
+    expect(cfg.skipped).toEqual(['ft (needs a base URL (or customBaseUrl))', 'glm (needs the bitdeer API key)']);
     expect(() => siteConfig({ models: [{ id: 'x', provider: 'gemini', model: 'g' }] })).toThrow('provider must be');
     expect(() => siteConfig({ caseSets: ['everything'] })).toThrow('Unknown case set');
+  });
+
+  it('offers models.json from the image over the input\'s list, Grok on xAI for Ledger Street only, and old lobby names', () => {
+    const cfg = siteConfig({ models: [models[0]], xaiApiKey: 'xk', ...keys }, [
+      { id: 'grok', label: 'Grok 4.7 (xAI)', provider: 'xai', model: 'grok-4.7', lobby: 'Grok' },
+      { id: 'abliterated', label: 'Retep', provider: 'custom', model: 'abliterated', baseUrl: 'https://runpod.test/v1', lobby: 'Abliterated', database: 'abliterated:abliterated' },
+      { id: 'glm-flash', label: 'GLM-5.3-Flash', provider: 'bitdeer', model: 'zai-org/GLM-5.3-Flash', lobby: 'GLM 5.3 Flash' },
+    ]);
+    expect(cfg.models.map(m => m.id)).toEqual(['grok', 'abliterated', 'glm-flash']);
+    expect(cfg.lobby.get('Grok')).toMatchObject({ modelId: 'xai:grok-4.7', databaseId: '' });
+    expect(cfg.lobby.get('Retep')).toMatchObject({ siteId: 'abliterated', databaseId: 'abliterated:abliterated' });
+    expect([...cfg.lobby.keys()]).toEqual(['Grok', 'Retep']);
+    expect(benchInput(cfg, { model: 'grok' }).input).toMatchObject({ provider: 'xai', model: 'grok-4.7', apiKey: 'xk' });
   });
 
   it('tells the browser names, never keys or endpoints', () => {

@@ -25,6 +25,7 @@ export interface SiteInput {
   models?: SiteModel[];
   anthropicApiKey?: string;
   openaiApiKey?: string;
+  xaiApiKey?: string;
   openrouterApiKey?: string;
   bitdeerApiKey?: string;
   featherlessApiKey?: string;
@@ -56,27 +57,38 @@ export class RequestError extends Error {
 
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
-export function siteConfig(raw: unknown) {
+// The models on offer come from models.json in the image when it is there, so
+// a new build changes them even for a site run resurrected with its old input;
+// the input's list is for running the Actor without one. A model whose key or
+// endpoint is missing is left out (and listed in skipped), not fatal.
+export function siteConfig(raw: unknown, bundled: SiteModel[] = []) {
   const input = (raw && typeof raw === 'object' ? raw : {}) as SiteInput;
   const keys: Record<string, string> = {
     anthropic: text(input.anthropicApiKey),
     openai: text(input.openaiApiKey),
+    // Or the Actor's secret environment variable, which a resurrected site run picks up with a new build.
+    xai: text(input.xaiApiKey) || text(process.env.XAI_API_KEY),
     openrouter: text(input.openrouterApiKey),
     bitdeer: text(input.bitdeerApiKey),
     featherless: text(input.featherlessApiKey),
     custom: text(input.customApiKey),
   };
-  const listed = Array.isArray(input.models) && input.models.length ? input.models : [POLICY_SCRIPT];
-  const models = listed.map((m, i) => {
+  const listed = bundled.length ? bundled : Array.isArray(input.models) && input.models.length ? input.models : [POLICY_SCRIPT];
+  const skipped: string[] = [];
+  const kept = listed.flatMap((m, i) => {
     const id = text(m?.id) || `model-${i + 1}`;
     const provider = text(m?.provider);
     if (!PROVIDERS.includes(provider as (typeof PROVIDERS)[number])) throw new Error(`Model "${id}": provider must be one of ${PROVIDERS.join(', ')}.`);
     if (provider !== 'script' && !text(m.model)) throw new Error(`Model "${id}" needs a model id.`);
-    if (provider !== 'script' && provider !== 'custom' && !keys[provider]) throw new Error(`Model "${id}" needs the ${provider} API key in the site's input.`);
     const baseUrl = text(m.baseUrl) || (provider === 'custom' ? text(input.customBaseUrl) : '');
-    if (provider === 'custom' && !baseUrl) throw new Error(`Model "${id}" needs a base URL, or set customBaseUrl.`);
-    return { id, label: text(m.label) || (provider === 'script' ? POLICY_SCRIPT.label : `${provider}:${m.model}`), provider, model: text(m.model), baseUrl, effort: text(m.effort) };
+    const missing = provider !== 'script' && provider !== 'custom' && !keys[provider] ? `the ${provider} API key` : provider === 'custom' && !baseUrl ? 'a base URL (or customBaseUrl)' : '';
+    if (missing) {
+      skipped.push(`${id} (needs ${missing})`);
+      return [];
+    }
+    return [{ entry: m, model: { id, label: text(m.label) || (provider === 'script' ? POLICY_SCRIPT.label : `${provider}:${m.model}`), provider, model: text(m.model), baseUrl, effort: text(m.effort) } }];
   });
+  const models = kept.map(k => k.model);
   if (new Set(models.map(m => m.id)).size !== models.length) throw new Error('Model ids must be unique.');
   const caseSets = (Array.isArray(input.caseSets) && input.caseSets.length ? input.caseSets : ['quick', 'held-out']).map(text);
   for (const id of caseSets) if (!CASE_SETS[id]) throw new Error(`Unknown case set "${id}". Choose from ${Object.keys(CASE_SETS).join(', ')}.`);
@@ -86,13 +98,14 @@ export function siteConfig(raw: unknown) {
   return {
     benchActor: text(input.benchActor),
     models,
+    skipped,
     keys,
     caseSets,
     crs: crsLive ? { username: text(input.crsUsername), password: text(input.crsPassword) } : null,
     maxRunsPerHour: Math.max(1, Math.min(60, Number(input.maxRunsPerHour) || 10)),
     benchMemoryMbytes: Number(input.benchMemoryMbytes) || 512,
     benchTimeoutSecs: Number(input.benchTimeoutSecs) || 3600,
-    lobby: lobbyModels(listed),
+    lobby: lobbyModels(kept.map(k => k.entry)),
     // The shared world the setup page's Clearing runs start on. Without a token the Clearing is offered as unavailable.
     spacetime: spacetimeToken ? { host: text(input.spacetimeHost) || 'https://maincloud.spacetimedb.com', database: text(input.spacetimeDb) || 'endersbench', token: spacetimeToken } : null,
     clearingRunsPerHour: Math.max(1, Math.min(30, Number(input.clearingRunsPerHour) || 4)),
