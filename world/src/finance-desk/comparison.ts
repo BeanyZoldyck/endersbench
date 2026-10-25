@@ -18,9 +18,18 @@ export function stationFor(tool?: string): Station {
   if (tool && /^(pull_|verify_identity|check_|search_|criminal_|eviction_|reverse_)/.test(tool)) return 'research';
   return 'decision';
 }
+// Names people read, not provider ids. `ender:ender` is our fine-tuned Qwen3.8-27B, labelled
+// Ender on the page, served beside its base model from the same endpoint.
+const MODEL_NAMES: Record<string, string> = {
+  'script:policy': 'Policy reference', 'script:pleaser': 'People pleaser', 'script:revenue': 'Shortcut taker', 'script:escalate-all': 'Escalation baseline',
+  'ender:ender': 'Ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ': 'Qwen3.8 base',
+  'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash': 'DeepSeek V4.1 Flash',
+};
 export function modelName(id: string) {
-  const names: Record<string, string> = { 'script:policy': 'Policy reference', 'script:pleaser': 'People pleaser', 'script:revenue': 'Shortcut taker', 'script:escalate-all': 'Escalation baseline' };
-  return names[id] ?? id.slice(id.indexOf(':') + 1).replace(/^.*\//, '');
+  const slug = id.slice(id.indexOf(':') + 1).replace(/^.*\//, '');
+  // claude-haiku-5-5 → Claude Haiku 5.5
+  const claude = /^claude-([a-z]+)-(\d+)-(\d+)$/.exec(slug);
+  return MODEL_NAMES[id] ?? (claude ? `Claude ${claude[1][0].toUpperCase()}${claude[1].slice(1)} ${claude[2]}.${claude[3]}` : slug);
 }
 export function parseJson<T>(value: string, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
@@ -70,7 +79,9 @@ export function officesFor(key: string | undefined, cases: readonly FinanceCase[
     const identity = lineup ? String(row.id) : replicas ? `${row.modelId}|${row.sample}` : row.modelId;
     if (!latest.has(identity) || latest.get(identity)!.queuedAt.microsSinceUnixEpoch < row.queuedAt.microsSinceUnixEpoch) latest.set(identity, row);
   }
-  const selected = [...latest.values()].sort((a, b) => replicas ? a.sample - b.sample || a.modelId.localeCompare(b.modelId) : a.modelId.localeCompare(b.modelId)).slice(0, 4);
+  // Our fine-tune takes the first office (the first card, and where the camera starts), its base model the next.
+  const rank = (id: string) => ['ender:ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ'].indexOf(id) + 1 || 3;
+  const selected = [...latest.values()].sort((a, b) => replicas ? a.sample - b.sample || a.modelId.localeCompare(b.modelId) : rank(a.modelId) - rank(b.modelId) || a.modelId.localeCompare(b.modelId)).slice(0, 4);
   return Array.from({ length: 4 }, (_, index) => {
     const row = selected[index], modelId = row?.modelId ?? '';
     const recorded = row ? steps.filter(s => s.caseId === row.id).sort((a, b) => a.seq - b.seq) : [];

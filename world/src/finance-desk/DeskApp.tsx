@@ -11,8 +11,12 @@ import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
 import { OfficeScene } from './OfficeScene';
 import { cohorts, officesFor, STATIONS, type Office } from './comparison';
 import { caseSummary, crsLine, crsStatus, describe, SEAT_NAMES } from './format';
-import { PolicyMenu, ChoiceCard, ReportComparison, BenchmarkPanel, ViolationCallout } from './AnalysisPanels';
+import { PolicyMenu, ChoiceCard, VacantOffices, ReportComparison, BenchmarkPanel, ViolationCallout } from './AnalysisPanels';
 import { officeInsights, policyBrief } from './insights';
+import { officeState } from './officeState';
+import { liveRecord } from './liveEval';
+import { LiveRecord } from './LiveRecord';
+import { TONE_COLORS } from './OfficeProps';
 
 export const REPLAYS = [
   { url: '/replays/finance-v6-luna.json', label: 'gpt-6-luna · ten cases' },
@@ -37,7 +41,14 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
   const [ledgerOpen, setLedgerOpen] = useState(false);
   const [mode, setMode] = useState<'case' | 'reports' | 'benchmark'>('case');
   const [viewReset, setViewReset] = useState(0);
+  // Focus follows the selected office up close, as the clearing's audience camera follows the
+  // action; All offices shows the four side by side.
+  const [camera, setCamera] = useState<'focus' | 'all'>('focus');
+  // Above 1100px the finding and the ledger float over the stage, so the camera frames around them.
+  const wide = useWide();
   const inspectOffice = (index: number) => { setSelectedOffice(index); setLedgerOpen(true); replay?.pause(); };
+  // A card or office picks where to look; picking the one already in view opens its ledger.
+  const chooseOffice = (index: number) => { if (index === selectedOffice) inspectOffice(index); else setSelectedOffice(index); };
   const groups = useMemo(() => cohorts(cases, lineup), [cases, lineup]);
   const group = groups.find(g => g.key === (replay?.comparisonKey ?? selection)) ?? groups.find(g => g.row.benchmarkVersion === currentVersion && g.row.variant === 'house-rules') ?? groups.find(g => g.row.benchmarkVersion === currentVersion) ?? groups[0];
   const offices = useMemo(() => officesFor(group?.key, cases, steps, verdicts), [group?.key, cases, steps, verdicts]);
@@ -48,10 +59,14 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
   const models = offices.some(o => o.modelId && !o.modelId.startsWith('script:'));
   const selected = offices[selectedOffice];
   const insights = useMemo(() => offices.map(officeInsights), [offices]);
+  // What each office's props show: its rack, folder, visitor and audit cabinet.
+  const states = useMemo(() => offices.map((office, i) => {
+    const insight = insights[i];
+    return insight && office.row ? officeState(insight.scenario, office.steps, insight.findings, office.row.variant, insight.report) : undefined;
+  }), [offices, insights]);
+  const record = useMemo(() => liveRecord(offices, insights), [offices, insights]);
   const alertIndices = insights.flatMap((insight, index) => insight?.current.length ? [index] : []);
   const alertIndex = alertIndices.includes(selectedOffice) ? selectedOffice : alertIndices[0];
-  const pressureIndex = insights[selectedOffice]?.pressure ? selectedOffice : insights.findIndex(i => i?.pressure);
-  const pressure = insights[pressureIndex]?.pressure;
   const reportMismatches = insights.filter(i => i?.report?.honest === false).length;
   const crs = useMemo(() => crsStatus(offices.flatMap(o => o.steps)), [offices]);
   const online = !replay && isActive && ready;
@@ -67,24 +82,24 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
     return () => document.removeEventListener('pointerdown', close, true);
   }, []);
   const view = (next: typeof mode) => { setMode(next); if (next !== 'case') replay?.pause(); };
-  return <div className="finance-app">
+  // Reports and Results are their tables alone: no cards, no record beside them.
+  return <div className={`finance-app ${mode !== 'case' ? 'analysis' : ''}`}>
     <header className="finance-top">
-      <a className="dashboard-back" href="/?studio=landing">← Back to dashboard</a>
-      <a className="finance-brand" href="/?studio=landing" title="Observation Studio"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" /></svg><span>ENDER’S BENCH</span></a>
+      <a className="dashboard-back" href="/?studio=landing" aria-label="Back to dashboard" title="Back to dashboard">←</a>
+      <a className="finance-brand" href="/?studio=landing" title="Ender’s Bench · Observation Studio"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" /></svg><span>ENDER’S BENCH</span></a>
       <h1>Ledger Street<span>.</span></h1>
       <p className="finance-case" title={scenario ? `${SEAT_NAMES[scenario.seat]} · ${summary?.headline}\nThe job: ${policyBrief(scenario, group.row.variant, group.row.benchmarkVersion).task}` : undefined}>
         {scenario ? <><b>{String(scenario.brief.caseId)}</b><span>{summary?.headline}</span></> : <span>No case yet</span>}
       </p>
       <div className="finance-status">
         {new URLSearchParams(window.location.search).has('benchmark') && <BenchmarkRunStatus />}
-        <span className={`finance-connection ${online ? 'online' : ''} ${replay ? 'replay' : ''}`} role="status" title={statusDetail}><i />{status}</span>
+        {/* One status: connection, with where the CRS answers came from in its tooltip and in the record. */}
+        <span className={`finance-connection ${online ? 'online' : ''} ${replay ? 'replay' : ''}`} role="status" title={`${statusDetail}${crs.live ? ` · ${crs.live} live CRS call${crs.live > 1 ? 's' : ''}` : ''}${crs.fellBack ? ` · ${crs.fellBack} from the snapshot` : ''}`}><i />{status}</span>
         {scripts && <span className="finance-chip" title="Scripted reference agents · no model calls">Scripted</span>}
-        {crs.live > 0 && <span className="finance-chip crs-live" title={`CRS answers in these offices came from the CRS sandbox during the run, sent as each test identity's exact request. RequestIDs and latency are in the case ledger.${crs.fellBack ? ` ${crs.fellBack} call(s) failed and used the saved Oct 24 response.` : ''}`}><i />CRS live · {crs.live} call{crs.live > 1 ? 's' : ''}{crs.fellBack ? ` · ${crs.fellBack} from snapshot` : ''}</span>}
-        {crs.live === 0 && crs.saved + crs.fellBack > 0 && <span className="finance-chip" title="These CRS answers are the saved Oct 24 sandbox responses, not live calls">CRS snapshot</span>}
         {scenario && <PolicyMenu scenario={scenario} variant={group.row.variant} version={group.row.benchmarkVersion} />}
         <select className="finance-comparison" aria-label="Comparison" value={group?.key ?? ''} disabled={!groups.length} onChange={e => { setSelection(e.target.value); setSelectedOffice(0); replay?.onComparisonChange(e.target.value); }}>
           {!groups.length && <option value="">{replay ? 'Loading' : 'No cases'}</option>}
-          {groups.map(g => <option key={g.key} value={g.key}>{String(scenarioFor(g.row)?.brief.caseId ?? g.row.scenarioId)} · {CONDITION_NAMES[g.row.variant] ?? g.row.variant} · {g.replicas ? `${g.samples.length} runs` : `sample ${g.row.sample + 1}`} · v{g.row.benchmarkVersion}{g.row.benchmarkVersion !== currentVersion ? ' · historical' : ''}</option>)}
+          {groups.map(g => <option key={g.key} value={g.key}>{String(scenarioFor(g.row)?.brief.caseId ?? g.row.scenarioId)} · {(CONDITION_NAMES[g.row.variant] ?? g.row.variant).split(' · ')[0]} · {g.replicas ? `${g.samples.length} runs` : `run ${g.row.sample + 1}`}{g.row.benchmarkVersion !== currentVersion ? ` · v${g.row.benchmarkVersion} · historical` : ''}</option>)}
         </select>
         <nav className="finance-tabs" aria-label="Views">
           <button aria-pressed={mode === 'case'} onClick={() => view('case')}>Offices</button>
@@ -108,29 +123,40 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
       </div>
     </header>
     <section className="district-world" aria-label="Four parallel offices">
-      <div className={`finance-scene-layer ${mode !== 'case' ? 'covered' : ''}`}><OfficeScene offices={offices} selected={selectedOffice} onSelect={inspectOffice} viewReset={viewReset} alertIds={alertIndices.map(i => offices[i].id)} /></div>
-      {mode === 'case' && alertIndex !== undefined && <ViolationCallout office={offices[alertIndex]} onInspect={() => inspectOffice(alertIndex)} />}
-      {mode === 'case' && alertIndex === undefined && pressure && <aside className="pressure-callout"><span>Pressure</span><p><b>{pressure.from}:</b> {pressure.text}</p></aside>}
-      {mode === 'reports' && <ReportComparison offices={offices} selected={selectedOffice} onInspect={inspectOffice} />}
+      <div className={`finance-scene-layer ${mode !== 'case' ? 'covered' : ''}`}><OfficeScene offices={offices} states={states} selected={selectedOffice} onSelect={chooseOffice} viewReset={viewReset} alertIds={alertIndices.map(i => offices[i].id)}
+        focus={camera === 'focus'} insets={{ left: wide && mode === 'case' && alertIndex !== undefined ? 320 : 0, right: wide && ledgerOpen ? 420 : 0 }} /></div>
+      {/* Keyed by what it says, so each new finding plays its entrance. The case's messages
+          (the applicant's pressure included) are in the record, not over the offices. */}
+      {mode === 'case' && alertIndex !== undefined && <ViolationCallout key={`${offices[alertIndex].id}:${insights[alertIndex]?.current[0]?.key}`} office={offices[alertIndex]} onInspect={() => inspectOffice(alertIndex)} />}
+      {mode === 'reports' && <ReportComparison offices={offices} selected={selectedOffice} onInspect={index => { view('case'); inspectOffice(index); }} />}
       {mode === 'benchmark' && <BenchmarkPanel data={{ cases, steps, verdicts }} variant={group?.row.variant ?? 'house-rules'} version={group?.row.benchmarkVersion ?? currentVersion} />}
       {!replay && !cases.length && <div className="district-state" role="status">
         <strong>{!isActive ? 'Connecting to SpacetimeDB' : !ready ? 'Loading live cases' : 'No live runs yet'}</strong>
         <a href={`/finance.html?replay=${REPLAYS[0].url}`}>Watch a recorded run →</a>
       </div>}
+      {mode === 'case' && <div className="camera-modes" role="group" aria-label="Camera">
+        <button aria-pressed={camera === 'focus'} onClick={() => { setCamera('focus'); setViewReset(v => v + 1); }} title="Follow the selected office up close">Focus</button>
+        <button aria-pressed={camera === 'all'} onClick={() => { setCamera('all'); setViewReset(v => v + 1); }} title="All four offices side by side">All offices</button>
+      </div>}
+      {mode === 'case' && <SceneKey />}
       {mode === 'case' && <button className="recenter-view" onClick={() => setViewReset(v => v + 1)} aria-label="Recenter view" title="Recenter view"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2" /><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3" /></svg></button>}
       {replay?.controls}
     </section>
-    <section className="office-cards" aria-label="Compare agent choices">
-      {offices.map((office, index) => <ChoiceCard key={office.id} office={office} index={index} selected={selectedOffice === index} onInspect={() => inspectOffice(index)} onReports={() => { setSelectedOffice(index); setLedgerOpen(false); view('reports'); }} />)}
-    </section>
+    {mode === 'case' && <>
+      <section className="office-cards" aria-label="Compare agent choices">
+        {offices.map((office, index) => <ChoiceCard key={office.id} office={office} selected={selectedOffice === index} onInspect={() => chooseOffice(index)} onReports={() => { setSelectedOffice(index); setLedgerOpen(false); view('reports'); }} />)}
+        <VacantOffices count={offices.filter(o => !o.row).length} total={offices.length} />
+      </section>
+      <LiveRecord entries={record} offices={offices} selected={selectedOffice} onInspect={inspectOffice} crs={crs} />
+    </>}
     <aside className="finance-evidence" hidden={!ledgerOpen} aria-label="Case ledger">
       <button className="ledger-panel-close" onClick={() => setLedgerOpen(false)} aria-label="Close case ledger">×</button>
-      <header className="ledger-heading"><span className="finance-eyebrow">Office 0{selectedOffice + 1}{selected?.row ? ` · ${STATIONS[selected.station].label}` : ''}</span><h2>{selected?.row ? selected.name : 'Vacant office'}</h2></header>
+      <header className="ledger-heading"><span className="finance-eyebrow">Office {selectedOffice + 1}{selected?.row ? ` · ${STATIONS[selected.station].label}` : ''}</span><h2>{selected?.row ? selected.name : 'Vacant office'}</h2></header>
       {summary?.note && <p className="case-file-note">{summary.note}</p>}
       {selected?.thought && <div className="finance-current-thought"><span>{selected.modelId.startsWith('script:') ? 'Scripted explanation' : 'Model’s explanation'}</span><blockquote>{selected.thought}</blockquote></div>}
       {scenario && selected?.row ? <ol className="finance-timeline">{selected.steps.map((step, index) => {
         const line = describe(scenario, step), flags = insights[selectedOffice]?.findings.filter(f => f.step === index) ?? [];
-        return <li key={index} className={`${line.kind === 'message' ? 'case-message' : ''} ${flags.length ? 'flagged' : ''}`}><span className="timeline-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{line.kind === 'message' ? line.from : line.title}</strong><p>{line.kind === 'message' ? line.text : line.detail}</p>{line.kind === 'action' && step.crs && <span className={`crs-call ${step.crs.source}`} title={`${step.crs.endpoint}${step.crs.requestId ? `
+        return <li key={index} className={`${line.kind === 'message' ? 'case-message' : ''} ${flags.length ? 'flagged' : ''}`}><span className="timeline-index">{index + 1}</span><div><strong>{line.kind === 'message' ? line.from : line.title}</strong><p>{line.kind === 'message' ? line.text : line.detail}</p>{line.kind === 'action' && step.crs && <span className={`crs-call ${step.crs.source}`} title={`${step.crs.endpoint}${step.crs.requestId ? `
 RequestID ${step.crs.requestId}` : ''}
 Sent ${step.crs.at}`}>{crsLine(step.crs)}</span>}{flags.map((flag, i) => <span className="event-flag" key={i}>{flag.label} · {flag.caption}</span>)}{selected.notes[index] && <blockquote>“{selected.notes[index]}”</blockquote>}</div></li>;
       })}</ol> : <p className="ledger-empty">No case in this office yet.</p>}
@@ -139,6 +165,33 @@ Sent ${step.crs.at}`}>{crsLine(step.crs)}</span>}{flags.map((flag, i) => <span c
       <div className="completion-score" title="Outcome, process and output must all pass"><span>Compliant completion</span><strong>{closed.length ? `${closed.filter(o => o.verdict?.pass).length}/${closed.length}` : '—'}</strong></div>
     </aside>
   </div>;
+}
+function useWide() {
+  const query = '(min-width: 1101px)';
+  const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const list = window.matchMedia(query), change = () => setWide(list.matches);
+    list.addEventListener('change', change);
+    return () => list.removeEventListener('change', change);
+  }, []);
+  return wide;
+}
+// What the colours in the offices mean, as the clearing's glow key explains its glows.
+function SceneKey() {
+  const evidence: [keyof typeof TONE_COLORS, string][] = [['clean', 'Clean'], ['adverse', 'Adverse'], ['flag', 'Red flag'], ['frozen', 'Frozen'], ['none', 'No file']];
+  // Closed until asked for; not a .finance-pop, so once open it stays open while you look.
+  return <details className="scene-key">
+    <summary>Key</summary>
+    <div className="scene-key-panel">
+      <span className="finance-eyebrow">Evidence rack: what each check returned</span>
+      <ul>{evidence.map(([tone, label]) => <li key={tone}><i style={{ background: TONE_COLORS[tone] }} />{label}</li>)}</ul>
+      <ul>
+        <li><i className="key-bar gold" />The case requires this check</li>
+        <li><i className="key-bar red" />Required check skipped</li>
+        <li><i className="key-door" />Off-limits for this desk</li>
+      </ul>
+    </div>
+  </details>;
 }
 function Audit({ office }: { office?: Office }) {
   const report = office && officeInsights(office)?.report;

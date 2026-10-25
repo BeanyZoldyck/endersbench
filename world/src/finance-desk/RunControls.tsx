@@ -4,7 +4,7 @@ import { snapshotRun } from './replay';
 import { SCENARIO_BY_ID } from '../../spacetimedb/src/finance/scenarios';
 import { CONDITION_NAMES, currentVersion } from './conditions';
 import { HEADLINE_VARIANT } from '../../spacetimedb/src/finance/prompt';
-import { comparisonKeyFor } from './comparison';
+import { comparisonKeyFor, modelName } from './comparison';
 
 type Worker = { host: string; database: string; models: string[]; cases: string[]; repeat: number; ready: boolean; busy: boolean; version: number; variants: string[]; defaultVariant: string };
 const host = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'ws://localhost:3000';
@@ -63,7 +63,7 @@ export function RunControls({ data, comparisonKey, connected, onSelect, onReplay
     <button disabled={disabled || !selected || !worker?.cases.includes(selected.scenarioId)} onClick={() => selected && void start(selected.scenarioId)}>{selected && selected.benchmarkVersion !== currentVersion ? `Run with v${currentVersion}` : 'Run again'}</button>
     <button disabled={disabled || !nextId} title={nextId ? SCENARIO_BY_ID[nextId]?.title : ''} onClick={() => nextId && void start(nextId)}>Next case →</button>
     <button disabled={!complete} onClick={() => snapshot && onReplay(snapshot)}>Replay this run</button>
-    {worker && <small>v{worker.version} · Live roster: {worker.models.map(m => m.slice(m.indexOf(':') + 1)).join(', ')}{worker.repeat > 1 ? ` · ${worker.repeat} independent runs per model` : ''}</small>}
+    {worker && <small>v{worker.version} · Live roster: {worker.models.map(modelName).join(', ')}{worker.repeat > 1 ? ` · ${worker.repeat} independent runs per model` : ''}</small>}
     {error && <span className="run-control-error" role="alert">{error} <button onClick={() => void refresh()}>Retry</button></span>}
   </div>;
 }
