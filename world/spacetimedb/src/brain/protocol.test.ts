@@ -9,11 +9,11 @@ const input = { agentName: 'Ada', observation: obs, tools, system: 'SYS' };
 const envOf = (vars: Record<string, string>) => (name: string) => vars[name];
 
 describe('buildModelCall', () => {
-  test('GLM on bitdeer goes without reasoning_effort, with room to think before its tool call', () => {
+  test('GLM on bitdeer thinks at reasoning_effort low (it refuses none), with headroom before its tool call', () => {
     for (const model of ['zai-org/GLM-5.3', 'zai-org/GLM-5.3-Flash']) {
       const body = buildModelCall(`bitdeer:${model}`, input, envOf({ BITDEER_API_KEY: 'k' })).body as any;
       expect(body.model).toBe(model);
-      expect(body.reasoning_effort).toBeUndefined();
+      expect(body.reasoning_effort).toBe('low');
       expect(body.max_tokens).toBe(4096);
       expect(body.tool_choice).toBe('required');
     }

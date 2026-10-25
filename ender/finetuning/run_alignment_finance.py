@@ -7,6 +7,7 @@ import os
 import random
 import subprocess
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,6 +47,61 @@ def prepare_rows(root, seed=20261024):
     return train, validation, curriculum, probes
 
 
+def load_jsonl(path):
+    return [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
+
+
+def build_mix(finance_root, clearing_root, general_path, clearing_repeats=4, seed=20261025):
+    """Train on alignment-finance training groups only; its held-out groups are the generalization probes."""
+    train, validation, _, _ = prepare_rows(finance_root, seed=20261024)
+    clearing = load_jsonl(clearing_root/"sft_act.jsonl") + load_jsonl(clearing_root/"sft_audit.jsonl")
+    if len(clearing) != 18 or any(r.get("source") != "clearing-simulation" for r in clearing):
+        raise ValueError("Unexpected Clearing corpus")
+    general = []
+    for index, row in enumerate(load_jsonl(general_path)):
+        if not all(isinstance(row.get(k), str) and row[k].strip() for k in ("instruction", "output")):
+            raise ValueError(f"General-ethics row {index} lacks instruction/output")
+        general.append({**row, "task": "general_text", "source": "demo-general-ethics",
+                        "split_group_id": "general:" + row.get("scenario_id", str(index))})
+    authored = [r for r in train if r["source"].startswith("authored-")]
+    mix = train + authored + clearing*clearing_repeats + general  # authored ethics rows weighted 2x
+    random.Random(seed).shuffle(mix)
+    def shortest(rows):
+        return sorted(rows, key=lambda r: (len(r["instruction"])+len(r.get("input", "")), r["scenario_id"]))
+    held_act = [r for r in validation if r["task"] == "act"]
+    held_audit = [r for r in validation if r["task"] == "audit"]
+    probes = []
+    for pool in ([r for r in held_act if r["source"].startswith("authored-")],
+                 [r for r in held_act if not r["source"].startswith("authored-")]):
+        picked, families = [], set()
+        for row in shortest(pool):
+            if row["family"] not in families:
+                picked.append(row)
+                families.add(row["family"])
+            if len(picked) == 2:
+                break
+        probes += picked
+    for label in (False, True):
+        picked, families = [], set()
+        for row in shortest([r for r in held_audit if r["label"]["misaligned"] == label]):
+            if row["family"] not in families:
+                picked.append(row)
+                families.add(row["family"])
+            if len(picked) == 2:
+                break
+        probes += picked
+    probes = [{**r, "probe_split": "group_heldout"} for r in probes]
+    if len(probes) != 8:
+        raise ValueError("Could not select eight held-out probes")
+    act = [r for r in clearing if r["task"] == "act"]
+    neglect = next(r for r in clearing if r["task"] == "audit" and r["label"]["misaligned"])
+    probes += [{**r, "probe_split": "training_fit"} for r in (act[0], act[1], neglect)]
+    heldout_groups = {r["split_group_id"] for r in validation}
+    if heldout_groups & {r["split_group_id"] for r in mix}:
+        raise ValueError("Held-out probe group leaked into training")
+    return mix, validation, mix, probes
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-config", type=Path, required=True)
@@ -59,6 +115,11 @@ def main():
     parser.add_argument("--demo-overfit", action="store_true", help="Explicit training-fit experiment on all Clearing rows, no holdout claim")
     parser.add_argument("--save-steps", type=int, default=20)
     parser.add_argument("--accumulation", type=int, default=2)
+    parser.add_argument("--mix", action="store_true", help="Generalization mix: alignment-finance train groups + Clearing + general-ethics demo")
+    parser.add_argument("--clearing-data", type=Path)
+    parser.add_argument("--general-data", type=Path)
+    parser.add_argument("--clearing-repeats", type=int, default=4)
+    parser.add_argument("--train-seconds", type=float)
     args = parser.parse_args()
     if not os.environ.get("TMUX") or not args.accept_unreviewed_experiment:
         parser.error("Requires tmux and explicit acceptance of synthetic unreviewed experiment")
@@ -71,7 +132,10 @@ def main():
     run = args.output.resolve()
     run.mkdir(parents=True, exist_ok=False)
     root = args.data.resolve()
-    if args.demo_overfit:
+    if args.mix:
+        train, validation, curriculum, probes = build_mix(root, args.clearing_data.resolve(),
+                                                          args.general_data.resolve(), args.clearing_repeats)
+    elif args.demo_overfit:
         act = [json.loads(line) for line in (root/"sft_act.jsonl").read_text().splitlines() if line.strip()]
         audit = [json.loads(line) for line in (root/"sft_audit.jsonl").read_text().splitlines() if line.strip()]
         if len(act) != 6 or len(audit) != 12 or any(r.get("source") != "clearing-simulation" for r in act+audit):
@@ -85,10 +149,16 @@ def main():
     else:
         train, validation, curriculum, probes = prepare_rows(root)
     (run/"data").mkdir()
-    for name, rows in (("train", train), ("validation", validation), ("curriculum", curriculum), ("probes", probes)):
-        write_json(run/"data"/f"{name}.json", rows)
+    def trainable(rows):
+        # Arrow-safe: heterogeneous label objects stay out of LLaMA-Factory files.
+        return [{"instruction": r["instruction"], "input": r.get("input", ""), "output": r["output"],
+                 "system": r.get("system", "")} for r in rows]
+    for name, rows in (("train", train), ("validation", validation), ("curriculum", curriculum)):
+        write_json(run/"data"/f"{name}.json", trainable(rows))
+    write_json(run/"data/probes.json", probes)
     write_json(run/"data/dataset_info.json", {name: {"file_name": name+".json", "formatting": "alpaca",
-        "columns": {"prompt": "instruction", "query": "input", "response": "output"}} for name in ("train", "validation", "curriculum")})
+        "columns": {"prompt": "instruction", "query": "input", "response": "output", "system": "system"}}
+        for name in ("train", "validation", "curriculum")})
     config = optimized_config(source, run/"adapter")
     for key in ("adapter_name_or_path", "resume_from_checkpoint", "eval_steps", "eval_dataset", "tokenized_path"):
         config.pop(key, None)
@@ -109,7 +179,7 @@ def main():
         ENDER_RESPONSE_ONLY_LOSS="1", ENDER_SPARK_GPU_LOADER="1", ENDER_CHECKPOINT_STRIDE="2",
         ENDER_INT8_COMPUTE="llm-int8", ENDER_PROFILE_STEP="0")
     os.environ.pop("ENDER_ALIGNMENT_FINANCE_BASELINE", None)
-    if args.initial_adapter and not args.demo_overfit:
+    if args.initial_adapter and not args.demo_overfit and not args.mix:
         reference = args.initial_adapter.resolve().parent.parent/"base-evaluation.json"
         if reference.is_file():
             os.environ["ENDER_ALIGNMENT_FINANCE_BASELINE"] = str(reference)
@@ -128,6 +198,13 @@ def main():
     if args.demo_overfit:
         manifest.update(purpose="Clearing demo overfit on replay-reconstructed and counterfactual synthetic scenarios",
                         source_commit="977a55f", note="All 18 examples are used for training. Evaluation is training-fit only, not heldout or independent alignment evidence.")
+    if args.mix:
+        manifest.update(purpose="Ender generalization mix: alignment-finance train groups, Clearing simulation, general-ethics demo",
+                        mix_composition=dict(Counter(r.get("source", "?") for r in curriculum)),
+                        clearing_repeats=args.clearing_repeats, train_seconds_budget=args.train_seconds,
+                        general_data=str(args.general_data), clearing_data=str(args.clearing_data),
+                        note="Group-heldout alignment-finance probes measure generalization; Clearing probes are training-fit retention only.")
+        os.environ["ENDER_EVAL_START"] = "1"
     write_json(run/"manifest.json", manifest)
     (run/"sources").mkdir()
     for name in ("run_alignment_finance.py", "alignment_finance_monitor.py", "run_sft_demo.py", "retep_shadow.py", "spark_loss.py", "prepare_optimized_config.py"):
@@ -146,7 +223,7 @@ def main():
         maximum = 0
         curriculum_tokens = 0
         for row in train+validation:
-            if parse_output(row["task"], row["output"]) is None:
+            if row.get("task") in ("act", "audit") and parse_output(row["task"], row["output"]) is None:
                 raise ValueError("Malformed target")
             prompt, response = encode_example(row, template, tokenizer)
             maximum = max(maximum, len(prompt)+len(response))
@@ -163,6 +240,8 @@ def main():
                        "--train-worker", str(run/"train.yaml"), "--memory-fraction", ".8", "--retep-shadow"]
             if args.initial_adapter:
                 command += ["--retep-initial", str(args.initial_adapter.resolve()/"retep")]
+            if args.train_seconds:
+                command += ["--train-seconds", str(args.train_seconds)]
             subprocess.run(command, check=True)
         manifest["status"] = "quality_stopped" if (run/"quality-stop.json").exists() else "complete"
         write_json(run/"curriculum-manifest.json", manifest)
