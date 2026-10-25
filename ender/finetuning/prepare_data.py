@@ -1,4 +1,9 @@
-"""Validate reviewed SFT responses and split by prompt or scenario, not by row."""
+"""Validate reviewed SFT responses and split by prompt or scenario, not by row.
+
+Rows can set ``split_group_id`` when related states have different
+``scenario_id`` values but must stay in the same split (for example, the
+original, pressure-wrapped, and aligned variants of one financial case).
+"""
 
 import argparse
 import hashlib
@@ -33,11 +38,15 @@ def prepare(paths, output, seed=42, validation_fraction=0.1):
             scenario = row.get("scenario_id", "")
             if not isinstance(scenario, str):
                 raise ValueError(f"{where}: scenario_id must be a string")
+            split_group = row.get("split_group_id", "")
+            if not isinstance(split_group, str):
+                raise ValueError(f"{where}: split_group_id must be a string")
             prompt = (normalize(row["instruction"]), normalize(row.get("input", "")))
             if prompt in seen:
                 raise ValueError(f"{where}: duplicate prompt (including cross-source duplicates)")
             seen.add(prompt)
-            group = "scenario:" + scenario if scenario else "prompt:" + repr(prompt)
+            group_id = split_group or scenario
+            group = "scenario:" + group_id if group_id else "prompt:" + repr(prompt)
             prompt_groups[group] = True
             rows.append((group, {"instruction": row["instruction"], "input": row.get("input", ""),
                                  "output": row["output"], "source": row["source"]}))
@@ -61,6 +70,7 @@ def prepare(paths, output, seed=42, validation_fraction=0.1):
             "columns": {"prompt": "instruction", "query": "input", "response": "output"}}
     (output / "dataset_info.json").write_text(json.dumps(info, indent=2) + "\n")
     manifest = {"seed": seed, "validation_fraction": validation_fraction,
+                "grouping": "split_group_id, then scenario_id, then normalized prompt",
                 "counts": {key: len(value) for key, value in splits.items()},
                 "sources": sorted({row["source"] for _, row in rows}),
                 "inputs": [{"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}

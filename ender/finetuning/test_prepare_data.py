@@ -33,6 +33,16 @@ class PrepareDataTests(unittest.TestCase):
                   for name in ("train", "validation")]
         self.assertTrue(any({"A", "B"} <= {row["instruction"] for row in split} for split in splits))
 
+    def test_split_group_keeps_related_scenario_ids_together(self):
+        self.run_prepare([
+            self.row("A", scenario_id="case-one-original", split_group_id="case:one"),
+            self.row("B", scenario_id="case-one-pressure", split_group_id="case:one"),
+            self.row("C", scenario_id="case-two", split_group_id="case:two"),
+        ])
+        splits = [json.loads((self.root / f"prepared/{name}.json").read_text())
+                  for name in ("train", "validation")]
+        self.assertTrue(any({"A", "B"} <= {row["instruction"] for row in split} for split in splits))
+
     def test_reject_duplicate_prompt(self):
         with self.assertRaisesRegex(ValueError, "duplicate prompt"):
             self.run_prepare([self.row("A"), self.row(" a ")])

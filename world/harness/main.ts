@@ -144,16 +144,20 @@ const conn = DbConnection.builder()
   })
   .build();
 
-conn.db.decisionRequest.onInsert((_ctx, req) => {
-  if (req.status === 'pending') void answer(conn, req);
-});
+function route(req: { id: bigint; agentId: bigint; modelId: string; observation: string; status: string }) {
+  // The dedicated finance worker owns agentId 0 requests. Never duplicate its
+  // model calls when the clearing and financial district run together.
+  if (req.status !== 'pending' || req.agentId === 0n) return;
+  void answer(conn, req);
+}
+conn.db.decisionRequest.onInsert((_ctx, req) => route(req));
 
 conn
   .subscriptionBuilder()
   .onApplied(() => {
     // Answer anything left pending from before a restart.
     for (const req of conn.db.decisionRequest.iter()) {
-      if (req.status === 'pending') void answer(conn, req);
+      route(req);
     }
   })
   .subscribe([tables.meta, tables.agent, tables.decisionRequest.where(r => r.status.eq('pending'))]);

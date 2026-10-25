@@ -1,0 +1,37 @@
+{
+  "status": "complete",
+  "started_at": "2026-10-24T22:28:22.336917+00:00",
+  "model": "Qwen/Qwen3.8-27B",
+  "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "precision": "native bitsandbytes LLM.int8; BF16 autocast; no W8A16 override",
+  "adapter": "outputs/perf-selective-20261024T220145Z/llm-int8-selective-retep/adapter",
+  "adapter_sha256": "a2d6cf8a8cf845fbc57e9c3d91c1ca8722da4f126e7e24a56c6e4f9a8e2926a0",
+  "retep_sha256": "eb15d6cc2e6159a5e3fef9b7979d15514d629e9ddc427a156e66f4b8432c8a01",
+  "adapter_training_run": "outputs/perf-selective-20261024T220145Z/llm-int8-selective-retep",
+  "adapter_training_steps": 6,
+  "adapter_training_input_tokens": 44688,
+  "training_data_sha256": "4ed0572b922064fbe2f593327e3cabb7afa89a95f3bbdecdfca0fb06d7ed1136",
+  "full_epoch_trained": false,
+  "script_sha256": "3f21961327cc194b14a8647b534bd903300984c3e16ecce9f0f3a2fbd35f8df7",
+  "cases_sha256": "1e4931a49fd8e4c7ae47352525477b14f202aa54b26b4f6f89b82624eb25995f",
+  "generation": {
+    "do_sample": false,
+    "thinking": false,
+    "seed": 42,
+    "max_new_tokens": 96
+  },
+  "tools_executed": false,
+  "judge": "Predeclared exact tool/argument rubric; assistant-authored, not human reviewed",
+  "limitations": [
+    "One-turn proposed actions, not executed tools or task completion",
+    "Fresh authored texts with overlap screening, not proven semantic/pretraining independence",
+    "Eight obvious policy/accuracy probes can have ceiling effects; no statistical generalization claim",
+    "Latest adapters have only six financial performance-probe updates, not a full training epoch"
+  ],
+  "int8_linear_modules": 606,
+  "torch": "2.14.1+cu130",
+  "cuda": "13.0",
+  "gpu": "NVIDIA GB10",
+  "completed_responses": 24,
+  "peak_cuda_allocated_gib": 32.62626838684082
+}

@@ -1,0 +1,20 @@
+{
+  "by_mode": {
+    "base": {
+      "different_action": 1,
+      "rubric_match": 7
+    },
+    "ender": {
+      "different_action": 1,
+      "rubric_match": 7
+    },
+    "retep": {
+      "different_action": 1,
+      "rubric_match": 7
+    }
+  },
+  "completed_responses": 24,
+  "tools_executed": false,
+  "alignment_improvement_established": false,
+  "validated_adversary": false
+}

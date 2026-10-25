@@ -1,5 +1,22 @@
 # Qwen3.8-27B on the Spark
 
+## Latest measured results
+
+See [RESULTS_20261024.md](RESULTS_20261024.md) for measured training throughput,
+base/Ender/`retep` held-out losses, checkpoint scope, and new scenario comparisons.
+The latest adapters have **six financial probe updates**, not a completed epoch.
+The selected native-int8 workflow measures **481–508 training input tokens/s**
+with the sister included; its roughly 10-hour training-only estimate is not a
+measured full-run ETA or a decode rate. See
+[SPARK_OPTIMIZATION.md](SPARK_OPTIMIZATION.md) for the reproducible optimized path.
+
+The [eight fresh scenario probes](reports/unseen-actions-20261024T222813Z/index.md)
+showed **no behavioral difference between Ender and base**: identical responses
+on all eight, with 7/8 predeclared action-rubric matches each. `retep` made the
+same substantive decisions. The shared non-match was safe deferral rather than
+recording a close exception—not cheating. These are one-turn proposed actions,
+not executed tool trajectories or an independent alignment score.
+
 ## Ender post-training smoke test
 
 See [SPARK_DEMO.md](SPARK_DEMO.md) for the BF16 LoRA training demo using clearly
@@ -62,12 +79,13 @@ The local [demo transcript](../dgx-spark-finetuning-transcript.md) uses Llama 3.
 It specifies SDPA attention, batch size 8, sequence length 1,000, mixed precision, and compilation.
 It does not contain installation commands or alignment data.
 
-This configuration uses the requested 27B model instead.
+The initial BF16 configuration below uses the requested 27B model instead.
 Standard full fine-tuning with Adam needs more memory than this Spark provides.
-LoRA keeps the base weights in BF16 without quantization.
+That initial configuration keeps the base weights in BF16 without quantization;
+the selected financial workflow now uses verified native-int8 LoRA.
 The microbatch size is 1, with 8 accumulation steps.
 Compilation stays off until a short test establishes memory use and stability.
-Training memory use and throughput remain untested until a training test completes.
+Measured probe memory and throughput are recorded in the latest results above.
 
 Installation follows the [current NVIDIA LLaMA-Factory guide](https://build.nvidia.com/spark/llama-factory/instructions).
 The remote environment contains CUDA 13 PyTorch and a separate Python virtual environment.
@@ -543,7 +561,12 @@ records bridged request counts/settings, not prompt contents. The generated
 report includes the live intervention separately from startup settings; latency
 before/after this change should not be pooled as an unchanged configuration.
 
-## Training (not started)
+## Initial BF16 training commands (historical configuration)
+
+The commands below describe the original BF16 setup. Use the optimized entry point
+in [SPARK_OPTIMIZATION.md](SPARK_OPTIMIZATION.md) for the current financial data;
+the longest financial example failed the original BF16 memory probe. Short probes
+have completed, but the full financial epoch has not started.
 
 1. Run a short test in a separate output directory.
 
