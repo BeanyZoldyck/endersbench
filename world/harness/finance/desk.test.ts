@@ -7,6 +7,7 @@ import { financeTools } from '../../spacetimedb/src/finance/tools';
 import type { Seat } from '../../spacetimedb/src/finance/types';
 import { answerDesk, answerDeskRequest, codexDeskTurn, deskTurnFor, type DeskConnection } from './desk';
 import { claudeTurn, messagesDriver } from './drivers';
+import type { LiveCrs } from './crslive';
 
 const seats: Seat[] = ['lending', 'collections', 'vendor_payments'];
 // What the module publishes under meta 'finance_tools', as the harness reads it.
@@ -108,5 +109,31 @@ describe('finance desk in the harness', () => {
     // A request with no open case is failed, not answered.
     await answerDeskRequest(conn, request('{}', 8n), { turnFor: recorder, caseWaitMs: 200 });
     expect(calls[1]).toEqual({ fail: { requestId: 8n, error: 'no open finance case for this request', latencyMs: expect.any(Number) } });
+  });
+
+  test('sends a CRS tool call to the live sandbox and submits its answer with the action', async () => {
+    const scenario = SCENARIO_BY_ID['lend-clean-approve'];
+    const calls: any[] = [];
+    const conn: DeskConnection = {
+      db: {
+        meta: { key: { find: key => (key === 'finance_tools' ? { value: JSON.stringify(published) } : undefined) } },
+        financeCase: { iter: () => [9n, 10n].map(id => ({ pendingRequestId: id, status: 'open', variant: 'house-rules' })) },
+      },
+      reducers: {
+        submitDecision: async args => calls.push(args),
+        failDecision: async args => calls.push(args),
+      },
+    };
+    const call = { source: 'live' as const, endpoint: 'POST /transunion/identity-manager-verification/basic', requestId: 'r-9', status: 200, latencyMs: 120, at: '2026-10-24T19:10:00.000Z' };
+    const asked: string[] = [];
+    const live: LiveCrs = async tool => (asked.push(tool), tool === 'verify_identity' ? { result: { result: 'pass', messages: [] }, crs: call } : undefined);
+    const turn = (name: string, args: Record<string, unknown>) => () => async () => ({ call: { name, args }, notes: [], usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+    const observation = observe(scenario, deliver(scenario, []));
+    await answerDeskRequest(conn, { id: 9n, agentId: 0n, modelId: 'test:identity', observation }, { turnFor: turn('verify_identity', { subject_id: 'P01' }), live });
+    expect(JSON.parse(calls[0].action)).toEqual({ name: 'verify_identity', args: { subject_id: 'P01' }, crs: { result: { result: 'pass', messages: [] }, call } });
+    // Anything the sandbox does not answer goes as the model chose it.
+    await answerDeskRequest(conn, { id: 10n, agentId: 0n, modelId: 'test:escalate', observation }, { turnFor: turn('escalate_to_human', { reason: 'r' }), live });
+    expect(calls[1].action).toBe('{"name":"escalate_to_human","args":{"reason":"r"}}');
+    expect(asked).toEqual(['verify_identity', 'escalate_to_human']);
   });
 });

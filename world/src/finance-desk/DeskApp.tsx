@@ -8,13 +8,14 @@ import { CONDITION_NAMES, currentVersion, scenarioFor } from './conditions';
 import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
 import { OfficeScene } from './OfficeScene';
 import { cohorts, officesFor, STATIONS, type Office } from './comparison';
-import { caseSummary, describe, SEAT_NAMES } from './format';
+import { caseSummary, crsLine, crsStatus, describe, SEAT_NAMES } from './format';
 import { PolicyMenu, ChoiceCard, ReportComparison, BenchmarkPanel, ViolationCallout } from './AnalysisPanels';
 import { officeInsights, policyBrief } from './insights';
 
 export const REPLAYS = [
   { url: '/replays/finance-v6-luna.json', label: 'gpt-6-luna · ten cases' },
   { url: '/replays/finance-v6-four-luna.json', label: 'gpt-6-luna · four runs of one case' },
+  { url: '/replays/finance-v6-live-crs-script.json', label: 'Policy reference · 25 held-out cases · live CRS' },
   { url: '/replays/finance-reference.json', label: 'Scripted references · v5' },
 ];
 
@@ -50,6 +51,7 @@ export function DeskView({ cases, steps, verdicts, isActive, ready, replay, onRe
   const pressureIndex = insights[selectedOffice]?.pressure ? selectedOffice : insights.findIndex(i => i?.pressure);
   const pressure = insights[pressureIndex]?.pressure;
   const reportMismatches = insights.filter(i => i?.report?.honest === false).length;
+  const crs = useMemo(() => crsStatus(offices.flatMap(o => o.steps)), [offices]);
   const online = !replay && isActive && ready;
   const status = replay ? 'Replay' : !isActive ? cases.length ? 'Reconnecting' : 'Connecting' : !ready ? 'Syncing' : 'Live';
   const statusDetail = replay ? scripts && !models ? 'Scripted replay · paced actions · no model calls' : 'Recorded SpacetimeDB case data · paced playback'
@@ -73,6 +75,8 @@ export function DeskView({ cases, steps, verdicts, isActive, ready, replay, onRe
       <div className="finance-status">
         <span className={`finance-connection ${online ? 'online' : ''} ${replay ? 'replay' : ''}`} role="status" title={statusDetail}><i />{status}</span>
         {scripts && <span className="finance-chip" title="Scripted reference agents · no model calls">Scripted</span>}
+        {crs.live > 0 && <span className="finance-chip crs-live" title={`CRS answers in these offices came from the CRS sandbox during the run, sent as each test identity's exact request. RequestIDs and latency are in the case ledger.${crs.fellBack ? ` ${crs.fellBack} call(s) failed and used the saved Oct 24 response.` : ''}`}><i />CRS live · {crs.live} call{crs.live > 1 ? 's' : ''}{crs.fellBack ? ` · ${crs.fellBack} from snapshot` : ''}</span>}
+        {crs.live === 0 && crs.saved + crs.fellBack > 0 && <span className="finance-chip" title="These CRS answers are the saved Oct 24 sandbox responses, not live calls">CRS snapshot</span>}
         {scenario && <PolicyMenu scenario={scenario} variant={group.row.variant} version={group.row.benchmarkVersion} />}
         <select className="finance-comparison" aria-label="Comparison" value={group?.key ?? ''} disabled={!groups.length} onChange={e => { setSelection(e.target.value); setSelectedOffice(0); replay?.onComparisonChange(e.target.value); }}>
           {!groups.length && <option value="">{replay ? 'Loading' : 'No cases'}</option>}
@@ -121,7 +125,9 @@ export function DeskView({ cases, steps, verdicts, isActive, ready, replay, onRe
       {selected?.thought && <div className="finance-current-thought"><span>{selected.modelId.startsWith('script:') ? 'Scripted explanation' : 'Model’s explanation'}</span><blockquote>{selected.thought}</blockquote></div>}
       {scenario && selected?.row ? <ol className="finance-timeline">{selected.steps.map((step, index) => {
         const line = describe(scenario, step), flags = insights[selectedOffice]?.findings.filter(f => f.step === index) ?? [];
-        return <li key={index} className={`${line.kind === 'message' ? 'case-message' : ''} ${flags.length ? 'flagged' : ''}`}><span className="timeline-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{line.kind === 'message' ? line.from : line.title}</strong><p>{line.kind === 'message' ? line.text : line.detail}</p>{flags.map((flag, i) => <span className="event-flag" key={i}>{flag.label} · {flag.caption}</span>)}{selected.notes[index] && <blockquote>“{selected.notes[index]}”</blockquote>}</div></li>;
+        return <li key={index} className={`${line.kind === 'message' ? 'case-message' : ''} ${flags.length ? 'flagged' : ''}`}><span className="timeline-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{line.kind === 'message' ? line.from : line.title}</strong><p>{line.kind === 'message' ? line.text : line.detail}</p>{line.kind === 'action' && step.crs && <span className={`crs-call ${step.crs.source}`} title={`${step.crs.endpoint}${step.crs.requestId ? `
+RequestID ${step.crs.requestId}` : ''}
+Sent ${step.crs.at}`}>{crsLine(step.crs)}</span>}{flags.map((flag, i) => <span className="event-flag" key={i}>{flag.label} · {flag.caption}</span>)}{selected.notes[index] && <blockquote>“{selected.notes[index]}”</blockquote>}</div></li>;
       })}</ol> : <p className="ledger-empty">No case in this office yet.</p>}
       {selected?.row?.stopped && <p className="run-stopped" role="alert">Run interrupted · {selected.row.stopped}</p>}
       <section className="finance-audit"><span className="finance-eyebrow">Audit</span><Audit office={selected} /></section>

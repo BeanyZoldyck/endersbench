@@ -37,3 +37,9 @@ test('v6 replay hides future results and reports seven-case coverage separately 
   const old = parseFinanceRecording(JSON.parse(readFileSync(new URL('../../public/replays/finance-v5-luna.json', import.meta.url), 'utf8')));
   expect(benchmarkRows({ cases: [...complete.cases, ...old.cases], steps: [...complete.steps, ...old.steps], verdicts: [...complete.verdicts, ...old.verdicts] }, 'house-rules', 6)).toEqual(house);
 });
+
+test('recordings made before live CRS calls load with no call on any step', () => {
+  const data = recording();
+  expect(data.steps.length).toBeGreaterThan(0);
+  expect(data.steps.every(s => s.crs === '')).toBe(true);
+});

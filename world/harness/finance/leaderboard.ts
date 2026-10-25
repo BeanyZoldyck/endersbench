@@ -26,6 +26,7 @@ import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT, hasHouseRules } from '../../
 import { FINANCE_BENCHMARK_VERSION, SCENARIOS, SCENARIO_BY_ID, forVariant } from '../../spacetimedb/src/finance/scenarios';
 import { checkTools, toolScore } from '../../spacetimedb/src/finance/toolcheck';
 import type { Step } from '../../spacetimedb/src/finance/types';
+import { crsSummary } from './crslive';
 import { TEST_CASES } from './labels';
 
 const RUNS_DIR = path.resolve('harness/finance/runs');
@@ -37,7 +38,7 @@ const heldOut = process.argv.includes('--held-out');
 const CASES = heldOut ? SCENARIOS.filter(s => TEST_CASES.includes(s.id)) : SCENARIOS;
 
 interface SavedRun {
-  config: { benchmarkVersion?: number; provider: string; model: string; variant: string; crsFormat?: 'raw' | 'card'; cases: string[]; repeat?: number };
+  config: { benchmarkVersion?: number; provider: string; model: string; variant: string; crsFormat?: 'raw' | 'card'; crsSource?: 'live' | 'snapshot'; cases: string[]; repeat?: number };
   results: { driver: string; cases: { id: string; sample?: number; steps: Step[] }[] }[];
 }
 
@@ -51,8 +52,10 @@ for (const file of fs.readdirSync(RUNS_DIR).filter(f => f.endsWith('.json') && f
   if (version > FINANCE_BENCHMARK_VERSION) continue;
   const loop = run.results.find(r => r.driver === 'messages');
   if (!loop) continue;
-  // Full CRS responses are a different task from cards: their own row.
-  const key = `${run.config.provider}:${run.config.model}${run.config.crsFormat === 'raw' ? ' [raw CRS]' : ''}|${run.config.variant}`;
+  // Full CRS responses are a different task from cards: their own row. Runs
+  // on live CRS data get their own row too, so a row is never half live.
+  const tags = [run.config.crsFormat === 'raw' ? 'raw' : '', run.config.crsSource === 'live' ? 'live' : ''].filter(Boolean);
+  const key = `${run.config.provider}:${run.config.model}${tags.length ? ` [${tags.join(', ')} CRS]` : ''}|${run.config.variant}`;
   const cases = byModel.get(key) ?? new Map<string, CaseRuns>();
   for (const id of new Set(loop.cases.map(c => c.id))) {
     const scenario = SCENARIO_BY_ID[id];
@@ -72,6 +75,7 @@ interface Row {
   gates: Gated[];
   wrongCalls: number;
   files?: string[];
+  crs?: ReturnType<typeof crsSummary>; // the CRS calls behind a live row
 }
 
 const pct = (x: number) => `${Math.round(100 * x)}%`.padStart(4);
@@ -97,6 +101,7 @@ for (const [key, cases] of byModel) {
     // Scored as the prompt variant saw each case (forVariant, v6).
     gates: all.map(c => ({ id: c.id, sample: c.sample, gate: gateCase(forVariant(SCENARIO_BY_ID[c.id], variant), c.steps) })),
     wrongCalls: toolScore(all.map(c => checkTools(SCENARIO_BY_ID[c.id], c.steps))).wrongCalls / repeat,
+    crs: crsSummary(all.map(c => c.steps)),
   });
 }
 
@@ -156,6 +161,18 @@ for (const variant of order) {
 }
 for (const note of incomplete) console.log(`Left out until complete: ${note}`);
 if (incomplete.length) console.log('');
+
+// Where a live row's CRS answers came from: the sandbox during the run, or
+// the snapshot when a call failed, and whether CRS's data had moved since.
+const liveRows = rows.filter(r => r.crs?.calls);
+if (liveRows.length) {
+  console.log('CRS calls behind the live rows:');
+  for (const r of liveRows) {
+    const c = r.crs!;
+    console.log(`  ${r.name.padEnd(30)} ${r.variant.padEnd(12)} ${c.calls} calls, ${c.live} answered by the sandbox (median ${c.medianMs ?? '-'} ms), ${c.fellBack} from the snapshot, ${c.drifted} differed from it`);
+  }
+  console.log('');
+}
 
 // The lift from writing the rules out: charter minus house-rules, as the mean
 // of paired per-case differences (each case's pass rate over its runs) with a

@@ -18,7 +18,7 @@ import {
   type DeskCtx,
 } from './desk';
 import { policyFollower, runBrain } from './finance/brains';
-import { deliver, observe } from './finance/engine';
+import { deliver, execute, isCrsTool, observe } from './finance/engine';
 import { SCENARIOS, SCENARIO_BY_ID } from './finance/scenarios';
 import { financeTools } from './finance/tools';
 
@@ -231,5 +231,44 @@ describe('finance desk in the world', () => {
     const tools = JSON.parse(deskMeta().finance_tools);
     expect(Object.keys(tools)).toEqual(['lending', 'collections', 'vendor_payments']);
     expect(tools.lending).toEqual(financeTools('lending'));
+  });
+
+  test('takes the worker’s live CRS answer: the step keeps the call, the verifier reads the answer, the agent never sees the call', () => {
+    const w = freshDesk();
+    queue(w, { cases: 'lend-clean-approve' });
+    tick(w);
+    const scenario = SCENARIO_BY_ID['lend-clean-approve'];
+    const call = { source: 'live', endpoint: 'POST /test', requestId: 'crs-req-1', status: 200, latencyMs: 160, at: '2026-10-24T19:03:00.000Z' };
+    for (let turn = 0; turn < 40 && cases(w).some(c => c.status !== 'closed'); turn++) {
+      for (const req of pending(w)) {
+        expect(req.observation).not.toContain('crs-req-1');
+        const action = policyFollower(JSON.parse(req.observation));
+        // A crs answer on a tool that is not a CRS tool is ignored.
+        const result = isCrsTool(action.tool) ? execute(scenario, action.tool, action.args) : { ok: true };
+        const payload = { name: action.tool, args: action.args, crs: { result, call } };
+        w.withReducerTx(harness, ctx => submitDecision(ctx, { requestId: req.id, action: JSON.stringify(payload), thought: action.thought, latencyMs: 5 }));
+      }
+      tick(w);
+    }
+    const [c] = cases(w);
+    const recorded = steps(w, c.id);
+    expect(recorded.some(s => isCrsTool(s.tool))).toBe(true);
+    for (const s of recorded) expect(s.crs, s.tool).toEqual(isCrsTool(s.tool) ? call : undefined);
+    expect(recorded.map(s => ({ ...s, crs: undefined }))).toEqual(runBrain(policyFollower, scenario));
+    expect(w.db.financeVerdict.caseId.find(c.id)!.pass).toBe(true);
+  });
+
+  test('scores what CRS answered live, not the saved card', () => {
+    const w = freshDesk();
+    queue(w, { cases: 'lend-clean-approve' });
+    tick(w);
+    const [req] = pending(w);
+    const live = { result: 'fail', messages: ['INPUT SSN NOT ASSOCIATED WITH INPUT NAME'] };
+    const call = { source: 'live', endpoint: 'POST /test', requestId: 'crs-req-2', status: 200, latencyMs: 90, at: '2026-10-24T19:03:00.000Z', drift: ['result', 'messages'] };
+    const action = { name: 'verify_identity', args: { subject_id: 'P01' }, crs: { result: live, call } };
+    w.withReducerTx(harness, ctx => submitDecision(ctx, { requestId: req.id, action: JSON.stringify(action), thought: '', latencyMs: 5 }));
+    const c = caseFor(w, pending(w)[0].id);
+    expect(steps(w, c.id).find(s => s.tool === 'verify_identity')).toMatchObject({ result: live, crs: call });
+    expect(JSON.parse(pending(w)[0].observation).timeline.find((e: any) => e.action?.tool === 'verify_identity').action.result).toEqual(live);
   });
 });

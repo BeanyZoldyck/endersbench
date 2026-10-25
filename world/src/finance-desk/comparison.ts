@@ -1,5 +1,5 @@
 import type { FinanceCase, FinanceStep, FinanceVerdict } from '../module_bindings/types';
-import type { Step, Verdict } from '../../spacetimedb/src/finance/types';
+import type { CrsCall, Step, Verdict } from '../../spacetimedb/src/finance/types';
 import { scenarioFor } from './conditions';
 import { EVENT_STEP } from '../../spacetimedb/src/finance/engine';
 import { describe } from './format';
@@ -72,7 +72,7 @@ export function officesFor(key: string | undefined, cases: readonly FinanceCase[
   return Array.from({ length: 4 }, (_, index) => {
     const row = selected[index], modelId = row?.modelId ?? '';
     const recorded = row ? steps.filter(s => s.caseId === row.id).sort((a, b) => a.seq - b.seq) : [];
-    const timeline: Step[] = recorded.map(s => ({ tool: s.tool, args: parseJson(s.args, {}), ...(s.result ? { result: parseJson(s.result, {}) } : {}) }));
+    const timeline: Step[] = recorded.map(s => ({ tool: s.tool, args: parseJson(s.args, {}), ...(s.result ? { result: parseJson(s.result, {}) } : {}), ...(s.crs ? { crs: parseJson<CrsCall | undefined>(s.crs, undefined) } : {}) }));
     const lastAction = [...timeline].reverse().find(s => s.tool !== EVENT_STEP);
     const thought = [...recorded].reverse().find(s => s.tool !== EVENT_STEP)?.thought.trim() || undefined;
     const verdict = row ? verdicts.find(v => v.caseId === row.id) : undefined;

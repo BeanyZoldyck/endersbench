@@ -202,6 +202,10 @@ button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible,
 .finance-timeline .case-message strong { color:var(--gold); }
 .finance-timeline .case-message p { color:var(--ink); }
 .event-flag { display:block; margin-top:6px; padding:4px 7px; border-radius:3px; background:var(--bad-bg); color:var(--bad); font-size:.7rem; font-weight:600; }
+.crs-call { display:inline-block; margin-top:6px; padding:3px 7px; border-radius:3px; background:var(--good-bg); color:var(--good); font-size:.68rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.crs-call.snapshot { background:var(--gold-bg); color:var(--gold); }
+.finance-chip.crs-live { color:var(--good); border-color:#9fcf9844; }
+.finance-chip.crs-live i { display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:var(--good); vertical-align:1px; }
 .ledger-empty { color:var(--muted); }
 .run-stopped { padding:8px 10px; border-radius:4px; background:var(--bad-bg); color:var(--bad); }
 .finance-audit { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }

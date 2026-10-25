@@ -2,12 +2,14 @@ import { expect, test } from 'vitest';
 import { Timestamp } from 'spacetimedb';
 import type { FinanceCase, FinanceStep } from '../module_bindings/types';
 import { cohortKey, cohorts, comparisonKeyFor, officesFor, stationFor } from './comparison';
+import { crsLine, crsStatus } from './format';
+import type { CrsCall } from '../../spacetimedb/src/finance/types';
 
 const episode = (id: bigint, modelId: string, fields: Partial<FinanceCase> = {}): FinanceCase => ({
   id, modelId, scenarioId: 'lend-clean-approve', seat: 'lending', variant: 'charter', sample: 0,
   benchmarkVersion: 5, status: 'open', pendingRequestId: 10n, stalls: 0, stopped: '', queuedAt: new Timestamp(id), ...fields,
 });
-const step = (caseId: bigint, seq: number, tool: string): FinanceStep => ({ id: BigInt(seq), caseId, seq, tool, args: '{}', result: '', requestId: 10n, thought: `Explanation for ${caseId}` });
+const step = (caseId: bigint, seq: number, tool: string): FinanceStep => ({ id: BigInt(seq), caseId, seq, tool, args: '{}', result: '', requestId: 10n, thought: `Explanation for ${caseId}`, crs: '' });
 test('parallel offices never compare different cases, prompts, samples or benchmark versions', () => {
   const rows = [episode(1n, 'model:a'), episode(2n, 'model:b'), episode(3n, 'model:a', { variant: 'no-charter' }), episode(4n, 'model:a', { sample: 1 }), episode(5n, 'model:a', { benchmarkVersion: 4 }), episode(6n, 'model:a', { scenarioId: 'vendor-genuine-change' })];
   expect(cohorts(rows)).toHaveLength(5);
@@ -58,4 +60,23 @@ test('four samples of Luna occupy four independent offices without changing the 
   expect(offices.map(o => o.name)).toEqual([1, 2, 3, 4].map(n => `gpt-6-luna · run ${n}`));
   expect(offices.every(o => o.modelId === 'codex:gpt-6-luna' && o.steps.length === 1)).toBe(true);
   for (const office of offices) expect(office.thought).toBe(`Explanation for ${office.id}`);
+});
+test('offices carry the live CRS call behind each answer, and the top bar counts them', () => {
+  const rows = [episode(1n, 'model:a', { benchmarkVersion: 6 })];
+  const call: CrsCall = { source: 'live', endpoint: 'POST /fraud-finder/fraud-finder', requestId: 'f40b9af1-fc0d-44a8-b847-f848d11882c6', status: 200, latencyMs: 148, at: '2026-10-24T19:03:00.000Z' };
+  const failed: CrsCall = { ...call, source: 'snapshot', requestId: null, status: null, error: 'fetch failed' };
+  const steps = [
+    { ...step(1n, 1, 'check_fraud'), result: '{"score":88,"band":"high","signals":[]}', crs: JSON.stringify(call) },
+    { ...step(1n, 2, 'verify_identity'), result: '{"result":"fail","messages":[]}', crs: JSON.stringify(failed) },
+    { ...step(1n, 3, 'pull_credit'), result: '{"bureau":"equifax","status":"file"}' },
+    { ...step(1n, 4, 'pull_credit'), result: JSON.stringify({ error: "no record found for subject_id 'P99'" }) },
+    step(1n, 5, 'escalate_to_human'),
+  ];
+  const [office] = officesFor(cohortKey(rows[0]), rows, steps, []);
+  expect(office.steps[0].crs).toEqual(call);
+  expect(office.steps[4].crs).toBeUndefined();
+  expect(crsStatus(office.steps)).toEqual({ live: 1, fellBack: 1, saved: 1 });
+  expect(crsLine(call)).toBe('CRS sandbox · live · 148 ms · RequestID f40b9af1');
+  expect(crsLine({ ...call, drift: ['score'] })).toContain('changed since Oct 24: score');
+  expect(crsLine(failed)).toBe('CRS snapshot · the live call failed (fetch failed)');
 });

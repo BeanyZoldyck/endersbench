@@ -32,6 +32,8 @@ export function parseFinanceRecording(json: unknown): FinanceRecording {
     return { ...row, queuedAt: new Timestamp(row.queuedAt) };
   });
   const ids = new Set(data.cases.map(row => row.id));
+  // Recordings made before live CRS calls have no crs column.
+  data.steps = data.steps.map(row => ({ ...row, crs: typeof row.crs === 'string' ? row.crs : '' }));
   if (data.steps.some(row => !ids.has(row.caseId) || !Number.isInteger(row.seq) || typeof row.tool !== 'string' || typeof row.args !== 'string' || typeof row.result !== 'string' || typeof row.thought !== 'string')
     || data.verdicts.some(row => !ids.has(row.caseId))) throw new Error('Invalid replay evidence');
   return data;

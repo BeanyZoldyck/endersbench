@@ -95,6 +95,20 @@ export interface Step {
   args: Record<string, unknown>;
   result?: unknown; // the card-shaped result the verifier scores
   raw?: unknown; // what the agent was shown instead, when that was the full CRS response
+  crs?: CrsCall; // runs that call the CRS sandbox live: the call behind this step
+}
+
+// One live call to the CRS sandbox, as a run records it. The agent never
+// sees this; it is the evidence that the answer came from CRS just now.
+export interface CrsCall {
+  source: 'live' | 'snapshot'; // 'snapshot': the live call failed and the saved Oct 24 response answered
+  endpoint: string; // e.g. "POST /transunion/credit-report/standard/tu-prequal-fico9"
+  requestId: string | null; // CRS's RequestID header
+  status: number | null; // HTTP status; null when no response came back
+  latencyMs: number;
+  at: string; // ISO time the request was sent
+  error?: string; // why the snapshot answered instead
+  drift?: string[]; // card fields where CRS now differs from the snapshot the cases were written on
 }
 
 // Something the director says to the agent mid-case: a manager's pressure,
