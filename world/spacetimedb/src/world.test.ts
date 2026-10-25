@@ -13,6 +13,7 @@ import { addRecord } from './record';
 import { reachFor } from './actions';
 import { hitWolf } from './threats';
 import { TOOLS } from './tools';
+import { settleThought } from './decisions';
 
 const {
   init,
@@ -4330,5 +4331,83 @@ describe('the river as a landmark', () => {
     const w = worldOf(t);
     expect(riverPath(w)).toBe(riverPath(w));
     expect(riverPath(w)).toBe(riverPath({ ...w }));
+  });
+});
+
+describe('database brains', () => {
+  function runInfo(t: T, extra: Record<string, unknown>) {
+    t.withReducerTx(harness, ctx => setRunInfo(ctx, { info: JSON.stringify({ promptVariant: 'reward', systemPrompt: 'SYS', roster: [], ...extra }) }));
+  }
+  function openRequest(t: T, name: string, modelId: string) {
+    t.withReducerTx(harness, ctx => spawnAgent(ctx, { name, modelId }));
+    setAgent(t, name, { wake: true, wakeReason: 'test' });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    return pendingFor(t, agentNamed(t, name).id)[0];
+  }
+
+  test('a database run routes a supported survivor\'s request to the database brain', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    expect(req.brain).toBe('database');
+    expect([...t.db.thinkJob.iter()].map((j: any) => j.requestId)).toEqual([req.id]);
+  });
+
+  test('a harness run leaves requests to the harness', () => {
+    const t = freshWorld();
+    runInfo(t, {});
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    expect(req.brain).toBe('harness');
+    expect(t.db.thinkJob.count()).toBe(0n);
+  });
+
+  test('a database run leaves a harness-only model to the harness', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'fake');
+    expect(req.brain).toBe('harness');
+    expect(t.db.thinkJob.count()).toBe(0n);
+  });
+
+  test('settleThought ignores a request that is no longer pending', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    t.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'no answer in time' });
+    const before = agentNamed(t, 'Ada');
+    let settled = true;
+    t.withReducerTx(internal, ctx => {
+      settled = settleThought(ctx, req.id, { decision: { action: { name: 'idle', args: {} }, thought: 'rest' } }, 812);
+    });
+    expect(settled).toBe(false);
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('expired');
+    expect(agentNamed(t, 'Ada')).toEqual(before);
+  });
+
+  test('settleThought applies a decision and records its latency', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    let settled = false;
+    t.withReducerTx(internal, ctx => {
+      settled = settleThought(ctx, req.id, { decision: { action: { name: 'idle', args: {} }, thought: 'rest' } }, 812);
+    });
+    expect(settled).toBe(true);
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('done');
+    const ada = agentNamed(t, 'Ada');
+    expect(ada.thought).toBe('rest');
+    expect(ada.lastLatencyMs).toBe(812);
+    expect(ada.pendingRequestId).toBe(0n);
+  });
+
+  test('settleThought records a failure in model health', () => {
+    const t = freshWorld();
+    runInfo(t, { brains: 'database' });
+    const req = openRequest(t, 'Ada', 'bitdeer:m');
+    t.withReducerTx(internal, ctx => {
+      settleThought(ctx, req.id, { error: 'bitdeer models need BITDEER_API_KEY' }, 3);
+    });
+    expect(t.db.decisionRequest.id.find(req.id)!.status).toBe('failed');
+    expect(t.db.modelHealth.modelId.find('bitdeer:m')!.lastError).toBe('bitdeer models need BITDEER_API_KEY');
   });
 });
