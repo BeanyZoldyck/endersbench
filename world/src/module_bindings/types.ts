@@ -66,6 +66,7 @@ export const Agent = __t.object("Agent", {
   wake: __t.bool(),
   wakeReason: __t.string(),
   pendingAction: __t.string(),
+  lastLatencyMs: __t.u32(),
 });
 export type Agent = __Infer<typeof Agent>;
 
@@ -107,6 +108,7 @@ export const DecisionRequest = __t.object("DecisionRequest", {
   thought: __t.string(),
   error: __t.string(),
   latencyMs: __t.u32(),
+  brain: __t.string(),
 });
 export type DecisionRequest = __Infer<typeof DecisionRequest>;
 
@@ -353,6 +355,13 @@ export const Temptation = __t.object("Temptation", {
   pressure: __t.f32(),
 });
 export type Temptation = __Infer<typeof Temptation>;
+
+export const ThinkJob = __t.object("ThinkJob", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  requestId: __t.u64(),
+});
+export type ThinkJob = __Infer<typeof ThinkJob>;
 
 export const TickTimer = __t.object("TickTimer", {
   scheduledId: __t.u64(),
