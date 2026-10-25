@@ -189,6 +189,7 @@ export type OpenAiApi = 'chat' | 'responses';
 
 interface OpenAiReply {
   text: string[];
+  reasoning?: string;
   call?: { name: string; arguments: string };
   refusal?: string;
   usage: { input: number; cached: number; output: number };
@@ -213,6 +214,19 @@ export function openAiDriver(opts: OpenAiOptions & { raw?: RawCrs; live?: LiveCr
 // Hermes JSON <tool_call>{"name", "arguments"}</tool_call>. XML values are text, so
 // each is typed by the tool's schema.
 const TOOL_CALL_BLOCK = /<tool_call>[\s\S]*?(?:<\/tool_call>|$)/;
+
+// Qwen, DeepSeek and Ender think beside the reply: reasoning_content (OpenRouter calls
+// it reasoning), or a <think> block inside the reply when vLLM runs without a
+// reasoning parser. It is kept as a (thinking) note, as Claude's is, capped so the
+// reply still fits in the 4,000 characters a step keeps.
+const THINK_BLOCK = /<think>([\s\S]*?)(?:<\/think>|$)/;
+const MAX_THINKING = 3_000;
+
+function thinkingNote(reasoning: string) {
+  return reasoning.length > MAX_THINKING
+    ? `(thinking) ${reasoning.slice(0, MAX_THINKING)}… (first ${MAX_THINKING} of ${reasoning.length} characters)`
+    : `(thinking) ${reasoning}`;
+}
 
 export function textToolCall(content: string, tools: DeskTool[]): { name: string; arguments: string } | null {
   const block = content.match(TOOL_CALL_BLOCK)?.[0];
@@ -282,12 +296,16 @@ export function openAiTurn(opts: OpenAiOptions): TakeTurn {
       ],
     });
     const message = reply.choices?.[0]?.message ?? {};
-    const content = typeof message.content === 'string' ? message.content.trim() : '';
+    const raw = typeof message.content === 'string' ? message.content.trim() : '';
+    const think = raw.match(THINK_BLOCK);
+    const content = think ? raw.replace(THINK_BLOCK, '').trim() : raw;
+    const reasoning = [message.reasoning_content, message.reasoning, think?.[1]].find((r): r is string => typeof r === 'string' && r.trim() !== '')?.trim();
     const written = message.tool_calls?.[0]?.function?.name ? null : textToolCall(content, tools);
     const call = written ?? message.tool_calls?.[0]?.function;
     const text = written ? content.replace(TOOL_CALL_BLOCK, '').trim() : content;
     return {
       text: text ? [text] : [],
+      ...(reasoning ? { reasoning } : {}),
       ...(call?.name ? { call: { name: call.name, arguments: call.arguments ?? '' } } : {}),
       ...(message.refusal ? { refusal: message.refusal } : {}),
       usage: { input: reply.usage?.prompt_tokens ?? 0, cached: reply.usage?.prompt_tokens_details?.cached_tokens ?? 0, output: reply.usage?.completion_tokens ?? 0 },
@@ -325,7 +343,7 @@ export function openAiTurn(opts: OpenAiOptions): TakeTurn {
   return async (system, tools, observation) => {
     const reply = await (api === 'responses' ? responsesTurn : chatTurn)(system, tools, turnPrompt(observation));
     const turn: Turn = {
-      notes: [...reply.text],
+      notes: [...(reply.reasoning ? [thinkingNote(reply.reasoning)] : []), ...reply.text],
       usage: { inputTokens: reply.usage.input - reply.usage.cached, outputTokens: reply.usage.output, cacheReadTokens: reply.usage.cached, cacheWriteTokens: 0 },
     };
     if (reply.refusal) {

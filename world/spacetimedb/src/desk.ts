@@ -183,6 +183,7 @@ function ask(ctx: DeskCtx, c: Case, steps: Step[]) {
     error: '',
     latencyMs: 0,
     brain: 'harness',
+    reasoning: '',
   });
   updateCase(ctx, c.id, { pendingRequestId: req.id });
 }

@@ -52,14 +52,14 @@ export function runBrains(ctx: Ctx): 'database' | 'harness' {
   }
 }
 
-export function applyDecision(ctx: Ctx, req: DecisionRequest, action: string, thought: string, latencyMs: number) {
+export function applyDecision(ctx: Ctx, req: DecisionRequest, action: string, thought: string, latencyMs: number, reasoning = '') {
   const me = ctx.db.agent.id.find(req.agentId);
   if (!me) throw new SenderError('agent is gone');
   noteModel(ctx, req.modelId);
   const w = getWorld(ctx);
 
   if (!me.alive) {
-    ctx.db.decisionRequest.id.update({ ...req, status: 'expired', action, thought: thought.slice(0, 120), error: 'agent is a ghost', latencyMs });
+    ctx.db.decisionRequest.id.update({ ...req, status: 'expired', action, thought: thought.slice(0, 120), error: 'agent is a ghost', latencyMs, reasoning: reasoning.slice(0, 4000) });
     ctx.db.agent.id.update({ ...me, pendingRequestId: 0n });
     return;
   }
@@ -81,6 +81,7 @@ export function applyDecision(ctx: Ctx, req: DecisionRequest, action: string, th
     thought: thought.slice(0, 120),
     error: outcome.ok ? '' : outcome.error,
     latencyMs,
+    reasoning: reasoning.slice(0, 4000),
   });
 
   const after = ctx.db.agent.id.find(me.id)!;
@@ -110,7 +111,7 @@ export function settleThought(ctx: Ctx, requestId: bigint, result: { decision: D
     ctx.db.decisionRequest.id.update({ ...req, status: 'expired', error: 'agent is gone', latencyMs });
     return false;
   }
-  if ('decision' in result) applyDecision(ctx, req, JSON.stringify(result.decision.action), result.decision.thought, latencyMs);
+  if ('decision' in result) applyDecision(ctx, req, JSON.stringify(result.decision.action), result.decision.thought, latencyMs, result.decision.reasoning);
   else failRequest(ctx, req, result.error, latencyMs);
   return true;
 }

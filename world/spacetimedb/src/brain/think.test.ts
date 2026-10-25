@@ -77,6 +77,15 @@ describe('think', () => {
     expect(ivy.pendingRequestId).toBe(0n);
   });
 
+  test('the reasoning a model returns is saved with its decision request', () => {
+    const { t, job, request } = world();
+    const reasoned = JSON.stringify({ choices: [{ finish_reason: 'tool_calls', message: { reasoning_content: 'Ivy is hungry; rest first.', tool_calls: [{ function: { name: 'idle', arguments: '{"thought":"rest"}' } }] } }] });
+    thinkAs(t, internal, job, { BITDEER_API_KEY: 'k' }, () => reply(200, reasoned));
+    expect(request().status).toBe('done');
+    expect(request().reasoning).toBe('Ivy is hungry; rest first.');
+    expect(request().thought).toBe('rest');
+  });
+
   test('an answer that arrives after beginRun replaced the roster changes nothing', () => {
     const { t, job } = world();
     thinkAs(t, internal, job, { BITDEER_API_KEY: 'k' }, () => {

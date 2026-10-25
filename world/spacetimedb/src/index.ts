@@ -290,6 +290,7 @@ export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer
       error: '',
       latencyMs: 0,
       brain,
+      reasoning: '',
     });
     if (brain === 'database') ctx.db.thinkJob.insert({ scheduledId: 0n, scheduledAt: ScheduleAt.time(ctx.timestamp.microsSinceUnixEpoch), requestId: req.id });
     ctx.db.agent.id.update({ ...a, pendingRequestId: req.id, wake: false, wakeReason: '' });

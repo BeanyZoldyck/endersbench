@@ -101,6 +101,7 @@ export const decisionRequest = table(
     error: t.string(),
     latencyMs: t.u32(),
     brain: t.string().default('harness'), // who asks the model: 'harness' | 'database'
+    reasoning: t.string().default(''), // thinking a database-brained model returned beside its answer (first 4,000 characters)
   }
 );
 

@@ -14,6 +14,7 @@ export type Tool = { name: string; description: string; parameters: JsonSchema }
 export type Decision = {
   action: { name: string; args: Record<string, unknown> };
   thought: string;
+  reasoning?: string; // thinking the model returned beside its tool call, if any
 };
 
 export type DecideInput = {
@@ -148,6 +149,13 @@ export function anthropicBody(model: string, input: DecideInput) {
   };
 }
 
+// Thinking returned beside the reply: reasoning_content (OpenRouter calls it
+// reasoning), or a <think> block in the content when served without a reasoning parser.
+function reasoningOf(message: any): string | undefined {
+  const think = typeof message?.content === 'string' ? message.content.match(/<think>([\s\S]*?)(?:<\/think>|$)/)?.[1] : undefined;
+  return [message?.reasoning_content, message?.reasoning, think].find((r): r is string => typeof r === 'string' && r.trim() !== '')?.trim();
+}
+
 export function parseOpenAiChat(reply: any): Decision {
   const call = reply?.choices?.[0]?.message?.tool_calls?.[0]?.function;
   if (!call?.name) throw new Error(`model answered without calling a tool (finish_reason: ${reply?.choices?.[0]?.finish_reason ?? 'none'})`);
@@ -157,7 +165,8 @@ export function parseOpenAiChat(reply: any): Decision {
   } catch {
     throw new Error(`tool arguments are not JSON: ${String(call.arguments).slice(0, 200)}`);
   }
-  return toDecision(call.name, args);
+  const reasoning = reasoningOf(reply?.choices?.[0]?.message);
+  return { ...toDecision(call.name, args), ...(reasoning ? { reasoning } : {}) };
 }
 
 export function parseAnthropic(reply: any): Decision {

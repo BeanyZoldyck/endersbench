@@ -109,6 +109,7 @@ export const DecisionRequest = __t.object("DecisionRequest", {
   error: __t.string(),
   latencyMs: __t.u32(),
   brain: __t.string(),
+  reasoning: __t.string(),
 });
 export type DecisionRequest = __Infer<typeof DecisionRequest>;
 

@@ -5,7 +5,7 @@ import { EVENT_STEP, deliver, takeStep } from '../../spacetimedb/src/finance/eng
 import { financeSystemPrompt } from '../../spacetimedb/src/finance/prompt';
 import { SCENARIOS, SCENARIO_BY_ID } from '../../spacetimedb/src/finance/scenarios';
 import type { Observation } from '../../spacetimedb/src/finance/types';
-import { managedDriver, messagesDriver, openAiDriver, setupManaged, toolReply } from './drivers';
+import { managedDriver, messagesDriver, openAiDriver, openAiTurn, setupManaged, toolReply } from './drivers';
 
 const usage = { input_tokens: 100, output_tokens: 10, cache_read_input_tokens: 80, cache_creation_input_tokens: 0 };
 
@@ -263,6 +263,39 @@ describe('OpenAI-compatible driver', () => {
       const result = await run(scenario, 'house-rules');
       expect(result.steps, scenario.id).toEqual(runBrain(policyFollower, scenario));
     }
+  });
+});
+
+// Qwen, DeepSeek and Ender return their thinking beside the reply, not in it: it is
+// kept as a (thinking) note first, as Claude's is, so a step records it.
+describe('reasoning from an OpenAI-compatible model', () => {
+  const call = { id: 'call_1', type: 'function', function: { name: 'decline_loan', arguments: '{}' } };
+  const turnWith = async (message: Record<string, unknown>) => {
+    const chat = fakeChat(() => ({ json: { choices: [{ message: { tool_calls: [call], ...message } }], usage: {} } }));
+    return openAiTurn({ baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm', fetchImpl: chat.fetchImpl })('SYS', [], '{}');
+  };
+
+  test('keeps reasoning_content as thinking, before the reply', async () => {
+    const turn = await turnWith({ content: 'Declining.', reasoning_content: 'No verified income.' });
+    expect(turn.notes).toEqual(['(thinking) No verified income.', 'Declining.']);
+    expect(turn.call?.name).toBe('decline_loan');
+  });
+
+  test('keeps reasoning sent as `reasoning`, as OpenRouter names it', async () => {
+    const turn = await turnWith({ content: null, reasoning: 'Policy says decline.' });
+    expect(turn.notes).toEqual(['(thinking) Policy says decline.']);
+  });
+
+  test('moves a <think> block out of the reply into thinking', async () => {
+    const turn = await turnWith({ content: '<think>\nCheck the score first.\n</think>\n\nDeclining.' });
+    expect(turn.notes).toEqual(['(thinking) Check the score first.', 'Declining.']);
+  });
+
+  test('caps long thinking so the reply still fits in a step', async () => {
+    const turn = await turnWith({ content: 'Declining.', reasoning_content: 'x'.repeat(10_000) });
+    expect(turn.notes[0].length).toBeLessThanOrEqual(3_100);
+    expect(turn.notes[0]).toMatch(/^\(thinking\) x+… \(first 3000 of 10000 characters\)$/);
+    expect(turn.notes[1]).toBe('Declining.');
   });
 });
 

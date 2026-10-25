@@ -23,4 +23,5 @@ export default __t.row({
   error: __t.string(),
   latencyMs: __t.u32().name("latency_ms"),
   brain: __t.string(),
+  reasoning: __t.string(),
 });

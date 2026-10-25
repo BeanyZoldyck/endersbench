@@ -146,6 +146,9 @@ scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,a
   `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `ENDER_BASE_URL`, `ENDER_API_KEY`,
   `FEATHERLESSAI_API_KEY`), never in a table.
   `spacetime env list` prints their values: don't run it where anyone can see.
+- Thinking a model returns beside its answer (`reasoning_content`, OpenRouter's `reasoning`, or a
+  `<think>` block) is saved: in `decision_request.reasoning` for database-brained Clearing runs
+  (first 4,000 characters), and as a `(thinking)` note on each Ledger Street step (first 3,000).
 - A harness left connected skips database-brained requests, and a harness started against a
   database-brained world leaves its run alone (`HARNESS_TAKEOVER=1` replaces it with the harness's
   roster). The run info records `brains: database`. Only the scheduler can run `think`.

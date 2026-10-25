@@ -93,6 +93,14 @@ describe('decisionFromResponse', () => {
     expect(decisionFromResponse('openai-chat', url, 200, text)).toEqual({ action: { name: 'move_to', args: { x: 3 } }, thought: 'go' });
   });
 
+  test('the reasoning a model returns beside its tool call is kept with the decision', () => {
+    const msg = (m: Record<string, unknown>) => JSON.stringify({ choices: [{ finish_reason: 'tool_calls', message: { tool_calls: [{ function: { name: 'move_to', arguments: '{"x":3,"thought":"go"}' } }], ...m } }] });
+    expect(decisionFromResponse('openai-chat', url, 200, msg({ reasoning_content: 'Food is east.' })).reasoning).toBe('Food is east.');
+    expect(decisionFromResponse('openai-chat', url, 200, msg({ reasoning: 'Food is east.' })).reasoning).toBe('Food is east.');
+    expect(decisionFromResponse('openai-chat', url, 200, msg({ content: '<think>Food is east.</think>' })).reasoning).toBe('Food is east.');
+    expect(decisionFromResponse('openai-chat', url, 200, msg({})).reasoning).toBeUndefined();
+  });
+
   test('an Anthropic tool_use block becomes a decision', () => {
     const text = JSON.stringify({ content: [{ type: 'text', text: 'hm' }, { type: 'tool_use', name: 'move_to', input: { x: 4, thought: 'east' } }] });
     expect(decisionFromResponse('anthropic', url, 200, text)).toEqual({ action: { name: 'move_to', args: { x: 4 } }, thought: 'east' });

@@ -215,6 +215,7 @@ describe('finance desk in the world', () => {
       error: '',
       latencyMs: 0,
       brain: 'harness',
+      reasoning: '',
     });
     expect(w.withReducerTx(harness, ctx => routeDeskDecision(ctx, req, { action: '{"name":"idle","args":{}}', thought: '', latencyMs: 1 }))).toBe(false);
     expect(w.db.decisionRequest.id.find(req.id)!.status).toBe('pending');
