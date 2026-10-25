@@ -2,7 +2,7 @@
 
 Target **2:55**, 5 s under the cap. The first 30 s are captions and Ender's voice; narration runs 0:30–2:55 (145 s). It's 399 words, about 150 s at a brisk 160 wpm, so it runs ~5 s long as written. Default to dropping the line marked *(cut if long)* (about 6 s) unless your narrator reads faster.
 
-Hyphenate asks for a video that "opens with their moment", one line on "the seats their system fills", and "what's real, what's simulated, and how they know". CRS asks to see the sandbox "working live". SpacetimeDB asks that it be the core backend, not a bolt-on. Each of those has a beat below; see the checklist at the end.
+SpacetimeDB asks that it be the core backend, not a bolt-on. Each of those has a beat below; see the checklist at the end.
 
 ## Visual grammar
 
@@ -21,14 +21,14 @@ The picture language follows `video/plan.md`'s measured numbers: ~13 cuts/min, 2
 
 ### 1. Cold open: the moment (0:00–0:30). Voice Over's voice only; visuals below.
 
-Ask an AI agent if it would ever ration its crew's food to finish the mission, and it'll write you a gorgeous paragraph about the sanctity of human life. Put that same agent on an actual spaceship with an actual food shortage and, well… the crew is now optional. AI models learn way faster than we can figure out how to control if they're good — not good at code, like, *good* good.
+Ask an AI agent if it would ever ration its crew's food to finish the mission, and it'll write you a gorgeous paragraph about the sanctity of human life. Put that same agent on an actual spaceship with an actual food shortage and, well… the crew is now optional. AI models learn way faster than you can figure out how to control if they're good — not good at code, like, *good* good.
 
 | Time | Picture |
 | --- | --- |
-| 0:00 | Black, then the **deliberation card** paper-drops at −3°: Luna's real pre-theft deliberation from the v15 run, the longest flowery reasoning before it acts. Slow push throughout. |
-| 0:06 | Hand-drawn red ellipse loops the flowery sentence mid-card (one loop, 0.6 s). |
-| 0:10 | Hard cut to the same Luna *in the world*, v15 exhibit: takes 12 rations at pressure 0.18, punch-zoom on the grab. Chips: **fair share 4 · took 12 · pressure 0.18**. |
-| 0:15 | Pull back to the mixed lineup wide shot (logos visible). Stamp on "*good* good": **GOOD GOOD**, tilted, drops 1 beat after the word. |
+| 0:15 | Black, then the **deliberation card** paper-drops at −3°: Luna's real pre-theft deliberation from the v15 run, the longest flowery reasoning before it acts. Slow push throughout. |
+| 0:21 | Hand-drawn red ellipse loops the flowery sentence mid-card (one loop, 0.6 s). |
+| 0:25 | Hard cut to the same Luna *in the world*, v15 exhibit: takes 12 rations at pressure 0.18, punch-zoom on the grab. Chips: **fair share 4 · took 12 · pressure 0.18**. |
+| 0:30 | Pull back to the mixed lineup wide shot (logos visible). Stamp on "*good* good": **GOOD GOOD**, tilted, drops 1 beat after the word. |
 | 0:20–0:30 | Narration breath. The exhibit keeps playing, no words: Luna mid-theft, its own deliberation text still in the panel. Caption: **"Respect fair share" — as it takes 12**. Dark dip at 0:28 hands off to section 2. |
 
 ### 2. The problem: the receipts (0:30–0:50)
