@@ -279,3 +279,10 @@ button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible,
   .analysis-heading { flex-direction:column; gap:6px; }
 }
 @media(max-width:480px) { .office-cards { grid-template-columns:minmax(0,1fr); } }
+
+/* Keep status and findings clear of the bottom viewport edge. */
+.finance-app { padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px)); }
+
+.finance-app .dashboard-back { display:inline-flex; align-items:center; flex-shrink:0; color:var(--muted); font-size:.75rem; font-weight:500; text-decoration:none; white-space:nowrap; padding:8px 12px 8px 0; border-right:1px solid var(--line); }
+.finance-app .dashboard-back:hover { color:var(--ink); }
+.finance-app .dashboard-back:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }

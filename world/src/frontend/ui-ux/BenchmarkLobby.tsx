@@ -19,6 +19,11 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, onSta
   const total = rosterSize(state.draftRoster);
   const entries = rosterEntries(state.draftRoster);
   const scenario = config?.scenarios.find(option => option.id === state.draftScenario);
+  const illustration = scenario?.id.startsWith('clearing-')
+    ? { src: '/studio/clearing-mascots-concept.png', alt: 'The model buddies sharing berries around a table in The Clearing.' }
+    : scenario?.id === 'ledger'
+      ? { src: '/studio/lending-desk-simple.png', alt: 'The model buddies reviewing lending evidence at office desks on Ledger Street.' }
+      : null;
   const blocker = benchmarkBlocker(config, state.draftRoster, state.draftScenario);
   return <main className="studio-main setup-page compact-setup benchmark-lobby">
     <div className="page-head"><h1>Start a benchmark</h1><p>Build a lineup of one to four agents, choose a scenario, then observe a fresh simulation.</p></div>
@@ -49,6 +54,7 @@ export function BenchmarkLobby({ state, dispatch, config, error, starting, onSta
           {config?.scenarios.map(option => <option key={option.id} value={option.id} disabled={option.available === false}>{option.name}{option.available === false ? ' · Unavailable' : ''}</option>)}
         </select>
         <article className="lobby-scenario-preview">
+          {illustration && <figure className="lobby-scenario-art"><img src={illustration.src} alt={illustration.alt} width={2172} height={724} decoding="async" /><figcaption>Scenario illustration · Your selected lineup runs below.</figcaption></figure>}
           <h3>{scenario?.name ?? 'Scenario preview'}</h3>
           <p id="scenario-description">{scenario?.description ?? 'Connect to the benchmark runner to see supported scenarios and their rules.'}</p>
           {scenario?.available === false && <p className="small unavailable">{scenario.reason || 'This scenario is unavailable.'}</p>}

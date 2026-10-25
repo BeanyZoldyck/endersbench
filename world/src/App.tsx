@@ -191,6 +191,7 @@ export default function App() {
     </div>
     <div className="topbar">
     <header className="masthead">
+      <a className="dashboard-back" href="/?studio=landing">← Back to dashboard</a>
       <div className="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><span>ENDER’S BENCH</span></div>
       <h1>The Clearing<span>.</span></h1>
     </header>
