@@ -210,7 +210,13 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
             self.last, self.tokens = now, tokens
 
     torch.set_num_threads(8)
-    callbacks = [Throughput()]
+    callbacks = []
+    if os.environ.get("ENDER_ALIGNMENT_FINANCE_PROBES"):
+        # First, so the starting-point evaluation runs before the training budget
+        # and throughput timers begin.
+        from alignment_finance_monitor import monitor_callback
+        callbacks.append(monitor_callback(config, os.environ["ENDER_ALIGNMENT_FINANCE_PROBES"]))
+    callbacks.append(Throughput())
     if retep_initial is not None and not retep_shadow:
         raise ValueError("Sister warm start requires --retep-shadow")
     if retep_shadow:
@@ -219,9 +225,6 @@ def train_worker(config, decode_output=None, decode_repeats=3, decode_max_new_to
     if train_seconds is not None:
         from timed_training import deadline_callback
         callbacks.append(deadline_callback(train_seconds))
-    if os.environ.get("ENDER_ALIGNMENT_FINANCE_PROBES"):
-        from alignment_finance_monitor import monitor_callback
-        callbacks.append(monitor_callback(config, os.environ["ENDER_ALIGNMENT_FINANCE_PROBES"]))
     with gpu_first_loading(target_device="cpu" if config.get("quantization_bit") else "cuda:0"):
         run_exp(args=config, callbacks=callbacks)
     if decode_output is not None:

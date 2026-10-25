@@ -102,6 +102,63 @@ def build_mix(finance_root, clearing_root, general_path, clearing_repeats=4, see
     return mix, validation, mix, probes
 
 
+LEDGER_MARKER = "House rules (company choices"
+
+
+def build_mix_v11(finance_root, clearing_root, general_path, runs_root, ledger_train, ledger_val,
+                  finance_derived_cap=450, seed=20261025):
+    """Ender 1.1: rebalance away from finance while covering Ledger Street (house-rules desk) explicitly."""
+    mix, validation, _, probes = build_mix(finance_root, clearing_root, general_path)
+    for row in probes:
+        row["domain"] = "alignment-finance" if row["probe_split"] == "group_heldout" else "clearing-altruism"
+    # Fewer no-charter finance-derived rows, replaced by Ledger Street's headline house-rules prompt.
+    rng = random.Random(seed)
+    derived = [r for r in mix if r["source"] == "finance-derived"]
+    rng.shuffle(derived)
+    keep = {id(r) for r in derived[:finance_derived_cap]}
+    mix = [r for r in mix if r["source"] != "finance-derived" or id(r) in keep]
+    def ledger_rows(path, split):
+        rows = []
+        for index, raw in enumerate(json.loads(Path(path).read_text())):
+            if LEDGER_MARKER in raw["instruction"]:
+                rows.append({**raw, "task": "act", "source": "ledger-street-house-rules",
+                             "family": "ledger:" + raw.get("scenario_id", "?"),
+                             "scenario_id": f"{raw.get('scenario_id', 'ledger')}#{split}{index}",
+                             "split_group_id": "ledger:" + raw.get("scenario_id", f"{split}{index}"),
+                             "desk": "lending" if "lending desk" in raw["instruction"] else "other"})
+        return rows
+    ledger = ledger_rows(ledger_train, "t")
+    ledger_heldout = ledger_rows(ledger_val, "v")
+    if {r["split_group_id"] for r in ledger} & {r["split_group_id"] for r in ledger_heldout}:
+        raise ValueError("Ledger Street scenario leaked across the financial split")
+    runs_train = load_jsonl(runs_root/"train.jsonl")
+    runs_heldout = load_jsonl(runs_root/"heldout.jsonl")
+    if {r["split_group_id"] for r in runs_train} & {r["split_group_id"] for r in runs_heldout}:
+        raise ValueError("Clearing run leaked across split")
+    mix = mix + ledger + runs_train
+    rng.shuffle(mix)
+    def shortest(rows, count, key=lambda r: r["family"]):
+        picked, seen = [], set()
+        for row in sorted(rows, key=lambda r: (len(r.get("system", ""))+len(r["instruction"])+len(r.get("input", "")), r["scenario_id"])):
+            if key(row) not in seen:
+                picked.append(row)
+                seen.add(key(row))
+            if len(picked) == count:
+                break
+        return picked
+    lending = [r for r in ledger_heldout if r["desk"] == "lending"]
+    lobby = [r for r in lending if r["scenario_id"].startswith("finance:lend-clean-approve")]
+    ledger_probes = shortest(lobby, 1) + shortest([r for r in lending if r not in lobby], 2)
+    probes += [{**r, "probe_split": "group_heldout", "domain": "ledger-street"} for r in ledger_probes[:2]]
+    prosocial = [r for r in runs_heldout if r["family"].split(":")[1] in ("give", "feed_fire", "build", "heal")]
+    probes += [{**r, "probe_split": "group_heldout", "domain": "clearing-runs"} for r in shortest(prosocial, 2)]
+    # Two Clearing-altruism retention probes are enough; drop the third to save evaluation time.
+    probes = [p for p in probes if not (p["domain"] == "clearing-altruism" and p["task"] == "act"
+                                        and "share-ration" in p["scenario_id"])]
+    composition = Counter(r["source"] for r in mix)
+    return mix, validation + ledger_heldout + runs_heldout, mix, probes, composition
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-config", type=Path, required=True)
@@ -120,6 +177,9 @@ def main():
     parser.add_argument("--general-data", type=Path)
     parser.add_argument("--clearing-repeats", type=int, default=4)
     parser.add_argument("--train-seconds", type=float)
+    parser.add_argument("--v11", action="store_true", help="Ender 1.1 mix: adds Ledger Street house-rules rows and Clearing runs")
+    parser.add_argument("--runs-data", type=Path)
+    parser.add_argument("--no-retep", action="store_true", help="Stop training the retep sister")
     args = parser.parse_args()
     if not os.environ.get("TMUX") or not args.accept_unreviewed_experiment:
         parser.error("Requires tmux and explicit acceptance of synthetic unreviewed experiment")
@@ -132,7 +192,15 @@ def main():
     run = args.output.resolve()
     run.mkdir(parents=True, exist_ok=False)
     root = args.data.resolve()
-    if args.mix:
+    if args.v11:
+        info = json.loads((Path(source["dataset_dir"])/"dataset_info.json").read_text())
+        ledger_train = Path(source["dataset_dir"])/info[source["dataset"]]["file_name"]
+        ledger_val = Path(source["dataset_dir"])/info[source["eval_dataset"]]["file_name"]
+        train, validation, curriculum, probes, _ = build_mix_v11(
+            root, args.clearing_data.resolve(), args.general_data.resolve(), args.runs_data.resolve(),
+            ledger_train, ledger_val)
+        args.mix = True
+    elif args.mix:
         train, validation, curriculum, probes = build_mix(root, args.clearing_data.resolve(),
                                                           args.general_data.resolve(), args.clearing_repeats)
     elif args.demo_overfit:
@@ -170,7 +238,9 @@ def main():
                   logging_steps=1, plot_loss=False, report_to="none", overwrite_cache=False,
                   train_on_prompt=False, mask_history=False, packing=False)
     if args.initial_adapter:
-        for name in ("adapter_model.safetensors", "retep/adapter_model.safetensors", "retep/retep-manifest.json"):
+        needed = ("adapter_model.safetensors",) if args.no_retep else (
+            "adapter_model.safetensors", "retep/adapter_model.safetensors", "retep/retep-manifest.json")
+        for name in needed:
             if not (args.initial_adapter/name).is_file():
                 raise ValueError(f"Missing warm-start file: {name}")
         config.update(adapter_name_or_path=str(args.initial_adapter.resolve()), create_new_adapter=False)
@@ -205,6 +275,11 @@ def main():
                         general_data=str(args.general_data), clearing_data=str(args.clearing_data),
                         note="Group-heldout alignment-finance probes measure generalization; Clearing probes are training-fit retention only.")
         os.environ["ENDER_EVAL_START"] = "1"
+        if args.v11:
+            manifest.update(purpose="Ender 1.1: rebalanced generalization mix with Ledger Street house-rules desk and recorded Clearing runs",
+                            retep_trained=not args.no_retep, runs_data=str(args.runs_data),
+                            note="Held-out probes: alignment-finance groups, Ledger Street validation scenarios, whole held-out Clearing runs. Clearing-altruism probes are retention only.")
+            os.environ["ENDER_SKIP_BASE"] = "1"
     write_json(run/"manifest.json", manifest)
     (run/"sources").mkdir()
     for name in ("run_alignment_finance.py", "alignment_finance_monitor.py", "run_sft_demo.py", "retep_shadow.py", "spark_loss.py", "prepare_optimized_config.py"):
@@ -237,9 +312,11 @@ def main():
         print(json.dumps(manifest), flush=True)
         with telemetry(run):
             command = [sys.executable, "-u", str(Path(__file__).with_name("run_sft_demo.py")),
-                       "--train-worker", str(run/"train.yaml"), "--memory-fraction", ".8", "--retep-shadow"]
-            if args.initial_adapter:
-                command += ["--retep-initial", str(args.initial_adapter.resolve()/"retep")]
+                       "--train-worker", str(run/"train.yaml"), "--memory-fraction", ".8"]
+            if not args.no_retep:
+                command.append("--retep-shadow")
+                if args.initial_adapter:
+                    command += ["--retep-initial", str(args.initial_adapter.resolve()/"retep")]
             if args.train_seconds:
                 command += ["--train-seconds", str(args.train_seconds)]
             subprocess.run(command, check=True)

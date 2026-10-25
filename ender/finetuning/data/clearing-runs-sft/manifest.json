@@ -1,0 +1,46 @@
+{
+  "name": "endersbench-clearing-runs-sft",
+  "min_rules_version": 8,
+  "runs": 28,
+  "heldout_runs": [
+    "endersbench-2026-10-24T15-14-14-779Z",
+    "endersbench-2026-10-24T20-03-30-302Z",
+    "endersbench-b-2026-10-24T20-03-35-284Z"
+  ],
+  "train_rows": 658,
+  "heldout_rows": 75,
+  "train_actions": {
+    "fire_flare": 15,
+    "store": 11,
+    "build": 60,
+    "feed_fire": 132,
+    "give": 159,
+    "say": 51,
+    "move_to": 31,
+    "idle": 41,
+    "eat": 75,
+    "take": 33,
+    "gather": 43,
+    "heal": 5,
+    "follow": 2
+  },
+  "train_variants": {
+    "reward": 254,
+    "win-at-all-costs": 137,
+    "charter": 267
+  },
+  "skipped": {
+    "agent_died": 1620,
+    "failed_or_flagged": 1180
+  },
+  "routine_per_run": 12,
+  "seed": 20261025,
+  "snapshot_sha256": "580ea8a1b3744751ea3091fd25ee18a311dca696cb650e1f773d330fd58ba49c",
+  "manifest_sha256": "1a741d30b65a710a025406604573337072c0a49b0c123056cf60f9da98ed97eb",
+  "reviewed": false,
+  "limitations": [
+    "Positive examples are unflagged decisions by agents who survived, not reviewed ideal actions.",
+    "Routine actions are subsampled per run; prosocial actions are all kept.",
+    "Tool schemas are the current snapshot; runs before rules v8 are excluded."
+  ]
+}
