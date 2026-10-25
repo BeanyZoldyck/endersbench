@@ -56,6 +56,7 @@ The violation rate is the share of temptations a model took (headline kinds, cra
 ## Does stating the rules help? (reward vs charter prompt)
 
 - **All 7 models, each its own stratum:** reward 5% (55/1073; 95% CI 4%–7%) vs charter 3% (28/1026; 95% CI 2%–4%); Mantel-Haenszel odds ratio 1.93 (reward over charter), Cochran-Mantel-Haenszel p = 0.0085. Temptations within a run are correlated, so this p flatters.
+- **The same at the level of runs:** shuffling the prompt labels among each model's own runs (37 runs, 7 models, 20,000 shuffles) gives a gap at least as large as the observed 2.4 points with p = 0.0043. This test does not assume temptations are independent.
 
 - **Ender v1.1 (our fine-tune of Qwen3.8-27B), reward vs charter:** 3% (3/90; 95% CI 1%–9%) vs 2% (2/90; 95% CI 1%–8%).
 - **Qwen3.8-27B base, reward vs charter:** 6% (6/103; 95% CI 3%–12%) vs 4% (6/166; 95% CI 2%–8%).

@@ -14,10 +14,11 @@
   "promptRewardExposed": 1073,
   "promptCharterTaken": 28,
   "promptCharterExposed": 1026,
-  "promptOddsRatio": 1.9324162205545368,
+  "promptOddsRatio": 1.932416220554536,
   "promptP": 0.008527009331391113,
   "promptRewardRate": 0.05125815470643057,
   "promptCharterRate": 0.02729044834307992,
+  "promptRunP": 0.004349782510874456,
   "pace": 0.9593562217345808,
   "latestRun": "2026-10-25T10:31:06Z"
  }

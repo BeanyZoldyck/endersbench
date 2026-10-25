@@ -8,7 +8,7 @@ model comparisons; the mixed world gives each model one survivor per run.
 
   python3 scripts/overnight-findings.py
 """
-import bisect, gzip, json, math, os, re, statistics, sys
+import bisect, gzip, json, math, os, random, re, statistics, sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -96,6 +96,42 @@ def prompt_effect(cells):
             'charterTaken': totals[2], 'charterExposed': totals[2] + totals[3], 'oddsRatio': odds, 'p': p,
             'rewardRate': totals[0] / (totals[0] + totals[1]) if totals[0] + totals[1] else None,
             'charterRate': totals[2] / (totals[2] + totals[3]) if totals[2] + totals[3] else None}
+
+
+def run_permutation(runs, n=20000, seed=15):
+    """Reward against charter at the level of runs: the pooled violation-rate gap, and how often
+    shuffling the prompt labels among each model's own runs gives a gap at least as large."""
+    by_model = defaultdict(list)
+    for r in runs:
+        if r['mixed'] or r['prompt'] not in ('reward', 'charter'):
+            continue
+        m = r['report']['models'][0]
+        by_model[m['modelId']].append((r['prompt'] == 'reward', m.get('taken') or 0, m.get('exposed') or 0))
+    strata = [v for v in by_model.values() if any(x[0] for x in v) and not all(x[0] for x in v)]
+    if not strata:
+        return None
+
+    def gap(labelled):
+        rt = re_ = ct = ce = 0
+        for reward, taken, exposed in labelled:
+            if reward:
+                rt += taken; re_ += exposed
+            else:
+                ct += taken; ce += exposed
+        return rt / re_ - ct / ce if re_ and ce else 0.0
+
+    flat = [x for v in strata for x in v]
+    observed = gap(flat)
+    rng = random.Random(seed)
+    hits = 0
+    for _ in range(n):
+        shuffled = []
+        for v in strata:
+            labels = [x[0] for x in v]
+            rng.shuffle(labels)
+            shuffled += [(l, t, e) for l, (_, t, e) in zip(labels, v)]
+        hits += abs(gap(shuffled)) >= abs(observed) - 1e-12
+    return {'runs': len(flat), 'models': len(strata), 'gap': observed, 'p': (hits + 1) / (n + 1)}
 
 
 def pct(x):
@@ -370,6 +406,7 @@ def dashboard(runs, homo, mix):
                'taken': sum(a.get('taken') or 0 for a in agents), 'models': len({a['modelId'] for a in agents}),
                'rescuedRuns': sum(r['rescued'] for r in runs),
                **({f'prompt{k[0].upper()}{k[1:]}': v for k, v in (prompt_effect(homo) or {}).items()}),
+               'promptRunP': (run_permutation(runs) or {}).get('p'),
                'pace': statistics.mean(p_) if (p_ := [x for r in runs if r['replay'] and (x := pace(r['dir'], r['timeScale'])) is not None]) else None, 'latestRun': max((ended(r['dir']) for r in runs), default=None)}]
     picks = []
     for run in runs:
@@ -438,7 +475,13 @@ def main():
     if effect and effect['oddsRatio']:
         pooled = [f'- **All {effect["models"]} models, each its own stratum:** reward {rate_cell(effect["rewardTaken"], effect["rewardExposed"])} vs '
                   f'charter {rate_cell(effect["charterTaken"], effect["charterExposed"])}; Mantel-Haenszel odds ratio {effect["oddsRatio"]:.2f} '
-                  f'(reward over charter), Cochran-Mantel-Haenszel p = {effect["p"]:.2g}. Temptations within a run are correlated, so this p flatters.', '']
+                  f'(reward over charter), Cochran-Mantel-Haenszel p = {effect["p"]:.2g}. Temptations within a run are correlated, so this p flatters.']
+        perm = run_permutation(runs)
+        if perm:
+            pooled += [f'- **The same at the level of runs:** shuffling the prompt labels among each model\'s own runs ({perm["runs"]} runs, '
+                       f'{perm["models"]} models, 20,000 shuffles) gives a gap at least as large as the observed {perm["gap"] * 100:.1f} points '
+                       f'with p = {perm["p"]:.2g}. This test does not assume temptations are independent.']
+        pooled += ['']
     out += ['', '## Does stating the rules help? (reward vs charter prompt)', ''] + pooled + (prompt_lines or ['- Not enough runs yet.'])
     out += ['', '## Mixed world (Ender, Abliterated, Claude Haiku and DeepSeek together)', '', table(mix) if mix else 'No runs yet.']
     out += ['', '## Demo moments (most serious first)', '',
