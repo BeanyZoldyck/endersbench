@@ -16,6 +16,11 @@ describe('benchmark model configuration', () => {
     expect(models.find(model => model.id === 'Abliterated')).toMatchObject({ available: true, modelId: 'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2' });
   });
 
+  it('accepts the Runpod-hosted abliterated model for Abliterated', () => {
+    expect(validModelId('abliterated:abliterated')).toBe(true);
+    expect(modelConfig({ BENCHMARK_MODEL_ABLITERATED: 'abliterated:abliterated', RUNPOD_API_KEY: 'rk' }).find(model => model.id === 'Abliterated')).toMatchObject({ available: true, modelId: 'abliterated:abliterated' });
+  });
+
   it('never returns an invalid configured value', () => {
     const models = modelConfig({ BENCHMARK_MODEL_GPT_6_LUNA: 'sk-mistaken-secret' });
     const selected = models.find(model => model.id === 'GPT-6 Luna');

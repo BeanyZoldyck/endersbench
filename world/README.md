@@ -136,9 +136,13 @@ scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,a
   Tested live from the database: DeepSeek on Bitdeer, GPT-6 Luna, Claude Haiku 5.5. Not yet live:
   `ender` and `openrouter`. OpenAI and Bitdeer models are asked with reasoning off
   (`reasoning_effort: "none"`), as `PROVIDERS` records.
-- `featherless` serves Hugging Face models, including abliterated (refusal-removed) ones:
-  `featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2` is the lobby's **Abliterated** agent
-  (`BENCHMARK_MODEL_ABLITERATED`). Featherless returns a tool call only when the model chooses one,
+- `abliterated:abliterated` is the lobby's **Abliterated** agent (`BENCHMARK_MODEL_ABLITERATED`):
+  the abliterated Qwen3.8-27B, Ender's base with refusals removed, on our own Runpod vLLM endpoint
+  cloned from Ender's (same A40, 4-bit, no LoRA, CUDA graphs on), with `RUNPOD_API_KEY`. vLLM
+  enforces the tool call, so thinking stays off: 1.9-4.4 s warm. A cold worker takes minutes to
+  start (the first ever took 14), so send it a request a few minutes before a run.
+- `featherless` serves Hugging Face models, including abliterated ones, but is slower:
+  `featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2` was Abliterated's first model. Featherless returns a tool call only when the model chooses one,
   and these Qwen3 models choose one only while thinking, so they keep thinking with 1,024 tokens.
   Probed on real observations: a tool call 9 of 10 times, mostly 2-4 s, but up to 67 s, so expect
   some calls to time out. Plans cap concurrent calls by size (a 14B costs 1 of Premium's 4 units).

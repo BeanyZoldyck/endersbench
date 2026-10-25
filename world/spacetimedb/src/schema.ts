@@ -569,6 +569,8 @@ const spacetimedb = schema({
     ENDER_BASE_URL: t.option(t.string()),
     ENDER_API_KEY: t.option(t.string()),
     FEATHERLESSAI_API_KEY: t.option(t.string()),
+    RUNPOD_API_KEY: t.option(t.string()),
+    ABLITERATED_BASE_URL: t.option(t.string()),
   },
 });
 export default spacetimedb;

@@ -13,7 +13,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 names=()
 values=()
-for name in BITDEER_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY OPENROUTER_API_KEY ENDER_BASE_URL ENDER_API_KEY FEATHERLESSAI_API_KEY; do
+for name in BITDEER_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY OPENROUTER_API_KEY ENDER_BASE_URL ENDER_API_KEY FEATHERLESSAI_API_KEY RUNPOD_API_KEY ABLITERATED_BASE_URL; do
   value=$( (grep -m1 "^$name=" "$ENV_FILE" 2>/dev/null || true) | cut -d= -f2- | tr -d "\"' \r")
   [ -n "$value" ] || value=${!name:-}
   if [ -n "$value" ]; then

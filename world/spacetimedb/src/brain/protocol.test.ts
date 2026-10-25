@@ -9,6 +9,19 @@ const input = { agentName: 'Ada', observation: obs, tools, system: 'SYS' };
 const envOf = (vars: Record<string, string>) => (name: string) => vars[name];
 
 describe('buildModelCall', () => {
+  test('abliterated reaches our Runpod vLLM endpoint with thinking off and the Runpod key', () => {
+    const call = buildModelCall('abliterated:abliterated', input, envOf({ RUNPOD_API_KEY: 'rk' }));
+    const body = call.body as any;
+    expect(call.url).toBe('https://api.runpod.ai/v2/g79oyxa5vbrwnv/openai/v1/chat/completions');
+    expect(call.headers.authorization).toBe('Bearer rk');
+    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
+    expect(body.tool_choice).toBe('required');
+    expect(body.max_tokens).toBe(200);
+    expect(DATABASE_PROVIDERS).toContain('abliterated');
+    expect(buildModelCall('abliterated:abliterated', input, envOf({ RUNPOD_API_KEY: 'rk', ABLITERATED_BASE_URL: 'https://other.test/v1' })).url).toBe('https://other.test/v1/chat/completions');
+    expect(() => buildModelCall('abliterated:abliterated', input, envOf({}))).toThrow('abliterated models need RUNPOD_API_KEY');
+  });
+
   test('featherless leaves the abliterated Qwen3 thinking, with room to think before its tool call', () => {
     const call = buildModelCall('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2', input, envOf({ FEATHERLESSAI_API_KEY: 'k' }));
     const body = call.body as any;

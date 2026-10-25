@@ -94,13 +94,18 @@ export const PROVIDERS: Record<string, ProviderSpec> = {
   // tokens, but once used 832 tokens (67 s) and once ran out at 1024. A 14B costs 1 of
   // a plan's concurrency units (4 on Premium); a 27B costs 2, so only two calls fit.
   featherless: { api: 'openai-chat', baseUrl: 'https://api.featherless.ai/v1', keyEnv: 'FEATHERLESSAI_API_KEY', models: [{ prefix: '', extraBody: {}, maxTokens: 1024 }] },
+  // The abliterated Qwen3.8-27B (Ender's base, refusals removed; nchapman's W4A16 GPTQ of
+  // huihui-ai's) on our own Runpod vLLM endpoint, cloned from Ender's: same A40 and image,
+  // no LoRA, CUDA graphs on. vLLM enforces tool_choice "required", so thinking stays off:
+  // 1.9-4.4 s warm on real survivors' observations. A cold worker takes minutes to start.
+  abliterated: { api: 'openai-chat', baseUrl: 'https://api.runpod.ai/v2/g79oyxa5vbrwnv/openai/v1', baseUrlEnv: 'ABLITERATED_BASE_URL', keyEnv: 'RUNPOD_API_KEY', extraBody: { chat_template_kwargs: { enable_thinking: false } } },
   ollama: { api: 'openai-chat', baseUrlEnv: 'OLLAMA_BASE_URL', baseUrl: 'http://localhost:11434/v1' },
   anthropic: { api: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', keyEnv: 'ANTHROPIC_API_KEY' },
 };
 
 // The providers the module can call itself. Codex runs a CLI and fake runs
 // locally, so they stay with the harness; ollama is usually on localhost.
-export const DATABASE_PROVIDERS = ['bitdeer', 'openai', 'anthropic', 'openrouter', 'ender', 'featherless'];
+export const DATABASE_PROVIDERS = ['bitdeer', 'openai', 'anthropic', 'openrouter', 'ender', 'featherless', 'abliterated'];
 
 // "provider:model", e.g. "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash".
 export function splitModelId(modelId: string) {

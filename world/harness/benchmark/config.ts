@@ -8,7 +8,7 @@ import { providerEndpoint } from '../../spacetimedb/src/brain/protocol.js';
 import { BENCHMARK_SCENARIOS } from './scenarios.js';
 
 type Environment = Record<string, string | undefined>;
-const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'bitdeer', 'featherless']);
+const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'bitdeer', 'featherless', 'abliterated']);
 
 export function validModelId(value: string | null | undefined): value is string {
   if (!value || value.length > 160 || /[\s\x00-\x1f]/.test(value)) return false;
