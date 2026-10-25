@@ -229,6 +229,17 @@ describe('finance desk in the world', () => {
     expect(cases(w)).toHaveLength(0);
   });
 
+  test('only the scheduler advances the desk', () => {
+    const w = freshDesk();
+    queue(w, { cases: 'lend-clean-approve' });
+
+    expect(() => w.withReducerTx(stranger, ctx => financeTick(ctx, { timer: timerRow }))).toThrow(/only the scheduler/);
+
+    expect(pending(w)).toHaveLength(0);
+    tick(w);
+    expect(pending(w)).toHaveLength(1);
+  });
+
   test('publishes each seat’s tools for the harness', () => {
     const tools = JSON.parse(deskMeta().finance_tools);
     expect(Object.keys(tools)).toEqual(['lending', 'collections', 'vendor_payments']);

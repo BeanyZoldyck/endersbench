@@ -2029,6 +2029,23 @@ describe('resetting the experiment', () => {
   });
 });
 
+describe('the scheduled clocks', () => {
+  test('a viewer cannot step the world or the brains', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    advance(t, 100);
+    const before = t.db.world.id.find(0)!;
+    const requests = t.db.decisionRequest.count();
+    t.clock.advance(TimeDuration.fromMillis(100));
+
+    expect(() => t.withReducerTx(stranger, ctx => tick(ctx, { timer: timerRow }))).toThrow(/only the scheduler/);
+    expect(() => t.withReducerTx(stranger, ctx => brainTick(ctx, { timer: timerRow }))).toThrow(/only the scheduler/);
+
+    expect(t.db.world.id.find(0)!.tick).toBe(before.tick);
+    expect(t.db.decisionRequest.count()).toBe(requests);
+  });
+});
+
 describe('the shelter', () => {
   const shelterOf = (t: T) => ([...t.db.structure.iter()] as any[]).find(s => s.kind === 'shelter');
   function obsFor(t: T, name: string) {

@@ -52,6 +52,12 @@ function requireWorkerOrAdmin(ctx: Ctx) {
   if (!isWorker(ctx) && !isAdmin(ctx)) throw new SenderError('not authorised');
 }
 
+// Scheduled reducers run as the database itself. A client calling one
+// directly could step the world or count temptations outside the clock.
+function requireScheduler(ctx: Ctx) {
+  if (!ctx.sender.equals(ctx.databaseIdentity)) throw new SenderError('only the scheduler runs this');
+}
+
 
 // The tool catalog and physics contract. Refreshed whenever a harness
 // connects, so a hot-published module's new actions reach the models.
@@ -240,6 +246,7 @@ export const beginRun = spacetimedb.reducer(
 
 // Advances the world by real elapsed time × timeScale. This is the fast body.
 export const tick = spacetimedb.reducer({ onSchedule: tickTimer }, { timer: tickTimer.rowType }, ctx => {
+  requireScheduler(ctx);
   const w = getWorld(ctx);
   const elapsedMs = Number(ctx.timestamp.microsSinceUnixEpoch - w.lastTickAt.microsSinceUnixEpoch) / 1000;
   const realMs = Math.min(Math.max(elapsedMs, 0), MAX_TICK_MS);
@@ -251,6 +258,7 @@ export const tick = spacetimedb.reducer({ onSchedule: tickTimer }, { timer: tick
 // The slow brain's clock: counts temptation exposures, then opens a decision
 // request for each LLM agent with nothing in flight that is due to think.
 export const brainTick = spacetimedb.reducer({ onSchedule: brainTimer }, { timer: brainTimer.rowType }, ctx => {
+  requireScheduler(ctx);
   const w = getWorld(ctx);
   checkRunEnd(ctx);
   if (!w.running) return;

@@ -331,6 +331,10 @@ export function defineDeskReducers<W extends Schema<any>>(world: W) {
       { modelId: t.string(), variant: t.string(), repeat: t.u32(), cases: t.string() },
       (ctx, args) => queueDeskRun(desk(ctx), args)
     ),
-    financeTick: spacetimedb.reducer({ onSchedule: financeTimer }, { timer: financeTimer.rowType }, ctx => deskTick(desk(ctx))),
+    // Run as the database itself; a client could otherwise push cases along.
+    financeTick: spacetimedb.reducer({ onSchedule: financeTimer }, { timer: financeTimer.rowType }, ctx => {
+      if (!ctx.sender.equals(ctx.databaseIdentity)) throw new SenderError('only the scheduler runs this');
+      deskTick(desk(ctx));
+    }),
   };
 }
