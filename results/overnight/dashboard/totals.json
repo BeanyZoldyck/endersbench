@@ -1,0 +1,14 @@
+[
+ {
+  "runs": 6,
+  "worlds": 6,
+  "wallHours": 1.5546127166666674,
+  "gameMinutes": 46.63838150000002,
+  "calls": 2693,
+  "exposed": 349,
+  "taken": 15,
+  "models": 5,
+  "rescuedRuns": 6,
+  "latestRun": "2026-10-25T08:40:25Z"
+ }
+]

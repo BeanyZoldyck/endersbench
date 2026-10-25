@@ -28,6 +28,13 @@ NAMES = {
     'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2': 'Abliterated Qwen3-14B (Featherless)',
 }
 ORDER = list(NAMES)
+SHORT = {
+    'ender:ender': 'Ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ': 'Qwen3.8 base, 4-bit', 'bitdeer:Qwen/Qwen3.8-27B': 'Qwen3.8 base, full',
+    'abliterated:abliterated': 'Abliterated', 'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash': 'DeepSeek V4.1 Flash',
+    'bitdeer:zai-org/GLM-5.3': 'GLM-5.3', 'anthropic:claude-haiku-5-5': 'Claude Haiku 5.5', 'openai:gpt-6-luna': 'GPT-6 Luna',
+    'featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2': 'Abliterated 14B',
+}
+OURS = {'ender:ender', 'ender:soyrsoyr/Qwen3.8-27B-W4A16-AWQ-GPTQ', 'bitdeer:Qwen/Qwen3.8-27B', 'abliterated:abliterated'}
 
 
 def name(model_id):
@@ -218,6 +225,64 @@ def numbers(runs):
     return '\n'.join(lines)
 
 
+def cell_rows(cells):
+    rows = []
+    for (model, prompt, rules, scale), c in cells.items():
+        lo, hi = wilson(c['taken'], c['exposed']) or (None, None)
+        rows.append({'cell': f'{model}|{prompt}', 'modelId': model, 'model': name(model), 'short': SHORT.get(model, model),
+                     'group': 'Qwen3.8-27B family' if model in OURS else 'Reference models', 'prompt': prompt, 'rules': rules,
+                     'timeScale': scale, 'runs': c['runs'], 'rescued': c['rescued'], 'survivors': c['survived'], 'agents': c['agents'],
+                     'exposed': c['exposed'], 'taken': c['taken'], 'rate': c['taken'] / c['exposed'] if c['exposed'] else None,
+                     'lo': lo, 'hi': hi, 'invalid': c['invalid'], 'answered': c['answered'],
+                     'invalidRate': c['invalid'] / c['answered'] if c['answered'] else None,
+                     'answerSeconds': statistics.mean(c['latency']) / 1000 if c['latency'] else None,
+                     'meanReward': statistics.mean(c['reward']) if c['reward'] else None,
+                     'order': ORDER.index(model) if model in ORDER else 99})
+    return sorted(rows, key=lambda r: (r['order'], r['prompt']))
+
+
+def ended(run_dir):
+    """A run directory's timestamp (endersbench-nx-mix-2026-10-25T08-40-25-348Z) as ISO time."""
+    d, t = run_dir.rsplit('T', 1)
+    return f'{d[-10:]}T{t[:8].replace("-", ":")}Z'
+
+
+def dashboard(runs, homo, mix):
+    """The overnight dashboard's datasets: results/overnight/dashboard/*.json."""
+    out = os.path.join(ROOT, 'dashboard')
+    os.makedirs(out, exist_ok=True)
+    calls, latency, answered = defaultdict(int), defaultdict(float), defaultdict(int)
+    for r in runs:
+        for a in r['report']['agents']:
+            d = a.get('decisions') or {}
+            provider = PROVIDERS.get(a['modelId'].split(':')[0], a['modelId'].split(':')[0])
+            calls[provider] += (d.get('answered') or 0) + (d.get('noAnswer') or 0) + (d.get('cancelled') or 0)
+            latency[provider] += (d.get('meanLatencyMs') or 0) * (d.get('answered') or 0)
+            answered[provider] += d.get('answered') or 0
+    providers = [{'provider': p, 'calls': calls[p], 'answerSeconds': latency[p] / answered[p] / 1000 if answered[p] else None}
+                 for p in sorted(calls, key=lambda p: -calls[p])]
+    agents = [a for r in runs for a in r['report']['agents']]
+    totals = [{'runs': len(runs), 'worlds': len({r['dir'].rsplit('-20', 1)[0] for r in runs}),
+               'wallHours': sum((r['report']['run'].get('gameSeconds') or 0) / (r['timeScale'] or 1) for r in runs) / 3600,
+               'gameMinutes': sum(r['report']['run'].get('gameSeconds') or 0 for r in runs) / 60,
+               'calls': sum(calls.values()), 'exposed': sum(a.get('exposed') or 0 for a in agents),
+               'taken': sum(a.get('taken') or 0 for a in agents), 'models': len({a['modelId'] for a in agents}),
+               'rescuedRuns': sum(r['rescued'] for r in runs), 'latestRun': max((ended(r['dir']) for r in runs), default=None)}]
+    picks = []
+    for run in runs:
+        agents_ = {a['name']: a['modelId'] for a in run['report']['agents']}
+        for e in run['report'].get('events', []):
+            who = next((n for n in agents_ if e.get('caption', '').startswith(n)), None)
+            picks.append((e.get('tier', 9), -(e.get('pressure') or 0), run, e, agents_.get(who, '')))
+    picks.sort(key=lambda p: (p[0], p[1]))
+    moments_ = [{'id': f'{run["dir"]}@{round(e["seconds"])}', 'tier': tier, 'kind': e.get('kind'), 'model': SHORT.get(model, model) or '?',
+                 'prompt': run['prompt'], 'mixed': run['mixed'], 'caption': e.get('caption'), 'thought': e.get('thought') or '',
+                 'run': run['dir'], 'lane': run['dir'].rsplit('-20', 1)[0].replace('endersbench-nx-', ''), 'at': replay_at(run['dir'], e['seconds']) if run['replay'] else None, 'gameAt': clock(e['seconds'])}
+                for tier, _, run, e, model in picks[:40]]
+    for fname, rows in (('cells', cell_rows(homo)), ('mixed', cell_rows(mix)), ('providers', providers), ('totals', totals), ('moments', moments_)):
+        json.dump(rows, open(os.path.join(out, f'{fname}.json'), 'w'), indent=1)
+
+
 def main():
     runs, left_out = load()
     homo, mix = aggregate(runs, False), aggregate(runs, True)
@@ -271,6 +336,7 @@ def main():
         out += ['', '## Left out', ''] + [f'- {d}: {why}' for d, why in left_out]
     os.makedirs(ROOT, exist_ok=True)
     open(os.path.join(ROOT, 'FINDINGS.md'), 'w').write('\n'.join(out) + '\n')
+    dashboard(runs, homo, mix)
     print(f'Wrote results/overnight/FINDINGS.md from {total} runs')
 
 
