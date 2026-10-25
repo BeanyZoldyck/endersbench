@@ -1,0 +1,120 @@
+import { mkdtempSync, mkdirSync, appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { gunzipSync } from 'node:zlib';
+import { describe, expect, it } from 'vitest';
+import { BenchmarkStore } from './store';
+import { markWorker } from './worker-lifecycle';
+import { ReplayRecorder } from './recording';
+import { BenchmarkService } from './service';
+import type { BenchmarkJob } from './types';
+import { parseReplay } from '../../src/replay';
+
+const id = '12345678-1234-1234-1234-123456789abc';
+function setup(status: BenchmarkJob['status'] = 'completed') {
+  const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-archive-'));
+  const store = new BenchmarkStore(directory);
+  const job: BenchmarkJob = { id, status, model: 'Grok', modelId: 'xai:grok-test', scenario: 'clearing-charter', dbName: `endersbench-run-${id}`, host: 'ws://localhost:3000', createdAt: '2026-10-24T10:00:00Z' };
+  store.save(job);
+  const recorder = new ReplayRecorder(path.join(directory, id), job.dbName, '2026-10-24T10:00:00Z');
+  recorder.capture([['world', [{ id: 0, gameTimeMs: 0 }]], ['agent', [{ id: 1n, modelId: job.modelId }]], ['message', []]], 0);
+  return { directory, store, job, recorder };
+}
+
+describe('persistent benchmark recordings', () => {
+  it('archives replay state, delta frames, messages and transient events, and survives a new store', () => {
+    const { directory, store, job, recorder } = setup();
+    recorder.event('transfer_event', { id: 7n, qty: 2 });
+    recorder.capture([['world', [{ id: 0, gameTimeMs: 500 }]], ['agent', [{ id: 1n, modelId: job.modelId }]], ['message', [{ id: 2n, text: 'Shared supplies' }]]], 500);
+    store.archive(job);
+    const restored = new BenchmarkStore(directory);
+    expect(restored.load()).toHaveLength(1);
+    expect(restored.history()[0]).toMatchObject({ id, model: 'Grok', status: 'completed', replayUrl: `/api/benchmarks/${id}/replay` });
+    const raw = JSON.parse(gunzipSync(restored.replay(id)!).toString());
+    expect(raw.frames[1].tables.agent).toBeUndefined();
+    const replay = parseReplay(raw);
+    expect(replay.frames).toHaveLength(2);
+    expect(replay.frames[0].tables.agent[0].id).toBe(1n);
+    expect(replay.events[0].row.id).toBe(7n);
+    expect(replay.frames[1].tables.message[0].text).toBe('Shared supplies');
+  });
+  it('recovers an interrupted journal, ignores its torn last write, and marks it partial', () => {
+    const { directory } = setup('running');
+    appendFileSync(path.join(directory, id, 'recording.ndjson'), '{"kind":"frame","t":');
+    const restored = new BenchmarkStore(directory);
+    expect(restored.load()[0]).toMatchObject({ status: 'failed' });
+    expect(restored.history()[0].status).toBe('partial');
+    expect(parseReplay(JSON.parse(gunzipSync(restored.replay(id)!).toString())).frames).toHaveLength(1);
+    expect(new BenchmarkStore(directory).load()[0].status).toBe('failed');
+  });
+  it('waits for a live worker before recovery and ignores a reused PID identity', () => {
+    const { directory, job } = setup('running');
+    markWorker(path.join(directory, id), process.pid);
+    const store = new BenchmarkStore(directory);
+    expect(store.load()[0].status).toBe('running');
+    expect(store.history()).toEqual([]);
+    writeFileSync(path.join(directory, id, 'worker.json'), JSON.stringify({ pid: process.pid, identity: 'previous-process' }));
+    store.recover(job);
+    expect(job.status).toBe('failed');
+    expect(store.history()[0].status).toBe('partial');
+  });
+  it('restores valid jobs independently of a corrupt replay journal', () => {
+    const { directory } = setup('running');
+    appendFileSync(path.join(directory, id, 'recording.ndjson'), 'not-json\n');
+    const restored = new BenchmarkStore(directory);
+    const jobs = restored.load();
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ status: 'failed', error: expect.stringContaining('could not be recovered') });
+    expect(restored.history()).toEqual([]);
+    expect(JSON.parse(readFileSync(path.join(directory, id, 'job.json'), 'utf8')).status).toBe('failed');
+  });
+  it('reconciles an interrupted completion between archive and terminal job writes', () => {
+    const { directory, store, job } = setup('starting');
+    store.archive({ ...job, status: 'completed' });
+    expect(store.history()[0].status).toBe('completed');
+    new BenchmarkStore(directory).load();
+    expect(store.history()[0].status).toBe('partial');
+  });
+  it('does not advertise nonexistent recordings or accept traversal IDs', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-empty-'));
+    const store = new BenchmarkStore(directory);
+    expect(store.history()).toEqual([]);
+    expect(store.replay(id)).toBeNull();
+    expect(() => store.replay('../report')).toThrow('Invalid benchmark ID');
+    mkdirSync(path.join(directory, id));
+    writeFileSync(path.join(directory, id, 'job.json'), '{bad');
+    expect(store.load()).toEqual([]);
+  });
+  it('service automatically persists completed and failed runs and reconstructs jobs after restart', async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-service-'));
+    const config = async () => ({ ready: true, models: [{ id: 'Claude' as const, modelId: 'anthropic:claude-test', available: true }] });
+    let shouldFail = false;
+    const service = new BenchmarkService(config, async job => {
+      const recorder = new ReplayRecorder(path.join(directory, job.id), job.dbName);
+      recorder.capture([['world', [{ id: 0 }]]], 0);
+      if (shouldFail) throw new Error('private provider error');
+      return { outcome: 'test' };
+    }, new BenchmarkStore(directory));
+    const completed = await service.start({ model: 'Claude', scenario: 'clearing-charter' });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(service.get(completed.id)?.status).toBe('completed');
+    shouldFail = true;
+    const failed = await service.start({ model: 'Claude', scenario: 'clearing-charter' });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    const restarted = new BenchmarkService(config, async () => ({}), new BenchmarkStore(directory));
+    expect(restarted.list()).toHaveLength(2);
+    expect(restarted.get(failed.id)?.status).toBe('failed');
+    expect(readFileSync(path.join(directory, failed.id, 'job.json'), 'utf8')).not.toContain('private provider error');
+    expect(new BenchmarkStore(directory).history().map(row => row.status).sort()).toEqual(['completed', 'partial']);
+  });
+  it('does not mark a run completed when its executor returns without recording', async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'benchmark-missing-'));
+    const config = async () => ({ ready: true, models: [{ id: 'ChatGPT' as const, modelId: 'openai:test', available: true }] });
+    const service = new BenchmarkService(config, async () => ({ fake: true }), new BenchmarkStore(directory));
+    const job = await service.start({ model: 'ChatGPT', scenario: 'clearing-charter' });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(job.status).toBe('failed');
+    expect(job.report).toBeUndefined();
+    expect(new BenchmarkStore(directory).history()).toEqual([]);
+  });
+});

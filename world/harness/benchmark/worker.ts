@@ -1,3 +1,4 @@
+import { ReplayRecorder } from './recording.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,29 @@ let ready = false;
 let fresh = false;
 let claimed = false;
 let interval: ReturnType<typeof setInterval> | undefined;
+let captureInterval: ReturnType<typeof setInterval> | undefined;
+let recorder: ReplayRecorder | undefined;
+const runsDir = path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), 'runs');
+const runDirectory = path.join(runsDir, id);
+
+function capture(): void {
+  if (!recorder || !conn) return;
+  recorder.capture([
+    ['world', [...conn.db.world.iter()]], ['agent', [...conn.db.agent.iter()]],
+    ['resource_node', [...conn.db.resourceNode.iter()]], ['container', [...conn.db.container.iter()]],
+    ['item', [...conn.db.item.iter()]], ['structure', [...conn.db.structure.iter()]],
+    ['mob', [...conn.db.mob.iter()]], ['hazard', [...conn.db.hazard.iter()]],
+    ['message', [...conn.db.message.iter()]], ['memory', [...conn.db.memory.iter()]],
+    ['score', [...conn.db.score.iter()]], ['ethics_event', [...conn.db.ethicsEvent.iter()]],
+    ['temptation', [...conn.db.temptation.iter()]], ['record', [...conn.db.record.iter()]],
+    ['discovery', [...conn.db.discovery.iter()]], ['explored', [...conn.db.explored.iter()]],
+    ['meta', [...conn.db.meta.iter()]],
+  ], conn.db.world.id.find(0)?.gameTimeMs ?? 0);
+}
+function captureSafely(): void {
+  try { capture(); } catch { fail(); }
+}
+
 let conn: DbConnection;
 const startupTimer = setTimeout(() => { if (!ready) fail(); }, 60_000);
 
@@ -28,6 +52,7 @@ async function pauseAndExit(): Promise<void> {
   closing = true;
   clearTimeout(startupTimer);
   if (interval) clearInterval(interval);
+  if (captureInterval) clearInterval(captureInterval);
   if (conn && fresh) {
     await Promise.race([
       (async () => {
@@ -37,6 +62,7 @@ async function pauseAndExit(): Promise<void> {
       new Promise<void>(resolve => setTimeout(resolve, 2_000)),
     ]);
   }
+  try { capture(); } catch { /* Preserve frames already written if storage fails. */ }
   conn?.disconnect();
   process.exit(1);
 }
@@ -45,6 +71,14 @@ function fail(): void {
   if (closing) return;
   void pauseAndExit();
 }
+
+function parentDisconnected(): void {
+  // This deadline also applies if normal finish() is already awaiting a reducer or disk I/O.
+  setTimeout(() => process.exit(1), 2_500).unref();
+  void pauseAndExit();
+}
+process.on('disconnect', parentDisconnected);
+if (!process.connected) parentDisconnected();
 
 process.on('SIGTERM', () => { void pauseAndExit(); });
 process.on('SIGINT', () => { void pauseAndExit(); });
@@ -107,6 +141,7 @@ async function finish(): Promise<void> {
   if (closing) return;
   closing = true;
   if (interval) clearInterval(interval);
+  if (captureInterval) clearInterval(captureInterval);
   try {
     await conn.reducers.setRunning({ running: false });
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -116,11 +151,8 @@ async function finish(): Promise<void> {
       || hasIncompleteDecisions(rows.decisions)
       || llms.some(agent => !rows.scores.some(score => score.agentId === agent.id))) throw new Error('Incomplete run.');
     const report = buildReport(rows);
-    const runsDir = path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), 'runs');
-    const dir = path.join(runsDir, id);
-    await mkdir(runsDir, { recursive: true });
-    await mkdir(dir, { recursive: false });
-    await writeFile(path.join(dir, 'report.json'), JSON.stringify(report, null, 2), { flag: 'wx' });
+    capture();
+    await writeFile(path.join(runDirectory, 'report.json'), JSON.stringify(report, null, 2), { flag: 'wx' });
     conn.disconnect();
     process.exit(0);
   } catch { await pauseAndExit(); }
@@ -136,6 +168,7 @@ function checkCompletion(): void {
 
 async function initialize(): Promise<void> {
   try {
+    if (closing) return;
     if ([...conn.db.agent.iter()].length > 0 || conn.db.meta.key.find('run')) throw new Error('Database is not fresh.');
     fresh = true;
     await conn.reducers.claimHarness({});
@@ -147,6 +180,10 @@ async function initialize(): Promise<void> {
     await conn.reducers.resetExperiment({});
     await conn.reducers.setRunning({ running: false });
     await conn.reducers.setRunInfo({ info: JSON.stringify({ scenario: 'clearing-charter', promptVariant: 'charter', promptVersion: promptVersion(), systemPrompt: prompt, roster: names.map(name => ({ name, modelId })), timeScale: 1, startedAt: new Date().toISOString() }) });
+    await mkdir(runDirectory, { recursive: true });
+    recorder = new ReplayRecorder(runDirectory, dbName);
+    capture();
+    captureInterval = setInterval(captureSafely, 500);
     ready = true;
     clearTimeout(startupTimer);
     await conn.reducers.setRunning({ running: true });
@@ -161,10 +198,17 @@ conn = DbConnection.builder()
   .withDatabaseName(dbName)
   .onConnect(connection => {
     conn = connection;
+    for (const [table, source] of [
+      ['hit_event', conn.db.hitEvent], ['transfer_event', conn.db.transferEvent], ['world_event', conn.db.worldEvent],
+    ] as const) source.onInsert((_ctx, row) => {
+      try { recorder?.event(table, row); } catch { fail(); }
+    });
     conn.db.decisionRequest.onInsert((_ctx, request) => { if (request.status === 'pending') void answer(request); });
     conn.subscriptionBuilder().onApplied(() => { void initialize(); }).onError(() => fail()).subscribe([
       tables.world, tables.agent, tables.score, tables.temptation, tables.ethicsEvent,
       tables.decisionRequest, tables.meta, tables.record, tables.discovery,
+      tables.resourceNode, tables.container, tables.item, tables.structure, tables.mob, tables.hazard,
+      tables.message, tables.memory, tables.explored, tables.hitEvent, tables.transferEvent, tables.worldEvent,
     ]);
   })
   .onConnectError(() => fail())

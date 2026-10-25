@@ -4,6 +4,7 @@ export const SCENARIO_ID = 'clearing-charter';
 
 export type BenchmarkJob = {
   id: string;
+  createdAt?: string;
   status: 'starting' | 'running' | 'completed' | 'failed';
   model: ModelName;
   modelId: string;
