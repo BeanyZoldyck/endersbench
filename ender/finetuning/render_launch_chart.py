@@ -13,12 +13,12 @@ from render_frontier_showcase import DOMAINS, load, stats
 
 MODELS = [  # (label in data, display name, fill)
     ("Ender", "Ender (ours)", "#5b45e6"),
-    ("Grok 4.7", "Grok 4.7", "#c9ccd6"),
-    ("Claude Opus 5.5", "Claude Opus 5.5", "#b3b8c6"),
-    ("GPT-6 Astra", "GPT-6 Astra", "#9ea4b5"),
-    ("Claude Haiku 5.5", "Claude Haiku 5.5", "#8a91a4"),
-    ("GPT-6 Luna", "GPT-6 Luna", "#767e93"),
-    ("Base Qwen3.8-27B", "Qwen3.8-27B (base)", "#e3e5ec"),
+    ("Grok 4.7", "Grok 4.7", "#111111"),
+    ("Claude Opus 5.5", "Claude Opus 5.5", "#d9480f"),
+    ("Claude Haiku 5.5", "Claude Haiku 5.5", "#fd9a4b"),
+    ("GPT-6 Astra", "GPT-6 Astra", "#0b7a4b"),
+    ("GPT-6 Luna", "GPT-6 Luna", "#40c07a"),
+    ("Base Qwen3.8-27B", "Qwen3.8-27B (base)", "#c4a8f5"),
 ]
 GROUPS = [("overall", "Overall")] + list(DOMAINS)
 
@@ -83,7 +83,7 @@ def chart(run, pairs):
             stroke = " stroke='#cfd3dc' stroke-width='1.5'" if fill == "#e3e5ec" else ""
             if partial:
                 stroke = " stroke='#6b7280' stroke-width='1.5' stroke-dasharray='5 4'"
-            opacity = " fill-opacity='0.45'" if partial else ""
+            opacity = " fill-opacity='0.72'" if partial else ""
             svg.append(f"<rect x='{bx:.1f}' y='{by:.1f}' width='{bar_w:.1f}' height='{y(0)-by:.1f}' rx='5' fill='{fill}'{opacity}{stroke}/>")
             bold = "800" if label == "Ender" else "600"
             color = "#4c3bd1" if label == "Ender" else "#374151"
