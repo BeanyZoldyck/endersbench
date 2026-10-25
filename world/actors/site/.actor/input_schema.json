@@ -23,6 +23,13 @@
       "description": "Any of quick (7 cases), held-out (25) and all (70).",
       "default": ["quick", "held-out"]
     },
+    "runPassword": {
+      "title": "Run password",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "description": "Starting a run (Start a benchmark, Run on Apify) asks for this, since runs spend your keys. Anyone can still browse, replay and watch live runs. Empty: anyone can start runs. npm run actors:site fills it from RUN_PASSWORD."
+    },
     "maxRunsPerHour": {
       "title": "Runs per hour",
       "type": "integer",

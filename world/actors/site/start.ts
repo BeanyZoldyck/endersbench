@@ -11,7 +11,7 @@
 // FEATHERLESS_API_KEY (or FEATHERLESSAI_API_KEY), ENDER_BASE_URL, ENDER_API_KEY (or RUNPOD_API_KEY), CRS_USERNAME, CRS_PASSWORD
 // and APIFY_TOKEN (or APIFY_API_KEY); the environment wins over the file. SPACETIMEDB_TOKEN,
 // else the Spacetime CLI's login (`spacetime login show --token`), lets the setup page start
-// Clearing runs on Maincloud. The models on offer, and which setup-page model each is, are in models.json.
+// Clearing runs on Maincloud. RUN_PASSWORD, if set, is what starting a run asks for. The models on offer, and which setup-page model each is, are in models.json.
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

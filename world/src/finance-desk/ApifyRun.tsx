@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CONDITION_NAMES } from './conditions';
+import { withRunPassword } from '../frontend/run-password';
 
 // Starts an Ender's Bench run on Apify from the viewer. It appears only where
 // the site Actor serves the page and answers /api/apify/config; the site
@@ -14,6 +15,7 @@ type Config = {
   benchActor: string;
   active: RunInfo | null;
   recent: RunInfo[];
+  passwordRequired?: boolean;
 };
 
 const STATUS: Record<string, string> = { READY: 'starting', RUNNING: 'running', SUCCEEDED: 'done', FAILED: 'failed', 'TIMING-OUT': 'timing out', 'TIMED-OUT': 'timed out', ABORTING: 'stopping', ABORTED: 'stopped' };
@@ -50,7 +52,7 @@ export function ApifyRun({ replayUrl }: { replayUrl?: string }) {
   const start = async () => {
     setSending(true); setError('');
     try {
-      const response = await fetch('/api/apify/runs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Enders-Bench': '1' }, body: JSON.stringify({ model, variant, caseSet }) });
+      const response = await withRunPassword(headers => fetch('/api/apify/runs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Enders-Bench': '1', ...headers }, body: JSON.stringify({ model, variant, caseSet }) }));
       const value = await response.json();
       if (!response.ok) throw new Error(value.error || 'Could not start the run.');
       window.location.href = `/finance.html?replay=${value.replayUrl}&live=1`;
@@ -73,7 +75,7 @@ export function ApifyRun({ replayUrl }: { replayUrl?: string }) {
         <span className="more-heading">Recent runs</span>
         {config.recent.map(r => <a key={r.runId} href={watch(r)} aria-current={r.replayUrl === replayUrl ? 'page' : undefined}>{r.label} · {STATUS[r.status] ?? r.status} · {time(r.startedAt)}</a>)}
       </div>}
-      <small>Each run is a run of the {config.benchActor} Actor on Apify · CRS {config.crs === 'live' ? 'live sandbox' : 'saved snapshot'}</small>
+      <small>Each run is a run of the {config.benchActor} Actor on Apify · CRS {config.crs === 'live' ? 'live sandbox' : 'saved snapshot'}{config.passwordRequired ? ' · starting one asks for the run password' : ''}</small>
       {error && <span className="run-control-error" role="alert">{error}</span>}
     </div>
   </details>;

@@ -32,12 +32,14 @@ export function siteInputFromEnv(env: Record<string, string | undefined>, models
     ...(crsLive ? { crsUsername, crsPassword } : {}),
     // The shared world's owner login, so the setup page can start Clearing runs on Maincloud.
     spacetimeToken: value('SPACETIMEDB_TOKEN'),
+    // Starting a run asks for this; browsing and watching don't.
+    runPassword: value('RUN_PASSWORD'),
     ...extra,
   };
   return Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as SiteInput;
 }
 
-const REPORTED: (keyof SiteInput)[] = ['anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'bitdeerApiKey', 'featherlessApiKey', 'customBaseUrl', 'customApiKey', 'crsUsername', 'crsPassword', 'spacetimeToken'];
+const REPORTED: (keyof SiteInput)[] = ['anthropicApiKey', 'openaiApiKey', 'openrouterApiKey', 'bitdeerApiKey', 'featherlessApiKey', 'customBaseUrl', 'customApiKey', 'crsUsername', 'crsPassword', 'spacetimeToken', 'runPassword'];
 
 // What the input holds, by field name only: safe to print.
 export function fieldReport(input: SiteInput): string {

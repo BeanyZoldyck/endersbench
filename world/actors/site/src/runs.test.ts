@@ -1,5 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
+import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
+
+describe('PasswordGuard', () => {
+  it('lets anyone start when no password is set', () => {
+    expect(() => new PasswordGuard('').check(undefined, 'ip')).not.toThrow();
+  });
+
+  it('asks for the password, refuses a wrong one, and takes the right one', () => {
+    const guard = new PasswordGuard('quiet-harbor-27');
+    expect(() => guard.check(undefined, 'ip')).toThrow(expect.objectContaining({ status: 401, message: expect.stringContaining('needs the run password') }));
+    expect(() => guard.check('quiet-harbor-26', 'ip')).toThrow('Wrong run password');
+    expect(() => guard.check(' quiet-harbor-27 ', 'ip')).not.toThrow();
+  });
+
+  it('locks out an address after ten wrong guesses in an hour, but not others', () => {
+    let now = 0;
+    const guard = new PasswordGuard('pw', 10, () => now);
+    for (let i = 0; i < 10; i++) expect(() => guard.check('nope', 'a')).toThrow('Wrong run password');
+    expect(() => guard.check('pw', 'a')).toThrow(expect.objectContaining({ status: 429 }));
+    expect(() => guard.check('pw', 'b')).not.toThrow();
+    now = 3_600_001;
+    expect(() => guard.check('pw', 'a')).not.toThrow();
+  });
+});
 
 const keys = { anthropicApiKey: 'sk-ant', bitdeerApiKey: 'bd-key', customBaseUrl: 'https://runpod.test/v1', customApiKey: 'rp' };
 const models = [

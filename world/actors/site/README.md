@@ -15,6 +15,7 @@ One run of this Actor serves the site from its container URL, `https://<run>.run
 
 ## Keeping it safe to share
 
+- With a **Run password** set, starting a run (Start a benchmark, Run on Apify) asks for it; anyone can still browse, replay and watch live runs. The site compares it in constant time and locks an address out after ten wrong guesses in an hour. `npm run actors:site` reads it from `RUN_PASSWORD`.
 - Visitors choose only from the **Models on offer** you list. By default that's the policy script, which calls no model. Entries with a `lobby` name are the setup page's models.
 - API keys, the custom endpoint, the CRS login and the SpacetimeDB token are stored encrypted in this Actor's input. They're passed to each benchmark run as encrypted secret input, or used only by this run, and never sent to the browser. A Clearing run's models are asked with the keys loaded into the database (`scripts/load-model-keys.sh`).
 - The site starts one `enders-bench` run at a time and at most **Runs per hour**; one Clearing run at a time and at most **Clearing runs per hour**. It never resets the world while it's running.

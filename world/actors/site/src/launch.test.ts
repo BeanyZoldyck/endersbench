@@ -44,6 +44,13 @@ describe('siteInputFromEnv', () => {
     expect(fieldReport(input)).toContain('spacetimeToken: set');
   });
 
+  it('passes the run password on, reported by name only', () => {
+    const input = siteInputFromEnv({ ...env, RUN_PASSWORD: 'quiet-harbor-27' }, models);
+    expect(input.runPassword).toBe('quiet-harbor-27');
+    expect(fieldReport(input)).toContain('runPassword: set');
+    expect(fieldReport(input)).not.toContain('quiet-harbor');
+  });
+
   it('takes the harness\'s FEATHERLESSAI_API_KEY too', () => {
     const { FEATHERLESS_API_KEY: _, ...rest } = env;
     expect(siteInputFromEnv({ ...rest, FEATHERLESSAI_API_KEY: 'fa' }, models).featherlessApiKey).toBe('fa');

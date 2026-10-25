@@ -1,6 +1,7 @@
 // What the site lets a visitor start. The site's own input (set by us in the
 // Console, keys stored encrypted) lists the models on offer; a visitor only
 // picks from that list, so a public Run button can't spend more than we allow.
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { FINANCE_PROMPT_VARIANTS, HEADLINE_VARIANT } from '../../../spacetimedb/src/finance/prompt';
 import { CASE_SETS, PROVIDERS } from '../../enders-bench/src/input';
 import { lobbyModels } from './clearing';
@@ -41,6 +42,7 @@ export interface SiteInput {
   clearingRunsPerHour?: number;
   clearingTimeScale?: number;
   clearingMaxMinutes?: number;
+  runPassword?: string;
 }
 
 export const POLICY_SCRIPT: SiteModel = { id: 'script', label: 'Policy reference script (no model)', provider: 'script' };
@@ -95,6 +97,7 @@ export function siteConfig(raw: unknown) {
     clearingRunsPerHour: Math.max(1, Math.min(30, Number(input.clearingRunsPerHour) || 4)),
     clearingTimeScale: Math.max(0.05, Math.min(4, Number(input.clearingTimeScale) || 0.5)),
     clearingMaxMinutes: Math.max(2, Math.min(120, Number(input.clearingMaxMinutes) || 20)),
+    runPassword: text(input.runPassword),
   };
 }
 
@@ -154,5 +157,29 @@ export class RunLimiter {
   }
   record() {
     this.started.push(this.now());
+  }
+}
+
+// Starting a run spends the site's keys, so with a run password set only
+// people who know it can; anyone can still browse, replay and watch. A few
+// wrong guesses an hour per address, compared in constant time.
+export class PasswordGuard {
+  private misses = new Map<string, number[]>();
+  constructor(private password: string, private perHour = 10, private now = () => Date.now()) {}
+  get required() {
+    return this.password !== '';
+  }
+  check(given: string | undefined, address: string) {
+    if (!this.required) return;
+    const hourAgo = this.now() - 3_600_000;
+    const recent = (this.misses.get(address) ?? []).filter(t => t > hourAgo);
+    if (recent.length >= this.perHour) throw new RequestError('Too many wrong passwords. Try again in an hour.', 429);
+    const typed = (given ?? '').trim();
+    if (!typed) throw new RequestError('Starting a run needs the run password.', 401);
+    const digest = (s: string) => createHash('sha256').update(s).digest();
+    if (!timingSafeEqual(digest(typed), digest(this.password))) {
+      this.misses.set(address, [...recent, this.now()]);
+      throw new RequestError('Wrong run password.', 401);
+    }
   }
 }

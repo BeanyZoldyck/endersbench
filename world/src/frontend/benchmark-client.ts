@@ -1,5 +1,6 @@
 import { ALL_MODEL_NAMES, isModelName } from '../../shared/models';
 import { MAX_BENCHMARK_AGENTS, rosterSize, type BenchmarkRoster, type StudioModel } from './model';
+import { withRunPassword } from './run-password';
 
 export type BenchmarkRosterEntry = { model: StudioModel; count: number };
 export type BenchmarkScenario = { id: string; name: string; description: string; available?: boolean; reason?: string };
@@ -61,8 +62,7 @@ export function benchmarkViewerHref(job: BenchmarkJob): string {
     : `/?${new URLSearchParams({ legacy: '1', benchmark: job.id, db: job.dbName })}`;
 }
 
-export async function benchmarkRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, signal: AbortSignal.timeout(15000) });
+async function benchmarkJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { error?: unknown } | null;
     throw new Error(typeof body?.error === 'string' ? body.error : 'The benchmark service could not complete this request.');
@@ -70,8 +70,13 @@ export async function benchmarkRequest<T>(path: string, init?: RequestInit): Pro
   return response.json() as Promise<T>;
 }
 
-export function launchBenchmark(roster: BenchmarkRosterEntry[], scenario: string): Promise<BenchmarkJob> {
-  return benchmarkRequest('/api/benchmarks', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roster, scenario }),
-  });
+export async function benchmarkRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  return benchmarkJson<T>(await fetch(path, { ...init, signal: AbortSignal.timeout(15000) }));
+}
+
+// The hosted site may ask for its run password first (run-password.ts).
+export async function launchBenchmark(roster: BenchmarkRosterEntry[], scenario: string): Promise<BenchmarkJob> {
+  return benchmarkJson<BenchmarkJob>(await withRunPassword(headers => fetch('/api/benchmarks', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ roster, scenario }), signal: AbortSignal.timeout(15000),
+  })));
 }

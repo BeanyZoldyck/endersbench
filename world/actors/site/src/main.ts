@@ -14,13 +14,14 @@
 //   GET  /api/benchmarks/config       the lobby models on offer and the two scenarios
 //   POST /api/benchmarks              { roster, scenario }: a Clearing run on Maincloud or a Ledger Street Actor run
 //   GET  /api/benchmarks/:id          that run's status and where to watch it
+import type { IncomingMessage } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Actor, log } from 'apify';
 import type { SelectableModel } from '../../../shared/models';
 import { serve } from '../../shared/serve';
 import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, type LineupEntry } from './clearing';
-import { RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
+import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FALLBACK_REPLAY = '/replays/finance-v6-live-crs-script.json';
@@ -43,6 +44,13 @@ if (!bench) {
   throw new Error('bench Actor missing');
 }
 const limiter = new RunLimiter(cfg.maxRunsPerHour);
+const password = new PasswordGuard(cfg.runPassword);
+const header = (req: IncomingMessage, name: string) => {
+  const value = req.headers[name];
+  return Array.isArray(value) ? value[0] : value;
+};
+// Apify's proxy puts the visitor first in X-Forwarded-For.
+const addressOf = (req: IncomingMessage) => (header(req, 'x-forwarded-for') ?? req.socket.remoteAddress ?? '').split(',')[0].trim();
 const labels = new Map<string, string>();
 
 // The shared world on Maincloud, with an identity that may run it.
@@ -319,11 +327,12 @@ await serve({
       // The landing page is home; every other view is a query on / and loads as it is.
       if (url.pathname === '/' && !url.search) return { redirect: '/?studio=landing' };
       if (url.pathname === '/finance.html' && !url.searchParams.has('replay')) return { redirect: await newestLedger() };
-      if (url.pathname === '/api/benchmarks/config' && req.method === 'GET') return { json: lobbyConfig(cfg.lobby, { clearing: !!spacetime }) };
+      if (url.pathname === '/api/benchmarks/config' && req.method === 'GET') return { json: { ...lobbyConfig(cfg.lobby, { clearing: !!spacetime }), passwordRequired: password.required } };
       if (url.pathname === '/api/benchmarks' && req.method === 'GET') return { json: await lobbyJobs() };
       if (url.pathname === '/api/benchmarks' && req.method === 'POST') {
         // JSON from another site's page needs a CORS preflight, which this server never grants.
         if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) throw new RequestError('Expected application/json.', 415);
+        password.check(header(req, 'x-run-password'), addressOf(req));
         const { lineup, scenario } = lineupFrom(body);
         if (scenario === CLEARING) return { status: 202, json: await startClearing(lineup) };
         if (scenario === LEDGER) return { status: 202, json: await startLedger(lineup) };
@@ -334,11 +343,12 @@ await serve({
       if (!url.pathname.startsWith('/api/apify/')) return url.pathname.startsWith('/api/') ? { status: 404, json: { error: 'Route not found.' } } : undefined;
       if (url.pathname === '/api/apify/config' && req.method === 'GET') {
         const recent = await recentRuns();
-        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent: recent.map(visible) } };
+        return { json: { ...publicConfig(cfg), benchActor: benchName, active: recent.find(r => !DONE.has(r.status)) ?? null, recent: recent.map(visible), passwordRequired: password.required } };
       }
       if (url.pathname === '/api/apify/runs' && req.method === 'POST') {
         // A custom header forces a preflight, so another site's page can't press Run for a visitor.
         if (req.headers['x-enders-bench'] !== '1') throw new RequestError('Use the Ender’s Bench viewer to start runs.', 403);
+        password.check(header(req, 'x-run-password'), addressOf(req));
         const runId = await startBenchRun(benchInput(cfg, JSON.parse(body || '{}')));
         return { status: 201, json: { runId, replayUrl: `/api/apify/runs/${runId}/replay` } };
       }
@@ -351,7 +361,7 @@ await serve({
       }
       throw new RequestError('Not found', 404);
     } catch (err) {
-      if (err instanceof RequestError) return { status: err.status, json: { error: err.message } };
+      if (err instanceof RequestError) return { status: err.status, json: { error: err.message, ...(err.status === 401 ? { passwordRequired: true } : {}) } };
       if (err instanceof SyntaxError) return { status: 400, json: { error: 'Send JSON.' } };
       log.warning(`api ${url.pathname}: ${err instanceof Error ? err.message : String(err)}`);
       const which = url.pathname.startsWith('/api/benchmarks') ? 'The benchmark service' : 'Apify';
