@@ -30,3 +30,7 @@
   .studio .lineup-model .model-buddy { width: 36px; height: 36px; min-width: 36px; }
   .studio .lineup-connection { grid-column: 1 / -1; }
 }
+
+.studio .lobby-scenario-art { margin: 0 0 20px; }
+.studio .lobby-scenario-art img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: contain; border-radius: 6px; }
+.studio .lobby-scenario-art figcaption { margin-top: 8px; color: var(--muted); font-size: .75rem; }

@@ -19,6 +19,23 @@ export function FrostedCursor() {
       return wisp;
     });
     let trailIndex = 0;
+    let trailColor = '255, 255, 255';
+    let lastSurface: Element | null = null;
+    const updateTrailColor = (target: Element | null) => {
+      if (target === lastSurface) return;
+      lastSurface = target;
+      trailColor = '255, 255, 255';
+      // Follow transparent children to the painted surface beneath them.
+      for (let surface: Element | null = target; surface !== null; surface = surface?.parentElement ?? null) {
+        const channels = getComputedStyle(surface).backgroundColor.match(/[\d.]+/g)?.map(Number);
+        if (!channels || channels.length < 3 || (channels[3] ?? 1) < 0.5) continue;
+        const [red, green, blue] = channels;
+        const isGreen = green > red * 1.08 && green > blue * 1.08;
+        const brightness = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+        trailColor = !isGreen && brightness > 150 ? '18, 18, 18' : '255, 255, 255';
+        break;
+      }
+    };
     let lastTrailTime = 0;
     let lastTrailX = 0;
     let lastTrailY = 0;
@@ -44,6 +61,7 @@ export function FrostedCursor() {
         const wisp = trail[trailIndex];
         trailIndex = (trailIndex + 1) % trail.length;
         wisp.getAnimations().forEach(animation => animation.cancel());
+        wisp.style.setProperty('--smoke-color', trailColor);
         const px = lastTrailX + dx * step / steps;
         const py = lastTrailY + dy * step / steps;
         const phase = time / 360;
@@ -112,6 +130,7 @@ export function FrostedCursor() {
         hide();
         return;
       }
+      updateTrailColor(target);
       targetX = event.clientX;
       targetY = event.clientY;
       if (cursor.dataset.visible !== 'true') { x = targetX; y = targetY; }
@@ -181,37 +200,38 @@ export function useLandingMotion(screen: StudioScreen, scenario: string) {
     const hero = landing.querySelector<HTMLElement>('.landing-hero');
     const illustration = landing.querySelector<HTMLElement>('.hero-illustration');
     const motion = matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
-    studio?.querySelectorAll<HTMLButtonElement>('.hero-actions > button, .header-cta, .hero-illustration figcaption > button').forEach(button => {
+    studio?.querySelectorAll<HTMLButtonElement>('.hero-actions > button, .header-cta').forEach(button => {
+      const rippleLayer = document.createElement('span');
+      rippleLayer.className = 'button-ripple-layer';
+      rippleLayer.setAttribute('aria-hidden', 'true');
+      button.append(rippleLayer);
       const waves = Array.from({ length: 2 }, () => {
         const wave = document.createElement('span');
         wave.className = 'button-touch-ripple';
         wave.setAttribute('aria-hidden', 'true');
-        button.append(wave);
+        rippleLayer.append(wave);
         return wave;
       });
       const clear = () => waves.forEach(wave => wave.getAnimations().forEach(animation => animation.cancel()));
       const enter = (event: PointerEvent) => {
         if (!motion.matches || event.pointerType !== 'mouse' || button.disabled) return;
-        const bounds = button.getBoundingClientRect();
-        const localX = (event.clientX - bounds.left) * button.offsetWidth / bounds.width;
-        const localY = (event.clientY - bounds.top) * button.offsetHeight / bounds.height;
+        const scaleX = 1 + 12 / Math.max(1, button.offsetWidth);
+        const scaleY = 1 + 12 / Math.max(1, button.offsetHeight);
         waves.forEach((wave, index) => {
           wave.getAnimations().forEach(animation => animation.cancel());
-          wave.style.left = `${localX}px`;
-          wave.style.top = `${localY}px`;
           wave.animate([
-            { transform: 'translate(-50%, -50%) scale(.15)', opacity: 0 },
-            { opacity: .42, offset: .15 },
-            { opacity: .14, offset: .6 },
-            { transform: 'translate(-50%, -50%) scale(4)', opacity: 0 },
-          ], { duration: 1150, delay: index * 160, easing: 'cubic-bezier(.2,.55,.35,1)' });
+            { transform: 'scale(1)', opacity: 0 },
+            { opacity: .55, offset: .15 },
+            { opacity: .2, offset: .6 },
+            { transform: `scale(${scaleX}, ${scaleY})`, opacity: 0 },
+          ], { duration: 700, delay: index * 100, easing: 'cubic-bezier(.2,.55,.35,1)' });
         });
       };
       button.addEventListener('pointerenter', enter);
       motion.addEventListener('change', clear);
       cleanups.push(() => {
         clear();
-        waves.forEach(wave => wave.remove());
+        rippleLayer.remove();
         button.removeEventListener('pointerenter', enter);
         motion.removeEventListener('change', clear);
       });

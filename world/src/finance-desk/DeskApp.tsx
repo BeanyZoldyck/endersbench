@@ -67,6 +67,7 @@ export function DeskView({ lineup = false, cases, steps, verdicts, isActive, rea
   const view = (next: typeof mode) => { setMode(next); if (next !== 'case') replay?.pause(); };
   return <div className="finance-app">
     <header className="finance-top">
+      <a className="dashboard-back" href="/?studio=landing">← Back to dashboard</a>
       <a className="finance-brand" href="/" title="Observation Studio"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V10M16 19C5 21 3 11 4 6c9 0 13 4 12 13ZM16 14C15 5 22 2 28 3c1 8-4 14-12 11Z" /></svg><span>ENDER’S BENCH</span></a>
       <h1>Ledger Street<span>.</span></h1>
       <p className="finance-case" title={scenario ? `${SEAT_NAMES[scenario.seat]} · ${summary?.headline}\nThe job: ${policyBrief(scenario, group.row.variant, group.row.benchmarkVersion).task}` : undefined}>

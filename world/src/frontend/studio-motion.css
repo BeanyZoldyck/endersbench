@@ -23,10 +23,10 @@
   .landing-content button { transition: transform 160ms cubic-bezier(.23,1,.32,1); }
   .landing-content button:active:not(:disabled) { transform: scale(.97); }
   .landing-content button:focus-visible { animation: none; transition: none; }
-  .hero-actions button span { display: inline-block; transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+  .hero-actions button > span:not(.button-ripple-layer) { display: inline-block; transition: transform 180ms cubic-bezier(.23,1,.32,1); }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .hero-actions button:hover span { transform: translate(2px,-2px); }
+  .hero-actions button:hover > span:not(.button-ripple-layer) { transform: translate(2px,-2px); }
   .agent-intros button:hover { transform: translateY(-3px); }
   .agent-intros button:active { transform: scale(.97); }
 }
@@ -65,7 +65,7 @@
 .cursor-trail-wisp {
   position: fixed; top: 0; left: 0; width: 60px; height: 28px;
   /* Long, feathered washes overlap without circular edges or bright centers. */
-  background: radial-gradient(ellipse at 46% 48%, #eed28466 0%, #e6c56b45 20%, #d8b55324 40%, #d8b5530a 60%, #d8b55300 75%);
+  background: radial-gradient(ellipse at 46% 48%, rgba(var(--smoke-color, 255, 255, 255), .4) 0%, rgba(var(--smoke-color, 255, 255, 255), .27) 20%, rgba(var(--smoke-color, 255, 255, 255), .14) 40%, rgba(var(--smoke-color, 255, 255, 255), .04) 60%, transparent 75%);
   filter: blur(2px); opacity: 0; pointer-events: none; z-index: 9999;
 }
 @media (prefers-reduced-motion: reduce), (forced-colors: active), (pointer: coarse) {
@@ -86,15 +86,24 @@
 /* Ripple accents follow the button surface, without per-pointer style reads. */
 .studio[data-studio-screen="landing"] .hero-actions > .gold { --button-ripple-color: #e6b65f; }
 .studio[data-studio-screen="landing"] .header-cta { --button-ripple-color: #b6cbe5; }
-.studio[data-studio-screen="landing"] :is(.hero-actions > .outline-button, .hero-illustration figcaption > button) { --button-ripple-color: #f0dca5; }
+.studio[data-studio-screen="landing"] .hero-actions > .outline-button { --button-ripple-color: #f0dca5; }
 
-/* Ripples originate at the pointer's entry point, not the button outline. */
-.studio[data-studio-screen="landing"] :is(.hero-actions > button, .header-cta, .hero-illustration figcaption > button) {
+/* Leave room between adjacent buttons for their complete ripple outlines. */
+.studio[data-studio-screen="landing"] .hero-actions { gap: 16px; }
+
+/* Button ripples expand evenly from the entire button perimeter. */
+.studio[data-studio-screen="landing"] :is(.hero-actions > button, .header-cta) {
   position: relative; isolation: isolate;
 }
+.button-ripple-layer {
+  position: absolute; inset: 0; margin: 0 !important; padding: 0;
+  pointer-events: none; z-index: -1; transform: none; transition: none;
+  border-radius: inherit;
+}
 .button-touch-ripple {
-  position: absolute; width: 24px; height: 24px; margin: 0 !important;
-  border: .6px solid var(--button-ripple-color, #e5ce8e); border-radius: 50%;
+  position: absolute; inset: 0; margin: 0 !important;
+  border: 1.5px solid var(--button-ripple-color, #e5ce8e); border-radius: inherit;
+  transform-origin: center;
   pointer-events: none; opacity: 0; z-index: -1;
 }
 @media (prefers-reduced-motion: reduce), (forced-colors: active), (pointer: coarse) {
