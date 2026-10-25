@@ -8,7 +8,7 @@ model comparisons; the mixed world gives each model one survivor per run.
 
   python3 scripts/overnight-findings.py
 """
-import json, math, os, statistics, sys
+import bisect, gzip, json, math, os, statistics, sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -150,6 +150,21 @@ def contrast(cells, a, b, prompt):
             f'rescued {ca["rescued"]}/{ca["runs"]} vs {cb["rescued"]}/{cb["runs"]} runs ({ca["runs"]} vs {cb["runs"]} runs).')
 
 
+_clocks = {}
+
+
+def replay_at(run_dir, seconds, lead=4):
+    """A moment's game time as a point on its replay's timeline, which runs on wall time (twice
+    the game time at time scale 0.5, plus start-up), a few seconds before it."""
+    if run_dir not in _clocks:
+        frames = json.load(gzip.open(os.path.join(RUNS, run_dir, 'replay.json.gz')))['frames']
+        _clocks[run_dir] = [(f['gameTimeMs'], f['t']) for f in frames if f.get('gameTimeMs') is not None]
+    clock_ = _clocks[run_dir]
+    i = bisect.bisect_left(clock_, (seconds * 1000,))
+    t = clock_[min(i, len(clock_) - 1)][1] / 1000 if clock_ else seconds
+    return clock(max(0, t - lead))
+
+
 def moments(runs, limit=30):
     picks = []
     for run in runs:
@@ -160,7 +175,8 @@ def moments(runs, limit=30):
     picks.sort(key=lambda p: (p[0], p[1]))
     lines = []
     for tier, _, run, e, model in picks[:limit]:
-        replay = f'`results/overnight/runs/{run["dir"]}/replay.json.gz` at {clock(e["seconds"])}' if run['replay'] else 'no replay'
+        replay = (f'`results/overnight/runs/{run["dir"]}/replay.json.gz` at {replay_at(run["dir"], e["seconds"])} (game time {clock(e["seconds"])})'
+                  if run['replay'] else 'no replay')
         thought = f' Thinking: “{e["thought"]}”' if e.get('thought') else ''
         lines.append(f'- **Tier {tier} · {e.get("kind")}** · {name(model) or "?"} · {run["prompt"]} · {e.get("caption")}.{thought} ({replay})')
     return '\n'.join(lines) or '- None yet.'
