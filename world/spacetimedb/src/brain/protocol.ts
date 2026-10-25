@@ -58,6 +58,8 @@ export type ProviderSpec = {
   keyOptional?: boolean;
   maxTokensField?: 'max_tokens' | 'max_completion_tokens'; // default max_tokens
   extraBody?: Record<string, unknown>;
+  // Models (by name prefix) that need their own extras and output cap.
+  models?: Array<{ prefix: string; extraBody: Record<string, unknown>; maxTokens: number }>;
 };
 
 export const PROVIDERS: Record<string, ProviderSpec> = {
@@ -67,7 +69,16 @@ export const PROVIDERS: Record<string, ProviderSpec> = {
   openrouter: { api: 'openai-chat', baseUrl: 'https://openrouter.ai/api/v1', keyEnv: 'OPENROUTER_API_KEY' },
   // DeepSeek on Bitdeer reasons by default, and the reasoning counts against
   // max_tokens: at MAX_OUTPUT_TOKENS it never reaches the tool call.
-  bitdeer: { api: 'openai-chat', baseUrl: 'https://api-inference.bitdeer.ai/v1', keyEnv: 'BITDEER_API_KEY', extraBody: { reasoning_effort: 'none' } },
+  // GLM on Bitdeer refuses reasoning_effort ("invalid request") and thinks whatever it is
+  // sent (enable_thinking, thinking: disabled): 600-800 characters, then the tool call.
+  // At 1024 tokens it called a tool 6 times out of 6, in 1-3.4 s.
+  bitdeer: {
+    api: 'openai-chat',
+    baseUrl: 'https://api-inference.bitdeer.ai/v1',
+    keyEnv: 'BITDEER_API_KEY',
+    extraBody: { reasoning_effort: 'none' },
+    models: [{ prefix: 'zai-org/GLM', extraBody: {}, maxTokens: 1024 }],
+  },
   // Ender is a Qwen3 fine-tune on vLLM (Runpod: https://api.runpod.ai/v2/<endpoint>/openai/v1,
   // model "ender"). Qwen3 thinks by default and runs out of max_tokens before answering.
   ender: { api: 'openai-chat', baseUrlEnv: 'ENDER_BASE_URL', keyEnv: 'ENDER_API_KEY', keyOptional: true, extraBody: { chat_template_kwargs: { enable_thinking: false } } },
@@ -97,10 +108,10 @@ export function providerEndpoint(provider: string, env: Env) {
   return { spec, baseUrl: baseUrl.replace(/\/$/, ''), key };
 }
 
-export function openAiChatBody(model: string, input: DecideInput, extraBody?: Record<string, unknown>, maxTokensField: ProviderSpec['maxTokensField'] = 'max_tokens') {
+export function openAiChatBody(model: string, input: DecideInput, extraBody?: Record<string, unknown>, maxTokensField: ProviderSpec['maxTokensField'] = 'max_tokens', maxTokens = MAX_OUTPUT_TOKENS) {
   return {
     model,
-    [maxTokensField]: MAX_OUTPUT_TOKENS,
+    [maxTokensField]: maxTokens,
     tool_choice: 'required',
     tools: withThought(input.tools).map(t => ({
       type: 'function',
@@ -153,7 +164,9 @@ export function buildModelCall(modelId: string, input: DecideInput, env: Env): M
   if (spec.api === 'anthropic') {
     return { api: 'anthropic', url: `${baseUrl}/messages`, headers: { 'x-api-key': key ?? '', 'anthropic-version': '2023-06-01' }, body: anthropicBody(model, input) };
   }
-  return { api: 'openai-chat', url: `${baseUrl}/chat/completions`, headers: key ? { authorization: `Bearer ${key}` } : {}, body: openAiChatBody(model, input, spec.extraBody, spec.maxTokensField) };
+  const special = spec.models?.find(m => model.startsWith(m.prefix));
+  const body = openAiChatBody(model, input, special?.extraBody ?? spec.extraBody, spec.maxTokensField, special?.maxTokens);
+  return { api: 'openai-chat', url: `${baseUrl}/chat/completions`, headers: key ? { authorization: `Bearer ${key}` } : {}, body };
 }
 
 export function decisionFromResponse(api: ModelCall['api'], url: string, status: number, text: string): Decision {

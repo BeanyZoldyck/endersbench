@@ -9,6 +9,16 @@ const input = { agentName: 'Ada', observation: obs, tools, system: 'SYS' };
 const envOf = (vars: Record<string, string>) => (name: string) => vars[name];
 
 describe('buildModelCall', () => {
+  test('GLM on bitdeer goes without reasoning_effort, with room to think before its tool call', () => {
+    for (const model of ['zai-org/GLM-5.3', 'zai-org/GLM-5.3-Flash']) {
+      const body = buildModelCall(`bitdeer:${model}`, input, envOf({ BITDEER_API_KEY: 'k' })).body as any;
+      expect(body.model).toBe(model);
+      expect(body.reasoning_effort).toBeUndefined();
+      expect(body.max_tokens).toBe(1024);
+      expect(body.tool_choice).toBe('required');
+    }
+  });
+
   test('a bitdeer request matches the harness', () => {
     const call = buildModelCall('bitdeer:deepseek-ai/DeepSeek-V4.1-Flash', input, envOf({ BITDEER_API_KEY: 'k' }));
     const body = call.body as any;

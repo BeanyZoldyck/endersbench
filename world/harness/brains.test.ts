@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { anthropicBrain, brainFor, codexBrain, codexError, fakeBrain, mcpServerNames, openAiCompatibleBrain, withThought, type CodexRun, type Tool } from './brains';
+import { buildModelCall } from '../spacetimedb/src/brain/protocol';
 
 const tools: Tool[] = [
   {
@@ -292,6 +293,22 @@ describe('openai-compatible brain', () => {
 
     await brain.decide({ agentName: 'Ada', observation, tools, system: '' });
     expect(calls[0].body.reasoning_effort).toBe('none');
+  });
+
+  test('GLM on bitdeer gets the same request from the harness as from the database brain', async () => {
+    const { calls, fetchImpl } = recordingFetch({
+      choices: [{ message: { tool_calls: [{ function: { name: 'idle', arguments: '{"thought":"rest"}' } }] } }],
+    });
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = fetchImpl;
+    try {
+      const input = { agentName: 'Ada', observation, tools, system: 'SYS' };
+      await brainFor('bitdeer:zai-org/GLM-5.3', { BITDEER_API_KEY: 'k' }).decide(input);
+      expect(calls[0].body).toEqual(buildModelCall('bitdeer:zai-org/GLM-5.3', input, () => 'k').body);
+      expect(calls[0].body.max_tokens).toBe(1024);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
 
