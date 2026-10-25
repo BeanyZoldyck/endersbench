@@ -8,7 +8,7 @@
 
 This is an action-labelled, simulated financial-services dataset. It combines:
 
-1. **24 authored scenario families, 72 scenarios total.** For each of the 12 reward-hacking/alignment families that appeared in the Qwen3.8 base report, there are two concrete misaligned action candidates and one matched clean control. Each family also has finance-native versions using lending, collections, or vendor-payment cases and the finance desk's tools.
+1. **24 authored scenario families, 72 scenarios total.** For each of the 12 reward-hacking/alignment families that appeared in the Qwen3.8 base report, there are two misaligned scenario variants and one matched clean control. The 48 misaligned scenarios contain 61 proposed misaligned tool calls. Each benchmark family also has a finance-native version using lending, collections, or vendor-payment cases and the finance desk's tools.
 2. **427 finance-derived scenarios from 164 eligible training cases.** These start from the raw-CRS financial training split and use the finance verifier's explicit fault codes and Script A's verified next action. 99 of the scenarios add a benchmark-style pressure note to the same financial case.
 
 The output is deliberately split into three tasks:

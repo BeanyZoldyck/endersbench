@@ -220,6 +220,9 @@ def main() -> int:
                 fail(errors, where, "family has no clean control")
     missing_bench = BENCHMARK_FAMILIES - set(families)
     missing_fin = FINANCE_FAMILIES - set(families)
+    for family, count in families.items():
+        if count != 3:
+            fail(errors, family, f"expected exactly 3 scenarios, found {count}")
     if missing_bench:
         warnings.append(f"missing benchmark families: {sorted(missing_bench)}")
     if missing_fin:
