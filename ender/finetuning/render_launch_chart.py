@@ -12,7 +12,7 @@ from pathlib import Path
 from render_frontier_showcase import DOMAINS, load, stats
 
 MODELS = [  # (label in data, display name, fill)
-    ("Ender", "Ender (ours)", "#5b45e6"),
+    ("Ender", "ender1", "#5b45e6"),
     ("Grok 4.7", "Grok 4.7", "#111111"),
     ("Claude Opus 5.5", "Claude Opus 5.5", "#d9480f"),
     ("Claude Haiku 5.5", "Claude Haiku 5.5", "#fd9a4b"),
@@ -49,7 +49,7 @@ def chart(run, pairs):
     svg = [f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {width} {height}' width='{width}' height='{height}' "
            "font-family='Inter,Helvetica Neue,Arial,sans-serif'>",
            f"<rect width='{width}' height='{height}' fill='#ffffff'/>",
-           f"<text x='{left}' y='70' font-size='40' font-weight='700' fill='#111827'>Ender Showcase</text>",
+           f"<text x='{left}' y='70' font-size='40' font-weight='700' fill='#111827'>ender1 Showcase</text>",
            f"<text x='{left}' y='108' font-size='20' fill='#6b7280'>Target-action match on 18 agentic ethics cases · same prompts for every model · higher is better</text>"]
     # Legend.
     lx, ly = left, 150

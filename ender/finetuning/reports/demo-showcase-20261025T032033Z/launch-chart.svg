@@ -1,21 +1,21 @@
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' width='1600' height='900' font-family='Inter,Helvetica Neue,Arial,sans-serif'>
 <rect width='1600' height='900' fill='#ffffff'/>
-<text x='90' y='70' font-size='40' font-weight='700' fill='#111827'>Ender Showcase</text>
+<text x='90' y='70' font-size='40' font-weight='700' fill='#111827'>ender1 Showcase</text>
 <text x='90' y='108' font-size='20' fill='#6b7280'>Target-action match on 18 agentic ethics cases · same prompts for every model · higher is better</text>
 <rect x='90' y='136' width='18' height='18' rx='4' fill='#5b45e6'/>
-<text x='116' y='150' font-size='17' font-weight='700' fill='#374151'>Ender (ours)</text>
-<rect x='239.2' y='136' width='18' height='18' rx='4' fill='#111111'/>
-<text x='265.2' y='150' font-size='17' font-weight='500' fill='#374151'>Grok 4.7</text>
-<rect x='350.0' y='136' width='18' height='18' rx='4' fill='#d9480f'/>
-<text x='376.0' y='150' font-size='17' font-weight='500' fill='#374151'>Claude Opus 5.5</text>
-<rect x='528.0' y='136' width='18' height='18' rx='4' fill='#fd9a4b'/>
-<text x='554.0' y='150' font-size='17' font-weight='500' fill='#374151'>Claude Haiku 5.5</text>
-<rect x='715.6' y='136' width='18' height='18' rx='4' fill='#0b7a4b'/>
-<text x='741.6' y='150' font-size='17' font-weight='500' fill='#374151'>GPT-6 Astra</text>
-<rect x='855.2' y='136' width='18' height='18' rx='4' fill='#40c07a'/>
-<text x='881.2' y='150' font-size='17' font-weight='500' fill='#374151'>GPT-6 Luna</text>
-<rect x='985.2' y='136' width='18' height='18' rx='4' fill='#c4a8f5'/>
-<text x='1011.2' y='150' font-size='17' font-weight='500' fill='#374151'>Qwen3.8-27B (base)</text>
+<text x='116' y='150' font-size='17' font-weight='700' fill='#374151'>ender1</text>
+<rect x='181.6' y='136' width='18' height='18' rx='4' fill='#111111'/>
+<text x='207.6' y='150' font-size='17' font-weight='500' fill='#374151'>Grok 4.7</text>
+<rect x='292.4' y='136' width='18' height='18' rx='4' fill='#d9480f'/>
+<text x='318.4' y='150' font-size='17' font-weight='500' fill='#374151'>Claude Opus 5.5</text>
+<rect x='470.4' y='136' width='18' height='18' rx='4' fill='#fd9a4b'/>
+<text x='496.4' y='150' font-size='17' font-weight='500' fill='#374151'>Claude Haiku 5.5</text>
+<rect x='658.0' y='136' width='18' height='18' rx='4' fill='#0b7a4b'/>
+<text x='684.0' y='150' font-size='17' font-weight='500' fill='#374151'>GPT-6 Astra</text>
+<rect x='797.6' y='136' width='18' height='18' rx='4' fill='#40c07a'/>
+<text x='823.6' y='150' font-size='17' font-weight='500' fill='#374151'>GPT-6 Luna</text>
+<rect x='927.6' y='136' width='18' height='18' rx='4' fill='#c4a8f5'/>
+<text x='953.6' y='150' font-size='17' font-weight='500' fill='#374151'>Qwen3.8-27B (base)</text>
 <line x1='90' y1='650.0' x2='1560' y2='650.0' stroke='#eef0f4' stroke-width='1.5'/>
 <text x='76' y='656.0' font-size='16' fill='#9ca3af' text-anchor='end'>0</text>
 <line x1='90' y1='562.0' x2='1560' y2='562.0' stroke='#eef0f4' stroke-width='1.5'/>

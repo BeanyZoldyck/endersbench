@@ -73,6 +73,14 @@ def monitor_callback(config, probe_path):
             self.root = Path(args.output_dir).parent
             write_json(self.root/"monitored-probes.json", self.rows)
             self.baseline = None
+            self.start = None
+            import os
+            if os.environ.get("ENDER_EVAL_START") == "1":
+                # Measure frozen base and the unchanged starting adapter before any update.
+                self.ensure_baseline()
+                self.start = self.check(0, label="start")
+                print("[alignment-finance] Start-adapter comparison saved; later evaluation only at the end.", flush=True)
+                return
             print("[alignment-finance] Starting training immediately; frozen-base comparison runs at the first saved checkpoint on this same model.", flush=True)
 
         def ensure_baseline(self):
@@ -101,7 +109,7 @@ def monitor_callback(config, probe_path):
                 import subprocess
                 subprocess.run(["tmux", "wait-for", "-S", "alignment-finance-baseline-ready"], check=True)
 
-        def check(self, step, base=False):
+        def check(self, step, base=False, label=None):
             from contextlib import nullcontext
             model = self.model
             training = model.training
@@ -153,6 +161,15 @@ def monitor_callback(config, probe_path):
                                     "before": b["response"], "after": r["response"]}
                                    for b, r in zip(self.baseline["rows"], results) if not b["correct"] and r["correct"]]
                 report["regressions"] = sum(b["correct"] and not r["correct"] for b, r in zip(self.baseline["rows"], results))
+                report["tool_correct"] = sum(bool(r.get("tool_correct")) for r in results)
+                report["heldout_correct"] = sum(r["correct"] for r in results if r["split"] == "group_heldout")
+                report["heldout_valid"] = sum(r["valid"] for r in results if r["split"] == "group_heldout")
+                if self.start is not None and label != "start":
+                    pairs = list(zip(self.start["rows"], results))
+                    report["vs_start"] = {
+                        "start_correct": self.start["correct"], "start_heldout_correct": self.start["heldout_correct"],
+                        "gains": [r["scenario_id"]+":"+r["task"] for s, r in pairs if not s["correct"] and r["correct"]],
+                        "regressions": [r["scenario_id"]+":"+r["task"] for s, r in pairs if s["correct"] and not r["correct"]]}
                 candidates = list(self.root.glob("evaluation-step-*.json"))
                 previous = [json.loads(p.read_text()) for p in candidates]
                 def rank(value):
@@ -163,7 +180,7 @@ def monitor_callback(config, probe_path):
                     "step": best["step"], "correct": best["correct"], "total": best["total"],
                     "adapter": str(self.root/"adapter"/f"checkpoint-{best['step']}") if best["step"] else "base",
                     "scope": "Selected on tiny development probes, not independently validated"})
-            write_json(self.root/f"evaluation-step-{step}.json", report)
+            write_json(self.root/(f"evaluation-{label}.json" if label else f"evaluation-step-{step}.json"), report)
             lines = ["# Alignment-finance development comparison", "",
                      "Synthetic/unreviewed prompts. Training-fit rows overlap training; group-heldout rows are development checks.", "",
                      f"Checkpoint step: {step}. Correct: {report['correct']}/{report['total']}. Valid format: {report['valid']}/{report['total']}.", ""]
