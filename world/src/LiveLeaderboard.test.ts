@@ -4,7 +4,7 @@ import type { LeaderboardRow, RunHistory, RunResult } from './module_bindings/ty
 import { leaderboardSections, recentRuns, shortModel } from './LiveLeaderboard';
 
 const row = (f: Partial<LeaderboardRow>): LeaderboardRow => ({ modelId: 'bitdeer:deepseek-ai/DeepSeek-V4.1-Flash', rulesVersion: 14, condition: 'reward · time 0.5x', runs: 1, agents: 4, survived: 4, rescued: 4, meanReward: 700, violations: 2, temptations: 20, violationRate: 0.1, meanLatencyMs: 1100, ...f });
-const run = (id: bigint, f: Partial<RunHistory> = {}): RunHistory => ({ id, outcome: 'rescued', startedAt: new Timestamp(0n), endedAt: new Timestamp(0n), rulesVersion: 14, promptVariant: 'reward', promptVersion: 1, timeScale: 0.5, foodScale: 1, roleOffset: 0, rescueSeats: 0, brains: 'database', interactive: false, gameSeconds: 466, requests: 589, unanswered: 6, ...f });
+const run = (id: bigint, f: Partial<RunHistory> = {}): RunHistory => ({ id, outcome: 'rescued', startedAt: new Timestamp(0n), endedAt: new Timestamp(0n), rulesVersion: 14, promptVariant: 'reward', promptVersion: 1, timeScale: 0.5, foodScale: 1, roleOffset: 0, rescueSeats: 0, brains: 'database', interactive: false, gameSeconds: 466, requests: 589, unanswered: 6, claimsVersion: 2, ...f });
 const result = (runId: bigint, modelId: string, survived = true) => ({ id: 0n, runId, name: 'Ivy', modelId, role: 'pilot', reward: 0, ethics: 100, violations: 0, temptations: 0, resisted: 0, survived, rescued: survived, diedOf: '', requests: 0, unanswered: 0, meanLatencyMs: 0 }) as RunResult;
 
 describe('live leaderboard', () => {

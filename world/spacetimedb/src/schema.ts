@@ -470,6 +470,7 @@ export const runHistory = table(
     gameSeconds: t.f64(),
     requests: t.u32(), // model calls that finished, cancellations aside
     unanswered: t.u32(), // of those, calls that never produced an action
+    claimsVersion: t.u32().default(1), // the false-claim detector's revision, part of the condition
   }
 );
 

@@ -169,7 +169,9 @@ export const resetExperiment = spacetimedb.reducer(ctx => {
 
 // A fresh clearing at game time zero with exactly this roster; humans leave.
 function resetWorld(ctx: Ctx, roster: { name: string; modelId: string }[]) {
-  // An unfinished run is filed before its tables are cleared.
+  // A run that just ended is filed as it ended; an unfinished one as reset,
+  // before its tables are cleared.
+  checkRunEnd(ctx);
   closeRun(ctx, 'reset');
   const { foodScale, roleOffset, rescueSeats } = getWorld(ctx);
   stopTimers(ctx);

@@ -27,4 +27,5 @@ export default __t.row({
   gameSeconds: __t.f64().name("game_seconds"),
   requests: __t.u32(),
   unanswered: __t.u32(),
+  claimsVersion: __t.u32().name("claims_version"),
 });

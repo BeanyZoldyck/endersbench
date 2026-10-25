@@ -359,6 +359,7 @@ export const RunHistory = __t.object("RunHistory", {
   gameSeconds: __t.f64(),
   requests: __t.u32(),
   unanswered: __t.u32(),
+  claimsVersion: __t.u32(),
 });
 export type RunHistory = __Infer<typeof RunHistory>;
 
