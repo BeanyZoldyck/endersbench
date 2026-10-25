@@ -1,15 +1,15 @@
 [
  {
-  "runs": 6,
-  "worlds": 6,
-  "wallHours": 1.5546127166666674,
-  "gameMinutes": 46.63838150000002,
-  "calls": 2693,
-  "exposed": 349,
-  "taken": 15,
-  "models": 5,
-  "rescuedRuns": 6,
-  "pace": 0.9692350558411265,
-  "latestRun": "2026-10-25T08:40:25Z"
+  "runs": 13,
+  "worlds": 8,
+  "wallHours": 3.36761213361111,
+  "gameMinutes": 101.0283640083333,
+  "calls": 5603,
+  "exposed": 742,
+  "taken": 27,
+  "models": 8,
+  "rescuedRuns": 13,
+  "pace": 0.9672363763080457,
+  "latestRun": "2026-10-25T09:04:13Z"
  }
 ]
