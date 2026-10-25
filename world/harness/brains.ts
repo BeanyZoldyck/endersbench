@@ -75,6 +75,7 @@ export function openAiCompatibleBrain(opts: {
   baseUrl: string;
   apiKey: string;
   model: string;
+  extraBody?: Record<string, unknown>;
   fetchImpl?: FetchImpl;
 }): Brain {
   const fetchImpl = opts.fetchImpl ?? fetch;
@@ -97,10 +98,11 @@ export function openAiCompatibleBrain(opts: {
             { role: 'system', content: input.system },
             { role: 'user', content: userMessage(input) },
           ],
+          ...opts.extraBody,
         }
       );
       const call = reply?.choices?.[0]?.message?.tool_calls?.[0]?.function;
-      if (!call?.name) throw new Error('model answered without calling a tool');
+      if (!call?.name) throw new Error(`model answered without calling a tool (finish_reason: ${reply?.choices?.[0]?.finish_reason ?? 'none'})`);
       let args: Record<string, unknown> = {};
       try {
         args = call.arguments ? JSON.parse(call.arguments) : {};
@@ -393,9 +395,12 @@ export function codexBrain(opts: { model: string; codexHome?: string; effort?: s
   };
 }
 
-const OPENAI_COMPATIBLE: Record<string, { baseUrl: (env: Env) => string | undefined; key: (env: Env) => string | undefined; needs: string }> = {
+const OPENAI_COMPATIBLE: Record<string, { baseUrl: (env: Env) => string | undefined; key: (env: Env) => string | undefined; needs: string; extraBody?: Record<string, unknown> }> = {
   openai: { baseUrl: () => 'https://api.openai.com/v1', key: env => env.OPENAI_API_KEY, needs: 'OPENAI_API_KEY' },
   openrouter: { baseUrl: () => 'https://openrouter.ai/api/v1', key: env => env.OPENROUTER_API_KEY, needs: 'OPENROUTER_API_KEY' },
+  // DeepSeek on Bitdeer reasons by default, and the reasoning counts against
+  // max_tokens: at MAX_OUTPUT_TOKENS it never reaches the tool call.
+  bitdeer: { baseUrl: () => 'https://api-inference.bitdeer.ai/v1', key: env => env.BITDEER_API_KEY, needs: 'BITDEER_API_KEY', extraBody: { reasoning_effort: 'none' } },
   ender: { baseUrl: env => env.ENDER_BASE_URL, key: env => env.ENDER_API_KEY ?? '', needs: 'ENDER_BASE_URL' },
   ollama: { baseUrl: env => env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1', key: () => '', needs: 'OLLAMA_BASE_URL' },
 };
@@ -404,6 +409,7 @@ type Env = Record<string, string | undefined>;
 
 // modelId is "fake" or "provider:model", e.g. "ender:qwen3.8-27b",
 // "anthropic:claude-haiku-4-5", "openrouter:google/gemini-2.5-flash",
+// "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash",
 // "codex:gpt-6-luna" (set CODEX_HOME to pick the Codex login, e.g. ~/.codex-mdl).
 export function brainFor(modelId: string, env: Env): Brain {
   if (modelId === 'fake' || modelId.startsWith('fake:')) {
@@ -423,5 +429,5 @@ export function brainFor(modelId: string, env: Env): Brain {
   const baseUrl = spec.baseUrl(env);
   const apiKey = spec.key(env);
   if (!baseUrl || apiKey === undefined) throw new Error(`${provider} models need ${spec.needs}`);
-  return openAiCompatibleBrain({ baseUrl, apiKey, model });
+  return openAiCompatibleBrain({ baseUrl, apiKey, model, extraBody: spec.extraBody });
 }
