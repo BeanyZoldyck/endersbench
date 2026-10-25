@@ -56,6 +56,9 @@ def main():
     parser.add_argument("--full-stage-steps", type=int, default=200)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
     parser.add_argument("--initial-adapter", type=Path)
+    parser.add_argument("--demo-overfit", action="store_true", help="Explicit training-fit experiment on all Clearing rows, no holdout claim")
+    parser.add_argument("--save-steps", type=int, default=20)
+    parser.add_argument("--accumulation", type=int, default=2)
     args = parser.parse_args()
     if not os.environ.get("TMUX") or not args.accept_unreviewed_experiment:
         parser.error("Requires tmux and explicit acceptance of synthetic unreviewed experiment")
@@ -68,7 +71,19 @@ def main():
     run = args.output.resolve()
     run.mkdir(parents=True, exist_ok=False)
     root = args.data.resolve()
-    train, validation, curriculum, probes = prepare_rows(root)
+    if args.demo_overfit:
+        act = [json.loads(line) for line in (root/"sft_act.jsonl").read_text().splitlines() if line.strip()]
+        audit = [json.loads(line) for line in (root/"sft_audit.jsonl").read_text().splitlines() if line.strip()]
+        if len(act) != 6 or len(audit) != 12 or any(r.get("source") != "clearing-simulation" for r in act+audit):
+            raise ValueError("Unexpected Clearing corpus; inspect before training")
+        train, validation = act+audit, []
+        curriculum = act*3+audit
+        audit_probes = [next(r for r in audit if r["label"]["misaligned"]),
+                        next(r for r in audit if r["label"]["altruistic"]),
+                        next(r for r in audit if r["label"]["missed_opportunity"])]
+        probes = [{**r, "probe_split": "training_fit"} for r in act+audit_probes]
+    else:
+        train, validation, curriculum, probes = prepare_rows(root)
     (run/"data").mkdir()
     for name, rows in (("train", train), ("validation", validation), ("curriculum", curriculum), ("probes", probes)):
         write_json(run/"data"/f"{name}.json", rows)
@@ -80,8 +95,8 @@ def main():
     config.update(dataset_dir=str(run/"data"), dataset="curriculum", do_train=True, do_eval=False,
                   eval_strategy="no", learning_rate=args.learning_rate, lr_scheduler_type="constant_with_warmup" if args.initial_adapter else "cosine", warmup_steps=3 if args.initial_adapter else 5,
                   warmup_ratio=0., max_steps=args.max_steps, num_train_epochs=10.,
-                  per_device_train_batch_size=1, gradient_accumulation_steps=2,
-                  save_steps=20, save_strategy="steps", save_total_limit=None, save_only_model=False,
+                  per_device_train_batch_size=1, gradient_accumulation_steps=args.accumulation,
+                  save_steps=args.save_steps, save_strategy="steps", save_total_limit=None, save_only_model=False,
                   logging_steps=1, plot_loss=False, report_to="none", overwrite_cache=False,
                   train_on_prompt=False, mask_history=False, packing=False)
     if args.initial_adapter:
@@ -94,7 +109,7 @@ def main():
         ENDER_RESPONSE_ONLY_LOSS="1", ENDER_SPARK_GPU_LOADER="1", ENDER_CHECKPOINT_STRIDE="2",
         ENDER_INT8_COMPUTE="llm-int8", ENDER_PROFILE_STEP="0")
     os.environ.pop("ENDER_ALIGNMENT_FINANCE_BASELINE", None)
-    if args.initial_adapter:
+    if args.initial_adapter and not args.demo_overfit:
         reference = args.initial_adapter.resolve().parent.parent/"base-evaluation.json"
         if reference.is_file():
             os.environ["ENDER_ALIGNMENT_FINANCE_BASELINE"] = str(reference)
@@ -106,9 +121,13 @@ def main():
                 "dataset_hashes": {name: hashlib.sha256((root/name).read_bytes()).hexdigest()
                                    for name in ("manifest.json", "sft_act.jsonl", "sft_audit.jsonl", "pairs.jsonl")},
                 "starting_adapter": str(args.initial_adapter) if args.initial_adapter else None,
+                "demo_overfit": args.demo_overfit,
                 "optimizer_state_resumed": False, "learning_rate": args.learning_rate, "max_steps": args.max_steps,
                 "note": "Train-fit probes intentionally overlap training; group-heldout probes are development checks, not independent alignment evidence",
                 "validated_adversary": False}
+    if args.demo_overfit:
+        manifest.update(purpose="Clearing demo overfit on replay-reconstructed and counterfactual synthetic scenarios",
+                        source_commit="977a55f", note="All 18 examples are used for training. Evaluation is training-fit only, not heldout or independent alignment evidence.")
     write_json(run/"manifest.json", manifest)
     (run/"sources").mkdir()
     for name in ("run_alignment_finance.py", "alignment_finance_monitor.py", "run_sft_demo.py", "retep_shadow.py", "spark_loss.py", "prepare_optimized_config.py"):
