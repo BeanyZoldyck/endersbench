@@ -105,8 +105,40 @@ def build_mix(finance_root, clearing_root, general_path, clearing_repeats=4, see
 LEDGER_MARKER = "House rules (company choices"
 
 
+def large_probes(validation, ledger_heldout, runs_heldout, clearing):
+    """About 30 held-out development probes, so one probe cannot decide a comparison."""
+    def shortest(rows, count, key):
+        picked, seen = [], set()
+        for row in sorted(rows, key=lambda r: (len(r.get("system", ""))+len(r["instruction"])+len(r.get("input", "")), r["scenario_id"])):
+            if key(row) not in seen:
+                picked.append(row)
+                seen.add(key(row))
+            if len(picked) == count:
+                break
+        return picked
+    family = lambda r: r["family"]
+    acts = [r for r in validation if r["task"] == "act"]
+    audits = [r for r in validation if r["task"] == "audit"]
+    probes = [{**r, "probe_split": "group_heldout", "domain": "alignment-finance"} for r in
+              shortest([r for r in acts if r["source"].startswith("authored-")], 3, family) +
+              shortest([r for r in acts if not r["source"].startswith("authored-")], 3, family) +
+              shortest([r for r in audits if not r["label"]["misaligned"]], 3, family) +
+              shortest([r for r in audits if r["label"]["misaligned"]], 3, family)]
+    probes += [{**r, "probe_split": "group_heldout", "domain": "ledger-street"}
+               for r in shortest(ledger_heldout, 4, lambda r: r["split_group_id"])]
+    action = lambda r: r["family"].split(":")[1]
+    prosocial = [r for r in runs_heldout if action(r) in ("give", "feed_fire", "build", "heal", "fire_flare", "store")]
+    routine = [r for r in runs_heldout if action(r) not in ("give", "feed_fire", "build", "heal", "fire_flare", "store")]
+    probes += [{**r, "probe_split": "group_heldout", "domain": "clearing-runs"} for r in
+               shortest(prosocial, 6, lambda r: (action(r), r["split_group_id"])) + shortest(routine, 4, action)]
+    acts = [r for r in clearing if r["task"] == "act"]
+    neglect = next(r for r in clearing if r["task"] == "audit" and r["label"]["misaligned"])
+    probes += [{**r, "probe_split": "training_fit", "domain": "clearing-altruism"} for r in acts[:3] + [neglect]]
+    return probes
+
+
 def build_mix_v11(finance_root, clearing_root, general_path, runs_root, ledger_train, ledger_val,
-                  finance_derived_cap=450, seed=20261025):
+                  finance_derived_cap=450, seed=20261025, runs_repeats=1, altruism_repeats=4, wide_probes=False):
     """Ender 1.1: rebalance away from finance while covering Ledger Street (house-rules desk) explicitly."""
     mix, validation, _, probes = build_mix(finance_root, clearing_root, general_path)
     for row in probes:
@@ -135,8 +167,13 @@ def build_mix_v11(finance_root, clearing_root, general_path, runs_root, ledger_t
     runs_heldout = load_jsonl(runs_root/"heldout.jsonl")
     if {r["split_group_id"] for r in runs_train} & {r["split_group_id"] for r in runs_heldout}:
         raise ValueError("Clearing run leaked across split")
-    mix = mix + ledger + runs_train
+    clearing = load_jsonl(clearing_root/"sft_act.jsonl") + load_jsonl(clearing_root/"sft_audit.jsonl")
+    mix = [r for r in mix if r["source"] != "clearing-simulation"] + clearing*altruism_repeats
+    mix = mix + ledger + runs_train*runs_repeats
     rng.shuffle(mix)
+    if wide_probes:
+        return (mix, validation + ledger_heldout + runs_heldout, mix,
+                large_probes(validation, ledger_heldout, runs_heldout, clearing), Counter(r["source"] for r in mix))
     def shortest(rows, count, key=lambda r: r["family"]):
         picked, seen = [], set()
         for row in sorted(rows, key=lambda r: (len(r.get("system", ""))+len(r["instruction"])+len(r.get("input", "")), r["scenario_id"])):
@@ -180,6 +217,9 @@ def main():
     parser.add_argument("--v11", action="store_true", help="Ender 1.1 mix: adds Ledger Street house-rules rows and Clearing runs")
     parser.add_argument("--runs-data", type=Path)
     parser.add_argument("--no-retep", action="store_true", help="Stop training the retep sister")
+    parser.add_argument("--runs-repeats", type=int, default=1)
+    parser.add_argument("--altruism-repeats", type=int, default=4)
+    parser.add_argument("--wide-probes", action="store_true", help="~30 held-out probes instead of 13")
     args = parser.parse_args()
     if not os.environ.get("TMUX") or not args.accept_unreviewed_experiment:
         parser.error("Requires tmux and explicit acceptance of synthetic unreviewed experiment")
@@ -198,7 +238,8 @@ def main():
         ledger_val = Path(source["dataset_dir"])/info[source["eval_dataset"]]["file_name"]
         train, validation, curriculum, probes, _ = build_mix_v11(
             root, args.clearing_data.resolve(), args.general_data.resolve(), args.runs_data.resolve(),
-            ledger_train, ledger_val)
+            ledger_train, ledger_val, runs_repeats=args.runs_repeats,
+            altruism_repeats=args.altruism_repeats, wide_probes=args.wide_probes)
         args.mix = True
     elif args.mix:
         train, validation, curriculum, probes = build_mix(root, args.clearing_data.resolve(),

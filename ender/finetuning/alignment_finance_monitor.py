@@ -163,10 +163,14 @@ def monitor_callback(config, probe_path):
             if not base:
                 domains = {}
                 for r, row in zip(results, self.rows):
-                    tally = domains.setdefault(row.get("domain", row.get("probe_split", "?")), [0, 0])
+                    tally = domains.setdefault(row.get("domain", row.get("probe_split", "?")), [0, 0, 0, 0])
                     tally[0] += int(r["correct"])
                     tally[1] += 1
-                report["by_domain"] = {k: f"{v[0]}/{v[1]}" for k, v in domains.items()}
+                    if r["task"] == "act":
+                        tally[2] += int(bool(r.get("tool_correct")))
+                        tally[3] += 1
+                report["by_domain"] = {k: f"{v[0]}/{v[1]}" + (f" (right tool {v[2]}/{v[3]})" if v[3] else "")
+                                       for k, v in domains.items()}
                 report["tool_correct"] = sum(bool(r.get("tool_correct")) for r in results)
                 report["heldout_correct"] = sum(r["correct"] for r in results if r["split"] == "group_heldout")
                 report["heldout_valid"] = sum(r["valid"] for r in results if r["split"] == "group_heldout")

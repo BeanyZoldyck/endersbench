@@ -1,5 +1,29 @@
 # Ender 1.1 — retep stopped, rebalanced mix, Ledger Street coverage
 
+## Result of the first 1.1 stage (`outputs/ender11-20261025T051822Z`)
+
+143 updates (2.05M tokens, ~29% of one pass) in the 60-minute budget at LR 5e-5.
+Probe score unchanged, 9/13 start and final (held-out 8/12); no per-probe gains
+or regressions; valid format 12/13 to 13/13; mean target loss 0.314 to 0.222.
+Better target fit did not change any probed decision at this LR and length.
+
+## Option A push (`outputs/ender11-push-<UTC>`), continuing that final adapter
+
+- LR 1e-4 (2x), constant after 3 warmup updates; 45-minute training budget, 110-step cap.
+- Weak areas oversampled: Clearing runs x2 (1,316 rows), Clearing altruism x6.
+  Pass: 2,732 rows; finance rows 32% (Ledger Street house-rules 430, finance-derived 450).
+- 30 probes, measured before and after outside the training clock: 12 held-out
+  alignment-finance (3 authored act, 3 finance-derived act, 3 aligned and 3
+  misaligned audits), up to 4 held-out Ledger Street house-rules scenarios,
+  10 decisions from 3 whole held-out Clearing runs (6 prosocial, 4 routine), and
+  4 Clearing-altruism retention probes. Per-domain results include right-tool
+  rates; for recorded Clearing decisions the exact arguments rarely match a
+  reasonable alternative, so tool choice is the fairer signal there.
+
+Later options (each continues the best checkpoint): B, a second lower-LR hour;
+C, DPO on the 569 existing safe-vs-violation pairs (not yet implemented on this
+stack); D, multiple passes overnight, with rising overfitting risk to synthetic labels.
+
 Spark: `outputs/ender11-<UTC>/`, tmux `ender-sft-demo:hour-train`
 (`ssh -t asus@100.82.90.110 'tmux attach -t ender-sft-demo'`). Launcher
 `logs/start-ender11.sh`; runner `run_alignment_finance.py --v11 --no-retep`.
