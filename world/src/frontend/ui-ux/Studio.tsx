@@ -120,7 +120,7 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
       const url = new URL(window.location.href);
       url.searchParams.delete('tour');
       window.history.replaceState(null, '', url);
-    } else window.location.assign(`${exhibitHref(EXHIBITS[0])}&tour=0`);
+    } else window.location.assign(`${exhibitHref(EXHIBITS[0])}&tour=0&studio=monitor`);
   };
   useEffect(() => {
     if (!tourEnabled || source.live) return;
@@ -133,7 +133,7 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
     }
     const step = tourStep(window.location.search);
     if (step === null) return;
-    const timer = window.setTimeout(() => window.location.assign(nextTourHref(step)), 40_000);
+    const timer = window.setTimeout(() => window.location.assign(`${nextTourHref(step)}&studio=monitor`), 40_000);
     return () => window.clearTimeout(timer);
   }, [tourEnabled, source.live, state.runId, state.screen]);
   useEffect(() => {
