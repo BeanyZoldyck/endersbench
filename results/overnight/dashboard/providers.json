@@ -1,18 +1,18 @@
 [
  {
+  "provider": "Bitdeer Model Studio",
+  "calls": 19697,
+  "answerSeconds": 1.6681386973180077
+ },
+ {
   "provider": "Anthropic",
   "calls": 19249,
   "answerSeconds": 1.2809474534744305
  },
  {
-  "provider": "Bitdeer Model Studio",
-  "calls": 19074,
-  "answerSeconds": 1.503330508474576
- },
- {
   "provider": "Runpod (our vLLM endpoint: abliterated)",
-  "calls": 13356,
-  "answerSeconds": 4.511553177004538
+  "calls": 13565,
+  "answerSeconds": 4.622911681336714
  },
  {
   "provider": "Runpod (our vLLM endpoint: Ender and its base)",
