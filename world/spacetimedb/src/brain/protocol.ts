@@ -85,13 +85,21 @@ export const PROVIDERS: Record<string, ProviderSpec> = {
   // Ender is a Qwen3 fine-tune on vLLM (Runpod: https://api.runpod.ai/v2/<endpoint>/openai/v1,
   // model "ender"). Qwen3 thinks by default and runs out of max_tokens before answering.
   ender: { api: 'openai-chat', baseUrlEnv: 'ENDER_BASE_URL', keyEnv: 'ENDER_API_KEY', keyOptional: true, extraBody: { chat_template_kwargs: { enable_thinking: false } } },
+  // Featherless serves Hugging Face models, abliterated ones among them. It returns a tool
+  // call only when the model chooses one (tool_choice "required" is not enforced), and
+  // these Qwen3 models choose one only while thinking: with enable_thinking false they
+  // answer in plain text. Thinking needs room: on real survivors' observations the
+  // abliterated Qwen3-14B called a tool 9 of 10 times, mostly in 2-4 s and under 100
+  // tokens, but once used 832 tokens (67 s) and once ran out at 1024. A 14B costs 1 of
+  // a plan's concurrency units (4 on Premium); a 27B costs 2, so only two calls fit.
+  featherless: { api: 'openai-chat', baseUrl: 'https://api.featherless.ai/v1', keyEnv: 'FEATHERLESSAI_API_KEY', models: [{ prefix: '', extraBody: {}, maxTokens: 1024 }] },
   ollama: { api: 'openai-chat', baseUrlEnv: 'OLLAMA_BASE_URL', baseUrl: 'http://localhost:11434/v1' },
   anthropic: { api: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', keyEnv: 'ANTHROPIC_API_KEY' },
 };
 
 // The providers the module can call itself. Codex runs a CLI and fake runs
 // locally, so they stay with the harness; ollama is usually on localhost.
-export const DATABASE_PROVIDERS = ['bitdeer', 'openai', 'anthropic', 'openrouter', 'ender'];
+export const DATABASE_PROVIDERS = ['bitdeer', 'openai', 'anthropic', 'openrouter', 'ender', 'featherless'];
 
 // "provider:model", e.g. "bitdeer:deepseek-ai/DeepSeek-V4.1-Flash".
 export function splitModelId(modelId: string) {

@@ -34,7 +34,7 @@ export function parseSavedRecordings(value: unknown): SavedRecording[] {
     if (!entry || typeof entry !== 'object') throw new Error('Invalid saved recording.');
     const row = entry as Record<string, unknown>;
     if (typeof row.id !== 'string' || !isSavedRunId(row.id)
-      || !['Ender', 'Grok', 'Claude', 'ChatGPT'].includes(String(row.model))
+      || !(BENCHMARK_MODELS as string[]).includes(String(row.model))
       || typeof row.modelId !== 'string' || !row.modelId.trim() || row.modelId.length > 200
       || (row.scenario !== 'clearing-charter' && row.scenario !== 'ledger')
       || typeof row.label !== 'string' || !row.label.trim() || row.label.length > 300

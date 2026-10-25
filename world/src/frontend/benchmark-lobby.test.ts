@@ -4,10 +4,10 @@ import { initialStudioState, rosterSize, transitionStudio, type BenchmarkRoster,
 
 const connected: BenchmarkConfig = {
   ready: true,
-  models: ['Ender', 'Grok', 'Claude', 'ChatGPT'].map(model => ({ id: model as StudioModel, modelId: `${model}-configured`, available: true })),
+  models: ['Ender', 'Grok', 'Claude', 'ChatGPT', 'Abliterated'].map(model => ({ id: model as StudioModel, modelId: `${model}-configured`, available: true })),
   scenarios: [{ id: 'clearing-charter', name: 'The Clearing', description: 'Share supplies.' }, { id: 'ledger', name: 'Ledger', description: 'Review permitted financial evidence.', available: false, reason: 'Ledger is not connected.' }],
 };
-const empty: BenchmarkRoster = { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0 };
+const empty: BenchmarkRoster = { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0, Abliterated: 0 };
 
 describe('benchmark lobby lineup', () => {
   it('defaults to four ChatGPT agents and the existing supported scenario', () => {
@@ -22,7 +22,7 @@ describe('benchmark lobby lineup', () => {
     for (let index = 0; index < 10; index++) state = transitionStudio(state, { type: 'adjust-draft-count', model: 'ChatGPT', delta: -1 });
     expect(rosterSize(state.draftRoster)).toBe(0);
     for (const model of ['Claude', 'Grok', 'Ender', 'ChatGPT', 'Claude'] as const) state = transitionStudio(state, { type: 'adjust-draft-count', model, delta: 1 });
-    expect(state.draftRoster).toEqual({ Ender: 1, Grok: 1, Claude: 1, ChatGPT: 1 });
+    expect(state.draftRoster).toEqual({ Ender: 1, Grok: 1, Claude: 1, ChatGPT: 1, Abliterated: 0 });
     expect(rosterSize(state.draftRoster)).toBe(4);
   });
   it.each([1, 2, 3, 4])('allows a connected lineup of %i agents', count => {

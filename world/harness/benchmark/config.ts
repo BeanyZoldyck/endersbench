@@ -6,12 +6,14 @@ import { MODEL_IDS, type ModelName, type BenchmarkScenario } from './types.js';
 import { BENCHMARK_SCENARIOS } from './scenarios.js';
 
 type Environment = Record<string, string | undefined>;
-const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama']);
+const PROVIDERS = new Set(['ender', 'openai', 'openrouter', 'anthropic', 'codex', 'ollama', 'featherless']);
 const MODEL_ENV: Record<ModelName, string> = {
   Ender: 'BENCHMARK_MODEL_ENDER',
   Grok: 'BENCHMARK_MODEL_GROK',
   Claude: 'BENCHMARK_MODEL_CLAUDE',
   ChatGPT: 'BENCHMARK_MODEL_CHATGPT',
+  // An abliterated (refusal-removed) open model, e.g. featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2.
+  Abliterated: 'BENCHMARK_MODEL_ABLITERATED',
 };
 
 export function validModelId(value: string | null | undefined): value is string {

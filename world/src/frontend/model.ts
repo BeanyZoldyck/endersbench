@@ -1,8 +1,8 @@
 export type StudioScreen = 'landing' | 'models' | 'setup' | 'single' | 'briefing' | 'monitor' | 'follow' | 'outcome' | 'lending' | 'compare' | 'context' | 'method';
-export type StudioModel = 'Ender' | 'Grok' | 'Claude' | 'ChatGPT';
+export type StudioModel = 'Ender' | 'Grok' | 'Claude' | 'ChatGPT' | 'Abliterated';
 export type BenchmarkRoster = Record<StudioModel, number>;
 export const MAX_BENCHMARK_AGENTS = 4;
-export const BENCHMARK_MODELS: StudioModel[] = ['Ender', 'Grok', 'Claude', 'ChatGPT'];
+export const BENCHMARK_MODELS: StudioModel[] = ['Ender', 'Grok', 'Claude', 'ChatGPT', 'Abliterated'];
 export function rosterSize(roster: BenchmarkRoster): number {
   return BENCHMARK_MODELS.reduce((total, model) => total + roster[model], 0);
 }
@@ -73,10 +73,10 @@ export function initialStudioState(search: string): StudioState {
   const screen = known.includes(route as StudioScreen) ? route as StudioScreen : params.has('replay') || params.has('live') ? 'monitor' : 'landing';
   const replayName = params.get('replay')?.match(/\/demo\/([a-z0-9-]+)\.json(?:\.gz)?$/)?.[1];
   return {
-    screen, previous: [], draftModel: 'ChatGPT', draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 4 }, draftScenario: 'clearing-charter', draftMode: 'swarm', briefingScenario: 'clearing',
+    screen, previous: [], draftModel: 'ChatGPT', draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 4, Abliterated: 0 }, draftScenario: 'clearing-charter', draftMode: 'swarm', briefingScenario: 'clearing',
     runId: params.get('run') || replayName || 'clearing-charter-v8-admission', selectedAgentId: null,
     eventIndex: 0, replayTimeMs: 0, restoreNonce: 0, playing: false,
-    historyModel: ['Ender', 'Grok', 'Claude', 'ChatGPT'].includes(params.get('historyModel') ?? '') ? params.get('historyModel') as StudioModel : 'all', contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',
+    historyModel: (BENCHMARK_MODELS as string[]).includes(params.get('historyModel') ?? '') ? params.get('historyModel') as StudioModel : 'all', contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',
     comparePair: ['Ender', 'Grok'], pendingComparePair: null, landingSection: 'top', previewTab: 'clearing',
   };
 }
@@ -109,7 +109,7 @@ export function transitionStudio(state: StudioState, action: StudioAction): Stud
       const previous = state.previous[state.previous.length - 1];
       return previous ? { ...state, ...previous, previous: state.previous.slice(0, -1), restoreNonce: state.restoreNonce + 1, playing: false } : { ...state, screen: action.fallback ?? 'compare', restoreNonce: state.restoreNonce + 1, playing: false };
     }
-    case 'select-draft-model': return { ...state, draftModel: action.model, draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0, [action.model]: Math.max(1, rosterSize(state.draftRoster)) } };
+    case 'select-draft-model': return { ...state, draftModel: action.model, draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0, Abliterated: 0, [action.model]: Math.max(1, rosterSize(state.draftRoster)) } };
     case 'adjust-draft-count': {
       if ((action.delta === 1 && rosterSize(state.draftRoster) >= MAX_BENCHMARK_AGENTS) || (action.delta === -1 && state.draftRoster[action.model] <= 0)) return state;
       return { ...state, draftRoster: { ...state.draftRoster, [action.model]: state.draftRoster[action.model] + action.delta } };

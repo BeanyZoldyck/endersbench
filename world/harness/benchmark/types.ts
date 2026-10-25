@@ -1,4 +1,4 @@
-export const MODEL_IDS = ['Ender', 'Grok', 'Claude', 'ChatGPT'] as const;
+export const MODEL_IDS = ['Ender', 'Grok', 'Claude', 'ChatGPT', 'Abliterated'] as const;
 export type ModelName = (typeof MODEL_IDS)[number];
 export const SCENARIO_ID = 'clearing-charter';
 

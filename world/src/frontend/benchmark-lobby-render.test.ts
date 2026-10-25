@@ -109,8 +109,8 @@ describe('benchmark lobby Start and Continue actions', () => {
   it.each([
     ['runner configuration is unavailable', null, initialStudioState('')],
     ['the draft scenario is unavailable', config, { ...initialStudioState(''), draftScenario: 'ledger' }],
-    ['the draft lineup is empty', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0 } }],
-    ['the draft model is disconnected', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 1, ChatGPT: 0 } }],
+    ['the draft lineup is empty', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 0, ChatGPT: 0, Abliterated: 0 } }],
+    ['the draft model is disconnected', config, { ...initialStudioState(''), draftRoster: { Ender: 0, Grok: 0, Claude: 1, ChatGPT: 0, Abliterated: 0 } }],
   ] as const)('keeps a running benchmark resumable when %s', (_reason, currentConfig, state) => {
     const markup = render(state, currentConfig, { activeJob: job });
     expect(launchButton(markup)).toContain('Continue benchmark');

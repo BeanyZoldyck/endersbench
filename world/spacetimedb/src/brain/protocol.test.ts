@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildModelCall, decisionFromResponse, userMessage, type Tool } from './protocol';
+import { DATABASE_PROVIDERS, buildModelCall, decisionFromResponse, userMessage, type Tool } from './protocol';
 
 const tools: Tool[] = [
   { name: 'move_to', description: 'Walk', parameters: { type: 'object', properties: { x: { type: 'number' } }, required: ['x'] } },
@@ -9,6 +9,19 @@ const input = { agentName: 'Ada', observation: obs, tools, system: 'SYS' };
 const envOf = (vars: Record<string, string>) => (name: string) => vars[name];
 
 describe('buildModelCall', () => {
+  test('featherless leaves the abliterated Qwen3 thinking, with room to think before its tool call', () => {
+    const call = buildModelCall('featherless:huihui-ai/Huihui-Qwen3-14B-abliterated-v2', input, envOf({ FEATHERLESSAI_API_KEY: 'k' }));
+    const body = call.body as any;
+    expect(call.url).toBe('https://api.featherless.ai/v1/chat/completions');
+    expect(call.headers.authorization).toBe('Bearer k');
+    expect(body.model).toBe('huihui-ai/Huihui-Qwen3-14B-abliterated-v2');
+    expect(body.max_tokens).toBe(1024);
+    expect(body.chat_template_kwargs).toBeUndefined();
+    expect(body.tool_choice).toBe('required');
+    expect(DATABASE_PROVIDERS).toContain('featherless');
+    expect(() => buildModelCall('featherless:m', input, envOf({}))).toThrow('featherless models need FEATHERLESSAI_API_KEY');
+  });
+
   test('GLM on bitdeer thinks at reasoning_effort low (it refuses none), with headroom before its tool call', () => {
     for (const model of ['zai-org/GLM-5.3', 'zai-org/GLM-5.3-Flash']) {
       const body = buildModelCall(`bitdeer:${model}`, input, envOf({ BITDEER_API_KEY: 'k' })).body as any;

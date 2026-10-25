@@ -4,7 +4,7 @@ import { formatClock } from '../data';
 import { ModelBuddy } from './ModelBuddy';
 import '../run-history.css';
 
-const filters: HistoryModel[] = ['all', 'Ender', 'Grok', 'Claude', 'ChatGPT'];
+const filters: HistoryModel[] = ['all', 'Ender', 'Grok', 'Claude', 'ChatGPT', 'Abliterated'];
 const recordedDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 export function RunHistory({ history, model, onFilter, onOpen }: {
