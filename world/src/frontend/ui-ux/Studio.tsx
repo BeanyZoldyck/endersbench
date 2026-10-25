@@ -25,7 +25,6 @@ import { RunHistory } from './RunHistory';
 import { ObservedComparison } from './ObservedComparison';
 import { FrostedCursor, useLandingMotion } from './StudioMotion';
 
-const MODELS: StudioModel[] = ['Ender', 'Grok', 'Claude', 'ChatGPT'];
 const playbackIcon = { previous: '/studio/f7bee.svg', play: '/studio/fbfe3.svg', stop: '/studio/4660a.svg', next: '/studio/aff88.svg' };
 
 export default function Studio() {
@@ -203,7 +202,7 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
       <button className="header-cta" aria-current={state.screen === 'setup' || state.screen === 'single' ? 'page' : undefined} onClick={() => nav('setup')}>Start a benchmark <span>↗</span></button>
     </header>
 
-    {['landing', 'setup', 'single', 'models', 'compare'].includes(state.screen) && <ActiveBenchmarks />}
+    {['landing', 'setup', 'single', 'compare'].includes(state.screen) && <ActiveBenchmarks />}
 
     {!source.live && isSavedRunId(state.runId) && ['monitor', 'follow', 'outcome', 'context', 'method'].includes(state.screen) && <p className="recording-provenance" role="status">{selectedRecording ? `${recordingIdentity(selectedRecording).label} · ${recordingIdentity(selectedRecording).modelIds} · ${selectedRecording.status === 'partial' ? 'Partial recording · Capture ended before successful completion. Scores are the last captured values.' : 'Completed benchmark recording'}` : history.status === 'unavailable' ? 'Local recording metadata unavailable. Replay data may still be accessible.' : history.status === 'ready' ? 'Recording metadata not found. Replay data may still be accessible.' : 'Loading saved benchmark metadata…'}</p>}
 
@@ -218,10 +217,8 @@ function StudioPages({ state, dispatch, source: rawSource }: { state: StudioStat
     </main>}
 
     {state.screen === 'models' && <main className="studio-main models-page">
-      <PageHead eyebrow="" title="Choose a model" description="Explore the observed ethics and task-performance findings before deciding what to run." />
-      <div className="model-browse-tabs" aria-label="Models">{MODELS.map(model => <button key={model} aria-pressed={state.draftModel === model} onClick={() => dispatch({ type: 'select-draft-model', model })}><ModelLogo model={model} /><span>{model}</span></button>)}</div>
-      <ObservedComparison selectedModel={state.draftModel} />
-      <button className="button gold" onClick={() => nav('setup')}>Set up a benchmark with {state.draftModel} ↗</button>
+      <ObservedComparison />
+      <div className="showcase-actions"><span>Build your own lineup to run a new benchmark.</span><button className="button gold" onClick={() => nav('setup')}>Set up a benchmark ↗</button></div>
     </main>}
 
     {(state.screen === 'setup' || state.screen === 'single') && <BenchmarkLobby state={state} dispatch={dispatch} config={benchmark.config} error={benchmark.error} starting={benchmark.starting} onStart={startBenchmark} onRetry={benchmark.retry} onDetails={() => { dispatch({ type: 'select-briefing-scenario', scenario: 'clearing' }); nav('briefing'); }} />}
