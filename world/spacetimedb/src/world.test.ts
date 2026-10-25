@@ -4,7 +4,7 @@ import { createModuleTestHarness, TestAuth } from 'spacetimedb/server/test-utils
 import spacetimedb from './schema';
 import * as moduleExports from './index';
 import * as R from './rules';
-import { SCENARIO, cratePosition, distanceToRiver, riverPath } from './scenario';
+import { SCENARIO, cratePosition, distanceToRiver, riverPath, wreckFuselage } from './scenario';
 import { isBerry, isWoody, yields } from './resources';
 import { closestOnSegment, inBush, staticColliders } from './physics';
 import { knowsOfCrate } from './crate';
@@ -278,9 +278,29 @@ describe('physics', () => {
       if (a.intentKind === 'idle') reason = a.wakeReason;
     }
 
-    expect(reason).toBe('blocked');
+    expect(reason).toBe('blocked by a tree');
     const a = agentNamed(t, 'Ada');
     expect(dist(a.x, a.y, cx, lane.y)).toBeGreaterThan(3);
+  });
+
+  test('a take whose walk is blocked wakes the agent saying the take was not done, and what was in the way', () => {
+    const t = freshWorld();
+    const cx = lane.x0 + 7;
+    for (let i = 0; i < 12; i++) addTree(t, cx + Math.cos((i / 12) * Math.PI * 2) * 3, lane.y + Math.sin((i / 12) * Math.PI * 2) * 3);
+    const drop = t.db.container.insert({ id: 0n, kind: 'drop', x: cx, y: lane.y, ownerAgentId: 0n, label: 'a dropped pile' });
+    t.db.item.insert({ id: 0n, agentId: 0n, containerId: drop.id, kind: 'berries', qty: 3 });
+    spawn(t, 'Ada', lane.x0, lane.y);
+
+    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(drop.id), item: 'berries', qty: 1 } }).status).toBe('done');
+    let reason = '';
+    for (let elapsed = 0; elapsed < 4_000 + R.STUCK_MS && !reason; elapsed += 100) {
+      advance(t, 100);
+      const a = agentNamed(t, 'Ada');
+      if (a.intentKind === 'idle') reason = a.wakeReason;
+    }
+
+    expect(reason).toBe('failed: take: blocked by a tree on the way');
+    expect(carried(t, 'Ada', 'berries')).toBe(0);
   });
 
   test("walking to a chest's own coordinates ends beside it as arrived, within reach", () => {
@@ -1326,6 +1346,61 @@ describe('items', () => {
     expect(agentNamed(t, 'Ada').hunger).toBeCloseTo(30 + R.FOOD_VALUE.ration, 3);
   });
 
+  test('eat with a qty eats that many in one move', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'berries', qty: 10 });
+    setAgent(t, 'Ada', { hunger: 10 });
+
+    expect(decide(t, 'Ada', { name: 'eat', args: { item: 'berries', qty: 5 } }).status).toBe('done');
+
+    expect(carried(t, 'Ada', 'berries')).toBe(5);
+    expect(agentNamed(t, 'Ada').hunger).toBeCloseTo(10 + 5 * R.FOOD_VALUE.berries, 3);
+  });
+
+  test('eating more than you need stops once you are full, keeping the rest', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'berries', qty: 10 });
+    setAgent(t, 'Ada', { hunger: 90 });
+
+    decide(t, 'Ada', { name: 'eat', args: { item: 'berries', qty: 10 } });
+
+    expect(carried(t, 'Ada', 'berries')).toBe(8);
+    expect(agentNamed(t, 'Ada').hunger).toBe(100);
+  });
+
+  test('eat with a qty larger than what you carry eats all of it', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'ration', qty: 2 });
+    setAgent(t, 'Ada', { hunger: 10 });
+
+    expect(decide(t, 'Ada', { name: 'eat', args: { item: 'ration', qty: 5 } }).status).toBe('done');
+
+    expect(carried(t, 'Ada', 'ration')).toBe(0);
+    expect(agentNamed(t, 'Ada').hunger).toBeCloseTo(10 + 2 * R.FOOD_VALUE.ration, 3);
+  });
+
+  test('the eat tool offers a qty', () => {
+    const eat = TOOLS.find(tool => tool.name === 'eat')!;
+    expect(eat.parameters.properties.qty).toMatchObject({ type: 'integer', minimum: 1 });
+    expect(eat.parameters.required).toEqual(['item']);
+  });
+
+  test('the observation says how many things you carry and the most you can', () => {
+    const t = freshWorld();
+    const ada = spawn(t, 'Ada');
+    t.db.item.insert({ id: 0n, agentId: ada.id, containerId: 0n, kind: 'wood', qty: 12 });
+    setAgent(t, 'Ada', { wake: true, wakeReason: 'test', pendingRequestId: 0n });
+    t.withReducerTx(internal, ctx => brainTick(ctx, { timer: timerRow }));
+    const you = JSON.parse(pendingFor(t, ada.id).at(-1)!.observation).you;
+
+    const count = ([...t.db.item.iter()] as any[]).filter(i => i.agentId === ada.id).reduce((n, i) => n + i.qty, 0);
+    expect(count).toBeGreaterThanOrEqual(12);
+    expect(you.carrying).toEqual({ count, max: R.CARRY_CAP });
+  });
+
   test('eating food you do not have fails', () => {
     const t = freshWorld();
     spawn(t, 'Ada');
@@ -2320,6 +2395,37 @@ describe('acting at a distance', () => {
     expect(lastReason(t, 'Ada')).toBe('done: take');
   });
 
+  test('a survivor on the far side of the fuselage walks up to it and takes from the wreck', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const w = wreck(t);
+    const f = wreckFuselage(t.db.world.id.find(0)!);
+    // Due north of the wreck's container point, across the fuselage: where Bo
+    // stalled in the first Ender run, walking straight at it.
+    setAgent(t, 'Ada', { x: w.x, y: f.y1 - f.radius - R.AGENT_RADIUS - 6 });
+
+    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: 1 } }).status).toBe('done');
+    run(t, 4_000);
+
+    expect(carried(t, 'Ada', 'ration')).toBe(1);
+    expect(lastReason(t, 'Ada')).toBe('done: take');
+  });
+
+  test('a survivor touching any part of the fuselage can reach into the wreck', () => {
+    const t = freshWorld();
+    spawn(t, 'Ada');
+    const w = wreck(t);
+    const f = wreckFuselage(t.db.world.id.find(0)!);
+    // Pressed against the north side, near one end: far from the container point.
+    setAgent(t, 'Ada', { x: f.x1 + 1, y: f.y1 - f.radius - R.AGENT_RADIUS });
+    expect(dist(f.x1 + 1, f.y1 - f.radius - R.AGENT_RADIUS, w.x, w.y)).toBeGreaterThan(R.REACH + 4);
+
+    expect(decide(t, 'Ada', { name: 'take', args: { container_id: Number(w.id), item: 'ration', qty: 1 } }).status).toBe('done');
+
+    expect(carried(t, 'Ada', 'ration')).toBe(1);
+    expect(agentNamed(t, 'Ada').intentKind).not.toBe('approach');
+  });
+
   test('giving to someone out of reach walks up to them, even as they move', () => {
     const t = freshWorld();
     const ada = spawn(t, 'Ada', 50, 64);
@@ -2409,8 +2515,8 @@ function homePositions() {
 describe('rules v11 geometry', () => {
   const worldOf = (t: T) => t.db.world.id.find(0)!;
 
-  test('the rules are version 13, with survivors walking 5 tiles per game second', () => {
-    expect(SCENARIO.version).toBe(13);
+  test('the rules are version 14, with survivors walking 5 tiles per game second', () => {
+    expect(SCENARIO.version).toBe(14);
     expect(SCENARIO.walkSpeed).toBe(5);
   });
 

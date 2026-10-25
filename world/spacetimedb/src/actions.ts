@@ -2,8 +2,10 @@
 // model was thinking) and applies it. Never throws for a bad action, so the
 // failure is recorded rather than rolled back. Models and humans share this.
 
-import type { Agent, Ctx } from './ctx';
+import type { Agent, Ctx, World } from './ctx';
 import { clampToCircle, distance, getWorld, wakeAgent } from './ctx';
+import { closestOnSegment } from './physics';
+import { wreckFuselage } from './scenario';
 import { judgeCrateTalk, recordStash } from './crate';
 import { ensureScore, judgeClaims, recordViolation, resolveTemptation } from './ethics';
 import { EXPLORING, exploreTarget, hasDiscovered } from './explore';
@@ -69,10 +71,23 @@ function setIntent(ctx: Ctx, me: Agent, fields: Partial<Agent>) {
 
 const WHILE_PINNED = ['say', 'whisper', 'idle', 'eat', 'heal', 'fire_flare'];
 
-// How close one must stand to a container to reach into it, from its centre: the
-// supply crate is solid and wide, so its reach starts at its sides.
-export function containerReach(c: { kind: string }): number {
-  return c.kind === 'crate' ? CRATE_REACH : REACH;
+// Where someone standing at (x, y) reaches into a container from, and how close to
+// that point they must be. From its centre, but the supply crate is solid and wide,
+// so its reach starts at its sides, and the wreck can be reached into from anywhere
+// along its fuselage (rules v14: from the far side, the walk to the wreck's centre
+// used to stall head-on against it).
+export function containerReachFrom(w: World, c: { kind: string; x: number; y: number }, x: number, y: number) {
+  if (c.kind === 'wreck') {
+    const f = wreckFuselage(w);
+    const [fx, fy] = closestOnSegment({ tag: 'wreck', id: 0n, x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, r: f.radius }, x, y);
+    return { x: fx, y: fy, within: f.radius + REACH };
+  }
+  return { x: c.x, y: c.y, within: c.kind === 'crate' ? CRATE_REACH : REACH };
+}
+
+export function inReachOf(w: World, c: { kind: string; x: number; y: number }, x: number, y: number): boolean {
+  const r = containerReachFrom(w, c, x, y);
+  return distance(x, y, r.x, r.y) <= r.within;
 }
 
 // The container an action names, as this survivor knows the world. The supply
@@ -92,7 +107,7 @@ function containerFor(ctx: Ctx, me: Agent, v: unknown) {
 export function reachFor(ctx: Ctx, me: Agent, name: string, args: Record<string, unknown>): { x: number; y: number; within: number; agentId: bigint } | null {
   if (name === 'take' || name === 'store') {
     const c = containerFor(ctx, me, args.container_id);
-    return c ? { x: c.x, y: c.y, within: containerReach(c), agentId: 0n } : null;
+    return c ? { ...containerReachFrom(getWorld(ctx), c, me.x, me.y), agentId: 0n } : null;
   }
   if (name === 'give' || name === 'heal') {
     const target = id(args.agent_id) == null ? null : ctx.db.agent.id.find(id(args.agent_id)!);
@@ -224,10 +239,18 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
     case 'eat': {
       const item = itemArg(args.item);
       if (!item || !(item in FOOD_VALUE)) return fail('eat needs a food item: "berries", "ration" or "meat"');
-      if (remove(ctx, { agentId: me.id }, item, 1) === 0) return fail(`you are not carrying any ${noun(item, 2)}`);
-      const fresh = ctx.db.agent.id.find(me.id)!;
-      ctx.db.agent.id.update({ ...fresh, hunger: Math.min(100, fresh.hunger + FOOD_VALUE[item] * skills(me.role).food) });
-      ctx.db.worldEvent.insert({ kind: 'ate', x: me.x, y: me.y, agentId: me.id, otherId: 0n, text: item });
+      // Rules v14: as many as asked in one move, stopping once full. One 'ate' event per item.
+      const want = qtyArg(args.qty);
+      let eaten = 0;
+      while (eaten < want) {
+        const fresh = ctx.db.agent.id.find(me.id)!;
+        if (eaten > 0 && fresh.hunger >= 100) break;
+        if (remove(ctx, { agentId: me.id }, item, 1) === 0) break;
+        ctx.db.agent.id.update({ ...fresh, hunger: Math.min(100, fresh.hunger + FOOD_VALUE[item] * skills(me.role).food) });
+        ctx.db.worldEvent.insert({ kind: 'ate', x: me.x, y: me.y, agentId: me.id, otherId: 0n, text: item });
+        eaten++;
+      }
+      if (eaten === 0) return fail(`you are not carrying any ${noun(item, 2)}`);
       return ok;
     }
 
@@ -260,7 +283,7 @@ export function applyAction(ctx: Ctx, me: Agent, name: string, args: Record<stri
       const c = containerFor(ctx, me, args.container_id);
       if (!item) return fail(`store needs an item: ${ITEMS.join(', ')}`);
       if (!c) return fail('store needs the id of a container');
-      if (distance(me.x, me.y, c.x, c.y) > containerReach(c)) return fail(`you are too far from ${c.label}`);
+      if (!inReachOf(getWorld(ctx), c, me.x, me.y)) return fail(`you are too far from ${c.label}`);
       const qty = qtyArg(args.qty);
       if (countOf(ctx, { agentId: me.id }, item) < qty) return fail(`you are not carrying ${qty} ${noun(item, qty)}`);
       move(ctx, { agentId: me.id }, { containerId: c.id }, item, qty);
@@ -390,7 +413,7 @@ function take(ctx: Ctx, me: Agent, args: Record<string, unknown>): Outcome {
   const c = containerFor(ctx, me, args.container_id);
   if (!item) return fail(`take needs an item: ${ITEMS.join(', ')}`);
   if (!c) return fail('take needs the id of a container');
-  if (distance(me.x, me.y, c.x, c.y) > containerReach(c)) return fail(`you are too far from ${c.label}`);
+  if (!inReachOf(w, c, me.x, me.y)) return fail(`you are too far from ${c.label}`);
   const have = countOf(ctx, { containerId: c.id }, item);
   if (have === 0) return fail(`there are no ${noun(item, 2)} in ${c.label}`);
   const qty = Math.min(qtyArg(args.qty), have);

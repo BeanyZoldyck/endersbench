@@ -12,7 +12,7 @@ cd spacetimedb && spacetime publish endersbench --server local --delete-data=alw
 npm run dev                                      # terminal 2: viewer on :5173
 ```
 
-`http://localhost:5173/` opens the **Observation Studio** (recorded runs, no server needed; `?live=1` watches the local world). The live clearing used on stage below, with the rail, Join, Exhibits and Results, is **`http://localhost:5173/?legacy=1`**.
+`http://localhost:5173/` opens **the clearing**, the authoritative viewer used on stage below, with the rail, Join, Exhibits and Results (old `?legacy=1` links still open it). The **Observation Studio** is `http://localhost:5173/?studio` (recorded runs, no server needed; `?studio=monitor&live=1` watches the local world).
 
 Check that the selected Codex login still has credits before the demo. The account status in NIGHTLOG is historical; do not assume it is current. For example:
 
