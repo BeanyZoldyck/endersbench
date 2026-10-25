@@ -1,4 +1,4 @@
-export type StudioScreen = 'landing' | 'setup' | 'single' | 'briefing' | 'monitor' | 'follow' | 'outcome' | 'lending' | 'compare' | 'context' | 'method';
+export type StudioScreen = 'landing' | 'models' | 'setup' | 'single' | 'briefing' | 'monitor' | 'follow' | 'outcome' | 'lending' | 'compare' | 'context' | 'method';
 export type StudioModel = 'Ender' | 'Grok' | 'Claude' | 'ChatGPT';
 export type Scenario = 'clearing' | 'lending';
 export type StudioSnapshot = Pick<StudioState, 'screen' | 'runId' | 'selectedAgentId' | 'eventIndex' | 'replayTimeMs' | 'briefingScenario' | 'contextTab' | 'compareScenario' | 'comparePair'>;
@@ -15,6 +15,7 @@ export type StudioState = {
   restoreNonce: number;
   playing: boolean;
   contextTab: 'graph' | 'details';
+  historyModel: 'all' | StudioModel;
   compareScenario: 'all' | Scenario;
   comparePair: [StudioModel, StudioModel];
   pendingComparePair: [StudioModel, StudioModel] | null;
@@ -28,6 +29,7 @@ export type StudioAction =
   | { type: 'select-draft-mode'; mode: 'swarm' | 'single' }
   | { type: 'select-briefing-scenario'; scenario: Scenario }
   | { type: 'select-run'; runId: string }
+  | { type: 'history-model'; model: 'all' | StudioModel }
   | { type: 'select-agent'; agentId: string | null }
   | { type: 'select-event'; index: number }
   | { type: 'replay'; command: 'previous' | 'next' | 'stop' | 'play' | 'pause'; count: number }
@@ -57,14 +59,14 @@ export function replayEventIndex(eventCount: number, currentIndex: number, direc
 export function initialStudioState(search: string): StudioState {
   const params = new URLSearchParams(search);
   const route = params.get('studio');
-  const known: StudioScreen[] = ['landing', 'setup', 'single', 'briefing', 'monitor', 'follow', 'outcome', 'lending', 'compare', 'context', 'method'];
+  const known: StudioScreen[] = ['landing', 'models', 'setup', 'single', 'briefing', 'monitor', 'follow', 'outcome', 'lending', 'compare', 'context', 'method'];
   const screen = known.includes(route as StudioScreen) ? route as StudioScreen : params.has('replay') || params.has('live') ? 'monitor' : 'landing';
   const replayName = params.get('replay')?.match(/\/demo\/([a-z0-9-]+)\.json(?:\.gz)?$/)?.[1];
   return {
     screen, previous: [], draftModel: 'ChatGPT', draftMode: 'swarm', briefingScenario: 'clearing',
     runId: params.get('run') || replayName || 'clearing-charter-v8-admission', selectedAgentId: null,
     eventIndex: 0, replayTimeMs: 0, restoreNonce: 0, playing: false,
-    contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',
+    historyModel: ['Ender', 'Grok', 'Claude', 'ChatGPT'].includes(params.get('historyModel') ?? '') ? params.get('historyModel') as StudioModel : 'all', contextTab: params.get('view') === 'details' ? 'details' : 'graph', compareScenario: 'all',
     comparePair: ['Ender', 'Grok'], pendingComparePair: null, landingSection: 'top', previewTab: 'clearing',
   };
 }
@@ -83,7 +85,7 @@ export function recordedStudioHref(
 }
 
 export function requiresRecordedSource(screen: StudioScreen): boolean {
-  return screen === 'landing' || screen === 'setup' || screen === 'single'
+  return screen === 'landing' || screen === 'models' || screen === 'setup' || screen === 'single'
     || screen === 'briefing' || screen === 'lending';
 }
 
@@ -100,6 +102,7 @@ export function transitionStudio(state: StudioState, action: StudioAction): Stud
     case 'select-draft-model': return { ...state, draftModel: action.model };
     case 'select-draft-mode': return { ...state, draftMode: action.mode, screen: action.mode === 'single' ? 'single' : 'setup', playing: false };
     case 'select-briefing-scenario': return { ...state, briefingScenario: action.scenario };
+    case 'history-model': return { ...state, historyModel: action.model };
     case 'select-run': return { ...state, runId: action.runId, eventIndex: 0, replayTimeMs: 0, selectedAgentId: null, briefingScenario: 'clearing', playing: false };
     case 'select-agent': return { ...state, selectedAgentId: action.agentId };
     case 'select-event': return { ...state, eventIndex: Math.max(0, action.index), playing: false };

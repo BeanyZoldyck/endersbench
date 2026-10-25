@@ -42,7 +42,7 @@ export function useRecordedSource(state: StudioState): StudioSource {
     data: replay.data, final, replay: replay.replay, moments, t: replay.t, duration: replay.duration,
     playing: replay.playing, speed: replay.speed, seek: replay.seek,
     setPlaying: replay.setPlaying, setSpeed: replay.setSpeed,
-    error: replay.error, ready: !!replay.data, live: false, sceneMoments: replay.moments,
+    error: replayPath(state.runId) ? replay.error : 'This recording ID is invalid. Open Run history to choose a recording.', ready: !!replay.data, live: false, sceneMoments: replay.moments,
   };
 }
 

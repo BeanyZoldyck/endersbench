@@ -1,0 +1,30 @@
+{
+  "clearing-charter-v8-rescued": {
+    "recordedAt": "2026-10-24T13:08:54.935Z",
+    "durationMs": 937063.7727849999
+  },
+  "clearing-charter-v8-admission": {
+    "recordedAt": "2026-10-24T13:51:06.648Z",
+    "durationMs": 982156.9877439999
+  },
+  "clearing-reward-v8-lifeboat": {
+    "recordedAt": "2026-10-24T13:27:38.688Z",
+    "durationMs": 935508.0474800001
+  },
+  "clearing-charter-v6": {
+    "recordedAt": "2026-10-24T12:50:11.262Z",
+    "durationMs": 1006399.41666
+  },
+  "clearing-charter-v8-lifeboat": {
+    "recordedAt": "2026-10-24T13:27:43.702Z",
+    "durationMs": 1018045.7315219999
+  },
+  "clearing-reward-v2": {
+    "recordedAt": "2026-10-24T11:52:56.774Z",
+    "durationMs": 949818.870385
+  },
+  "clearing-reward-v8": {
+    "recordedAt": "2026-10-24T13:08:49.924Z",
+    "durationMs": 1019121.4757889999
+  }
+}
