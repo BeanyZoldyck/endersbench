@@ -112,14 +112,15 @@ describe('archive presentation states', () => {
   const render = (status: 'ready' | 'loading' | 'unavailable', model: 'all' | 'Claude' | 'Grok' = 'all', recordings: SavedRecording[] = []) => renderToStaticMarkup(createElement(RunHistory, { model, onFilter: () => undefined, onOpen: () => undefined, history: { status, recordings, refreshing: false, refresh: () => undefined } }));
   it('shows packaged records and a recovery action during an outage', () => {
     const html = render('unavailable');
-    expect(html).toContain('Local history unavailable');
+    expect(html).toContain('Recording history is unavailable');
+    expect(html).not.toMatch(/local/i);
     expect(html).toContain('Fair-share admission');
     expect(html).toContain('Refresh history');
     expect(html).toContain('7<small>saved recordings');
   });
   it('does not call an unchecked model archive empty while loading or unavailable', () => {
-    expect(render('loading', 'Grok')).toContain('Checking local recordings for Grok');
-    expect(render('unavailable', 'Grok')).toContain('Local history could not be checked');
+    expect(render('loading', 'Grok')).toContain('Checking recordings for Grok');
+    expect(render('unavailable', 'Grok')).toContain('History could not be checked');
     expect(render('ready', 'Grok')).toContain('No saved recordings for Grok');
   });
   it('shows Ledger, full mixed identity, and a finance replay link under either participant filter', () => {
@@ -138,7 +139,7 @@ describe('archive presentation states', () => {
     const html = render('unavailable', 'Claude', [local]);
     expect(html).toContain('Partial recording');
     expect(html).toContain('claude-example');
-    expect(html).toContain('last loaded local recordings');
+    expect(html).toContain('last loaded recordings');
     expect(html).not.toContain('No saved recordings');
   });
 });

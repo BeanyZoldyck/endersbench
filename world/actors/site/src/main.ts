@@ -21,6 +21,7 @@ import { Actor, log } from 'apify';
 import type { SelectableModel } from '../../../shared/models';
 import { serve } from '../../shared/serve';
 import { CLEARING, LEDGER, clearingRoster, episodeVerdict, lobbyConfig, spacetimeClient, type LineupEntry } from './clearing';
+import { historyEntry, type BenchRunInput } from './history';
 import { PasswordGuard, RequestError, RunLimiter, benchInput, publicConfig, siteConfig } from './runs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -88,12 +89,33 @@ async function cached<T>(key: string, ms: number, load: () => Promise<T>): Promi
 }
 
 // Runs started from the Console or the API show up too; their label comes from their input.
+// A run's input names its agent and cases (its secret fields stay encrypted in storage).
+const inputs = new Map<string, BenchRunInput>();
+async function runInput(runId: string, storeId: string): Promise<BenchRunInput> {
+  if (!inputs.has(runId)) inputs.set(runId, ((await client.keyValueStore(storeId).getRecord('INPUT'))?.value ?? {}) as BenchRunInput);
+  return inputs.get(runId)!;
+}
+
 async function labelFor(runId: string, storeId: string) {
   if (labels.has(runId)) return labels.get(runId)!;
-  const input = (await client.keyValueStore(storeId).getRecord('INPUT'))?.value as { provider?: string; model?: string } | undefined;
+  const input = await runInput(runId, storeId);
   const label = !input?.provider || input.provider === 'script' ? 'Policy reference script' : `${input.provider}:${input.model ?? ''}`;
   labels.set(runId, label);
   return label;
+}
+
+// Run history: every enders-bench model run, newest first, as a Ledger Street recording.
+const historyRuns = new Map<string, string>(); // uuid -> Apify run id
+async function runHistory() {
+  return cached('history', 15_000, async () => {
+    const list = await client.actor(bench!.id).runs().list({ desc: true, limit: 40 });
+    const entries = await Promise.all(list.items.filter(r => r.status !== 'READY').map(async r => {
+      const entry = historyEntry(r, await runInput(r.id, r.defaultKeyValueStoreId));
+      if (entry) historyRuns.set(entry.id, r.id);
+      return entry;
+    }));
+    return entries.filter(e => e !== null);
+  });
 }
 
 async function runInfo(runId: string): Promise<RunInfo | null> {
@@ -337,6 +359,14 @@ await serve({
         if (scenario === CLEARING) return { status: 202, json: await startClearing(lineup) };
         if (scenario === LEDGER) return { status: 202, json: await startLedger(lineup) };
         throw new RequestError('Choose a supported scenario.');
+      }
+      if (url.pathname === '/api/benchmarks/history' && req.method === 'GET') return { json: await runHistory() };
+      const recording = url.pathname.match(/^\/api\/benchmarks\/([a-f0-9-]{36})\/replay$/);
+      if (recording && req.method === 'GET') {
+        // A link opened before this run listed the history: list it once to learn the id.
+        const runId = historyRuns.get(recording[1]) ?? (await runHistory(), historyRuns.get(recording[1]));
+        if (!runId) throw new RequestError('Recording not found.', 404);
+        return { json: await replay(runId) };
       }
       const lobby = url.pathname.match(/^\/api\/benchmarks\/([A-Za-z0-9-]+)$/);
       if (lobby && req.method === 'GET' && lobby[1] !== 'history') return { json: await lobbyJob(lobby[1]) };
