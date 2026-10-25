@@ -47,6 +47,7 @@ export function openAiCompatibleBrain(opts: {
   apiKey: string;
   model: string;
   extraBody?: Record<string, unknown>;
+  maxTokensField?: 'max_tokens' | 'max_completion_tokens';
   fetchImpl?: FetchImpl;
 }): Brain {
   const fetchImpl = opts.fetchImpl ?? fetch;
@@ -57,7 +58,7 @@ export function openAiCompatibleBrain(opts: {
         fetchImpl,
         `${opts.baseUrl.replace(/\/$/, '')}/chat/completions`,
         opts.apiKey ? { authorization: `Bearer ${opts.apiKey}` } : {},
-        openAiChatBody(opts.model, input, opts.extraBody)
+        openAiChatBody(opts.model, input, opts.extraBody, opts.maxTokensField)
       );
       return parseOpenAiChat(reply);
     },
@@ -349,5 +350,5 @@ export function brainFor(modelId: string, env: Env): Brain {
   if (!PROVIDERS[provider]) throw new Error(`unknown provider '${provider}' in modelId '${modelId}'`);
   const { spec, baseUrl, key } = providerEndpoint(provider, name => env[name]);
   if (spec.api === 'anthropic') return anthropicBrain({ apiKey: key ?? '', model });
-  return openAiCompatibleBrain({ baseUrl, apiKey: key ?? '', model, extraBody: spec.extraBody });
+  return openAiCompatibleBrain({ baseUrl, apiKey: key ?? '', model, extraBody: spec.extraBody, maxTokensField: spec.maxTokensField });
 }

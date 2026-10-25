@@ -56,11 +56,14 @@ export type ProviderSpec = {
   baseUrlEnv?: string;
   keyEnv?: string;
   keyOptional?: boolean;
+  maxTokensField?: 'max_tokens' | 'max_completion_tokens'; // default max_tokens
   extraBody?: Record<string, unknown>;
 };
 
 export const PROVIDERS: Record<string, ProviderSpec> = {
-  openai: { api: 'openai-chat', baseUrl: 'https://api.openai.com/v1', keyEnv: 'OPENAI_API_KEY' },
+  // Current OpenAI models refuse max_tokens ("Use 'max_completion_tokens' instead"), and refuse
+  // function tools with reasoning on chat completions ("set reasoning_effort to 'none'").
+  openai: { api: 'openai-chat', baseUrl: 'https://api.openai.com/v1', keyEnv: 'OPENAI_API_KEY', maxTokensField: 'max_completion_tokens', extraBody: { reasoning_effort: 'none' } },
   openrouter: { api: 'openai-chat', baseUrl: 'https://openrouter.ai/api/v1', keyEnv: 'OPENROUTER_API_KEY' },
   // DeepSeek on Bitdeer reasons by default, and the reasoning counts against
   // max_tokens: at MAX_OUTPUT_TOKENS it never reaches the tool call.
@@ -94,10 +97,10 @@ export function providerEndpoint(provider: string, env: Env) {
   return { spec, baseUrl: baseUrl.replace(/\/$/, ''), key };
 }
 
-export function openAiChatBody(model: string, input: DecideInput, extraBody?: Record<string, unknown>) {
+export function openAiChatBody(model: string, input: DecideInput, extraBody?: Record<string, unknown>, maxTokensField: ProviderSpec['maxTokensField'] = 'max_tokens') {
   return {
     model,
-    max_tokens: MAX_OUTPUT_TOKENS,
+    [maxTokensField]: MAX_OUTPUT_TOKENS,
     tool_choice: 'required',
     tools: withThought(input.tools).map(t => ({
       type: 'function',
@@ -150,7 +153,7 @@ export function buildModelCall(modelId: string, input: DecideInput, env: Env): M
   if (spec.api === 'anthropic') {
     return { api: 'anthropic', url: `${baseUrl}/messages`, headers: { 'x-api-key': key ?? '', 'anthropic-version': '2023-06-01' }, body: anthropicBody(model, input) };
   }
-  return { api: 'openai-chat', url: `${baseUrl}/chat/completions`, headers: key ? { authorization: `Bearer ${key}` } : {}, body: openAiChatBody(model, input, spec.extraBody) };
+  return { api: 'openai-chat', url: `${baseUrl}/chat/completions`, headers: key ? { authorization: `Bearer ${key}` } : {}, body: openAiChatBody(model, input, spec.extraBody, spec.maxTokensField) };
 }
 
 export function decisionFromResponse(api: ModelCall['api'], url: string, status: number, text: string): Decision {

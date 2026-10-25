@@ -46,6 +46,13 @@ describe('buildModelCall', () => {
     expect(call.headers.authorization).toBeUndefined();
   });
 
+  test('an openai request caps output with max_completion_tokens and turns reasoning off', () => {
+    const body = buildModelCall('openai:gpt-6-luna', input, envOf({ OPENAI_API_KEY: 'k' })).body as any;
+    expect(body.max_completion_tokens).toBe(200);
+    expect(body.max_tokens).toBeUndefined();
+    expect(body.reasoning_effort).toBe('none');
+  });
+
   test('a missing key names the variable', () => {
     expect(() => buildModelCall('bitdeer:m', input, envOf({}))).toThrow('bitdeer models need BITDEER_API_KEY');
   });

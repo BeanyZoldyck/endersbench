@@ -112,16 +112,41 @@ Writes `runs/<db>-<timestamp>/` (git-ignored):
 2. `brainTick` (every 250 ms) finds LLM agents with nothing in flight that are due: woken by an event
    (`arrived`, `spoken_to`, `lost_target`, `retry`) or 5 game seconds since their last decision.
    It writes a `decision_request` row with the agent's observation, computed on the server.
-3. The harness sees the pending row, asks the agent's model, and calls `submitDecision`.
+3. The harness sees the pending row, asks the agent's model, and calls `submitDecision`. In a
+   database-brained run (below) the module asks the model itself instead.
 4. `submitDecision` validates the action against the world as it is now, applies it, and logs it to
    `action_log`. A bad action is recorded as `failed`, never thrown, and the agent is asked again in 1 s.
+
+## Database brains: no harness at all
+
+The module can ask the models itself. `beginRun` starts a run whose requests are marked
+`brain = 'database'`; for each one `brainTick` schedules the `think` procedure, which calls the
+provider with `ctx.http.fetch` outside any transaction (calls run in parallel and never hold up
+the 20 Hz tick) and settles the answer through the same code as `submitDecision`. Prompt, tools,
+200-token cap and parsing are shared with the harness (`spacetimedb/src/brain/protocol.ts`).
+
+```
+scripts/load-model-keys.sh endersbench-deepseek          # keys from the repo's dotenv file (or this shell) into the database
+scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash
+scripts/db-run.sh endersbench-deepseek bitdeer:deepseek-ai/DeepSeek-V4.1-Flash,anthropic:claude-haiku-4-5 charter 1 0.5
+```
+
+- Providers: `bitdeer`, `openai`, `anthropic`, `openrouter`, `ender` (`ENDER_BASE_URL`, e.g. a Runpod
+  vLLM endpoint). `codex`, `fake` and `ollama` stay with the harness; `beginRun` refuses them.
+- Keys live only in the database's environment (`BITDEER_API_KEY`, `OPENAI_API_KEY`,
+  `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `ENDER_BASE_URL`, `ENDER_API_KEY`), never in a table.
+  `spacetime env list` prints their values: don't run it where anyone can see.
+- A harness left connected skips database-brained requests. The run info records `brains: database`.
+- `db-run.sh` records the run and writes the report like `scripts/experiment.sh`; pass `maincloud` as
+  the sixth argument for the shared world (load its keys with `scripts/load-model-keys.sh <db> maincloud`).
 
 ## Contract for anyone plugging in a model
 
 - **Roster:** `ROSTER="Ada:fake,Bo:ender:qwen3.8-27b,Cy:anthropic:claude-haiku-4-5"`, as `Name:provider:model`.
   Providers: `fake`, `ender` (needs `ENDER_BASE_URL`, an OpenAI-compatible URL such as vLLM on the Spark),
   `openai` (`OPENAI_API_KEY`), `openrouter` (`OPENROUTER_API_KEY`), `ollama` (`OLLAMA_BASE_URL`),
-  `anthropic` (`ANTHROPIC_API_KEY`). Add a provider in `harness/brains.ts`.
+  `anthropic` (`ANTHROPIC_API_KEY`), `bitdeer` (`BITDEER_API_KEY`). Add a provider to `PROVIDERS` in
+  `spacetimedb/src/brain/protocol.ts`.
 - **Tools:** the module publishes the action catalog as JSON tool schemas in `meta` (key `tools`).
   The harness adds a required `thought` argument (12 words max) to each tool.
 - **Answer:** `{"name": "move_to", "args": {"x": 30, "y": 12}}` as the `action` string, plus the thought.
@@ -129,7 +154,7 @@ Writes `runs/<db>-<timestamp>/` (git-ignored):
   The exact observation each model saw is stored in `decision_request.observation`.
 - **Training data:** every row of `decision_request` (observation, action, thought, status, latency) is a
   labelled decision. Pull it with `spacetime sql endersbench "SELECT * FROM decision_request"`.
-- **Prompt variants:** `PROMPT_VARIANT=charter | no-charter | win-at-all-costs` (`harness/prompt.ts`).
+- **Prompt variants:** `PROMPT_VARIANT=charter | no-charter | win-at-all-costs` (`spacetimedb/src/brain/prompt.ts`).
 - **Other env:** `SPACETIMEDB_HOST` (default `ws://localhost:3000`), `SPACETIMEDB_DB_NAME`
   (default `endersbench`), `FAKE_LATENCY_MS` (default `600-2500`), `FAKE_MISCHIEF` (chance a fake
   survivor steals or attacks per decision, default 0.05), `DECISION_TIMEOUT_MS` (default 20000).
