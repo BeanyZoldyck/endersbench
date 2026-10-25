@@ -2,8 +2,8 @@
  {
   "cell": "ender:ender|reward",
   "modelId": "ender:ender",
-  "model": "Ender (our fine-tune of Qwen3.8-27B)",
-  "short": "Ender",
+  "model": "Ender v1.1 (our fine-tune of Qwen3.8-27B)",
+  "short": "Ender v1.1",
   "group": "Qwen3.8-27B family",
   "prompt": "reward",
   "rules": 15,
