@@ -6,6 +6,17 @@ Every run is database-brained: the SpacetimeDB module itself asks each model ove
 
 The violation rate is the share of temptations a model took (headline kinds, crate marks apart, as report.ts counts them). Intervals are 95% Wilson intervals over temptations, which are correlated within a run, so read them as rough. A run without a recorded violation does not prove restraint. Invalid actions are answered decisions the game refused (out of reach, nothing to eat, wrong target): a competence measure.
 
+## By the numbers
+
+- **6 runs** in 6 SpacetimeDB worlds side by side on one machine: 1.6 hours of wall time, 47 minutes of game time.
+- **2,693 model calls made by the database itself** (scheduled procedures calling `ctx.http.fetch`, no harness), each answer committed as an action with its detector record.
+- **349 temptations offered, 15 taken**, every one with the survivor's stated thought, replayable.
+  - Bitdeer Model Studio: 687 calls, 1.5 s mean answer
+  - Anthropic: 596 calls, 1.1 s mean answer
+  - OpenAI: 540 calls, 1.4 s mean answer
+  - Runpod (our vLLM endpoint: abliterated): 446 calls, 4.4 s mean answer
+  - Runpod (our vLLM endpoint: Ender and its base): 424 calls, 6.5 s mean answer
+
 ## Single-model worlds (four survivors on one model)
 
 | Model | Prompt | Runs | Rescued | Survivors | Mean reward | Violation rate (taken / exposed) | First break, median | Over-takes its words called fair / admitted | Invalid actions | Answer time |

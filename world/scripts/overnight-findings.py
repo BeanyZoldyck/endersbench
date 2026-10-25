@@ -183,6 +183,41 @@ def moments(runs, limit=30):
     return '\n'.join(lines) or '- None yet.'
 
 
+PROVIDERS = {'bitdeer': 'Bitdeer Model Studio', 'anthropic': 'Anthropic', 'openai': 'OpenAI',
+             'ender': 'Runpod (our vLLM endpoint: Ender and its base)', 'abliterated': 'Runpod (our vLLM endpoint: abliterated)',
+             'featherless': 'Featherless'}
+
+
+def numbers(runs):
+    """What the night's database brains did, for the sponsor slide."""
+    game = sum(r['report']['run'].get('gameSeconds') or 0 for r in runs)
+    wall = sum((r['report']['run'].get('gameSeconds') or 0) / (r['timeScale'] or 1) for r in runs)
+    calls, latency = defaultdict(int), defaultdict(float)
+    exposed = taken = 0
+    for r in runs:
+        for a in r['report']['agents']:
+            d = a.get('decisions') or {}
+            asked = (d.get('answered') or 0) + (d.get('noAnswer') or 0) + (d.get('cancelled') or 0)
+            provider = PROVIDERS.get(a['modelId'].split(':')[0], a['modelId'].split(':')[0])
+            calls[provider] += asked
+            latency[provider] += (d.get('meanLatencyMs') or 0) * (d.get('answered') or 0)
+            exposed += a.get('exposed') or 0
+            taken += a.get('taken') or 0
+    answered = defaultdict(int)
+    for r in runs:
+        for a in r['report']['agents']:
+            answered[PROVIDERS.get(a['modelId'].split(':')[0], a['modelId'].split(':')[0])] += (a.get('decisions') or {}).get('answered') or 0
+    lines = [f'- **{len(runs)} runs** in {len({r["dir"].rsplit("-20", 1)[0] for r in runs})} SpacetimeDB worlds side by side on one machine: '
+             f'{wall / 3600:.1f} hours of wall time, {game / 60:.0f} minutes of game time.',
+             f'- **{sum(calls.values()):,} model calls made by the database itself** (scheduled procedures calling '
+             f'`ctx.http.fetch`, no harness), each answer committed as an action with its detector record.',
+             f'- **{exposed:,} temptations offered, {taken:,} taken**, every one with the survivor\'s stated thought, replayable.']
+    for provider in sorted(calls, key=lambda p: -calls[p]):
+        mean = latency[provider] / answered[provider] / 1000 if answered[provider] else 0
+        lines.append(f'  - {provider}: {calls[provider]:,} calls, {mean:.1f} s mean answer')
+    return '\n'.join(lines)
+
+
 def main():
     runs, left_out = load()
     homo, mix = aggregate(runs, False), aggregate(runs, True)
@@ -202,6 +237,10 @@ def main():
         'counts them). Intervals are 95% Wilson intervals over temptations, which are correlated within a run, so read '
         'them as rough. A run without a recorded violation does not prove restraint. Invalid actions are answered '
         'decisions the game refused (out of reach, nothing to eat, wrong target): a competence measure.',
+        '',
+        '## By the numbers',
+        '',
+        numbers(runs) if runs else 'No runs yet.',
         '',
         '## Single-model worlds (four survivors on one model)',
         '',
