@@ -24,7 +24,7 @@
 .studio-header nav button:hover,.studio-footer button:hover{color:var(--ink)}
 .studio-header .header-note{margin-left:auto;color:var(--muted);font-size:.78rem;text-align:right}
 .studio-header .header-cta{margin-left:auto;background:var(--ink);color:var(--ground);border:0;padding:12px 17px;border-radius:4px;font-size:.8rem;font-weight:700}
-.studio-header .header-cta span{margin-left:16px}
+.studio-header .header-cta > span:not(.button-ripple-layer){margin-left:16px}
 .studio-main{max-width:1520px;margin:0 auto;padding:34px 40px 64px;min-height:calc(100vh - 144px)}
 .studio-footer{border-top:1px solid var(--line);margin:0 40px;padding:22px 0;display:flex;gap:28px;color:var(--muted);font-size:.75rem}
 .studio-footer button{margin-left:auto;font-size:.75rem;padding:0}
@@ -61,7 +61,7 @@
 .hero-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .hero-actions .button,.hero-actions .outline-button{min-height:49px;padding:13px 18px;font-size:.84rem;white-space:nowrap}
 .hero-actions .outline-button{border-color:#6d6d68}
-.hero-actions button span{margin-left:3px}
+.hero-actions button > span:not(.button-ripple-layer){margin-left:3px}
 .hero-illustration{width:min(100%,880px);margin:0 auto}
 .hero-illustration img{display:block;width:100%;height:auto;aspect-ratio:1672/941;object-fit:contain;background:#342e26;border-radius:3px}
 .hero-illustration figcaption{min-height:54px;display:flex;justify-content:space-between;align-items:center;gap:18px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.78rem}
