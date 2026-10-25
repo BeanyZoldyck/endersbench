@@ -46,9 +46,9 @@ h1 span { color:#927457; }
 .cast-name>span { font-size:9px; color:#7e856f; white-space:nowrap; }
 .model-name { display:block; font-size:9px; color:#838874; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; }
 .portrait { width:43px; height:43px; display:block; position:relative; flex:none; border-radius:50%; background:radial-gradient(circle at 33% 25%, color-mix(in srgb, var(--agent-color) 55%, #f0e4cc), var(--agent-color)); box-shadow:inset -4px -5px 7px #293f3924, 0 3px 4px #293f3915; }
-.portrait i { position:absolute; width:3px; height:5px; border-radius:50%; background:#293f39; top:17px; left:14px; }
-.portrait i+i { left:25px; }
-.portrait b { position:absolute; top:31px; left:4px; right:4px; height:4px; border-radius:50%; background:color-mix(in srgb, var(--agent-color) 70%, #293f39); }
+.portrait i { position:absolute; width:17%; height:21%; border-radius:50%; background:radial-gradient(ellipse at 32% 28%, #fffbee 0 20%, transparent 24%), radial-gradient(ellipse at 66% 70%, #d0dfc9 0 9%, transparent 13%), #050807; top:7%; left:24%; box-shadow:0 0 4px 3px #fffef780, inset 0 -2px 2px #101915; }
+.portrait i+i { left:59%; }
+.portrait img { position:absolute; width:60%; height:60%; left:20%; top:20%; object-fit:contain; }
 .portrait.ghost { opacity:.35; }
 .needs { display:flex; flex-direction:column; gap:7px; margin:17px 0; }
 .need { display:flex; align-items:center; gap:8px; font-size:10px; color:#75816a; }
@@ -124,7 +124,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 @keyframes blink { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
 @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
 @media (min-width:1500px) { .spectator-dock { left:max(38px, calc((100vw - 1450px)/2)); right:max(38px, calc((100vw - 1450px)/2)); } }
-@media (max-width:1000px) { .edition { display:none; } .cast-card { padding:13px; gap:10px; flex-basis:180px; } .cast-name>span { display:none; } .cast-name strong { font-size:18px; } .portrait { width:39px; height:39px; } .portrait i { top:15px; left:12px; } .portrait i+i { left:23px; } .portrait b { top:28px; } }
+@media (max-width:1000px) { .edition { display:none; } .cast-card { padding:13px; gap:10px; flex-basis:180px; } .cast-name>span { display:none; } .cast-name strong { font-size:18px; } .portrait { width:39px; height:39px; } }
 @media (max-height:720px) { .masthead { top:22px; left:25px; } h1 { font-size:39px; margin:12px 0 4px; } .masthead p { font-size:11px; margin:8px 0; } .world-status { top:24px; right:25px; gap:12px; } .season strong { font-size:12px; } .season svg { width:24px; height:24px; } .spectator-dock { bottom:10px; left:25px; right:25px; } .scene-tools { margin-bottom:12px; } .cast-card { padding:11px 13px; } .cast-heading { margin-bottom:5px; } .colophon { display:none; } .detail-panel { right:25px; top:140px; max-height:calc(100dvh - 290px); padding:20px; } .event-caption { bottom:calc(100% + 10px); font-size:12px; } }
 @media (max-width:650px) { .masthead { top:22px; left:18px; } .brand { font-size:9px; letter-spacing:.12em; gap:6px; } .brand svg { width:22px; height:22px; } h1 { font-size:36px; } .masthead p { font-size:10px; max-width:210px; line-height:1.6; } .world-status { top:25px; right:18px; gap:14px; max-width:150px; } .connection { font-size:9px; text-align:right; } .season { gap:6px; } .season strong { font-size:11px; } .season span { font-size:8px; } .utility { gap:3px; } .utility button { font-size:9px; padding:5px 6px; } .spectator-dock { left:15px; right:15px; } .cast-card { flex:0 0 190px; } .cast-heading span+span { display:none; } .camera-hint { font-size:8px; } .camera-toggle button { padding:7px 12px; font-size:10px; } .detail-panel { right:15px; width:min(305px, calc(100vw - 30px)); top:155px; max-height:calc(100dvh - 330px); } .bubble { font-size:12px; max-width:190px; } .preview-banner { font-size:8px; } .preview-banner button { margin-left:8px; font-size:8px; } .event-caption { width:100%; max-width:100%; } }
 
@@ -133,7 +133,7 @@ summary { font-size:11px; cursor:pointer; color:#76836c; }
 .detail-panel { z-index:3; }
 .preview-banner { z-index:4; }
 
-@media (max-width:850px) and (min-width:651px) { .cast-card { flex-basis:calc((100% - 30px)/4); padding:11px 10px; gap:10px; } .portrait { width:35px; height:35px; } .portrait i { top:13px; left:11px; } .portrait i+i { left:21px; } .portrait b { top:25px; } .needs.compact { gap:6px; } }
+@media (max-width:850px) and (min-width:651px) { .cast-card { flex-basis:calc((100% - 30px)/4); padding:11px 10px; gap:10px; } .portrait { width:35px; height:35px; } .needs.compact { gap:6px; } }
 
 .preview-actions { display:flex; flex-wrap:wrap; gap:6px; }
 .preview-actions button { background:#e7e2ce; border:1px solid #bcc4a7; padding:8px; border-radius:5px; font-size:10px; }

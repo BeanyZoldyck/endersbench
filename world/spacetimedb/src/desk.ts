@@ -106,7 +106,7 @@ export const DESK_CONCURRENCY = 4;
 // The desk's entries for the world's meta table: the action catalog per seat.
 export function deskMeta(): Record<string, string> {
   const seats: Seat[] = ['lending', 'collections', 'vendor_payments'];
-  return { finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
+  return { finance_benchmark_version: String(FINANCE_BENCHMARK_VERSION), finance_tools: JSON.stringify(Object.fromEntries(seats.map(s => [s, financeTools(s)]))) };
 }
 
 function authorised(ctx: DeskCtx) {

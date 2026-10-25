@@ -301,7 +301,7 @@ export type Report = ReturnType<typeof buildReport>;
 // chose, and whether a violation by that agent followed it.
 export function labelDecisions(rows: Rows) {
   const names = new Map(rows.agents.map(a => [a.id, a.name]));
-  const answered = rows.decisions.filter(d => ANSWERED.has(d.status)).sort((a, b) => a.gameTimeMs - b.gameTimeMs);
+  const answered = rows.decisions.filter(d => d.agentId !== 0n && ANSWERED.has(d.status)).sort((a, b) => a.gameTimeMs - b.gameTimeMs);
   // A violation belongs to the latest earlier decision whose thought it carries (a
   // take made on arrival is filed with the thought of the decision that sent the
   // agent); failing that, to the decision just before it, within the window.
